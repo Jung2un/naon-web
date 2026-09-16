@@ -27,40 +27,47 @@ CLI는 레포에 devDependency로 들어 있다. 전역 설치 필요 없이 `np
 - [x] `supabase db push` — 마이그레이션 4개 적용 완료 (init · ledger_reasons · presets_seed · credit_functions)
 - [x] `supabase gen types typescript --linked > src/types/database.ts` — 손으로 옮겨 적던 상태를 실제 생성물로 교체. 빌드 통과
 - [x] `presets` 테이블 시드 — 16종(머리·상의·하의·장소 각 4) 마이그레이션으로 들어감. id 고정
+- [x] Vercel 환경변수 등록 — 3번에서 완료 (Production / Preview / Development 전부)
 - [ ] `presets` 버킷에 썸네일 업로드 — **이미지가 아직 없다.** 지금은 이름만 나온다
       경로는 DB에 미리 적혀 있다(`hair/1.jpg` … `scene/4.jpg`). 같은 경로로 올리면 SQL을 안 건드려도 붙는다.
       presets 버킷에는 INSERT 정책이 없다 — 대시보드나 service_role로 올린다
-- [ ] Vercel 환경변수에 `NEXT_PUBLIC_SUPABASE_URL` · `NEXT_PUBLIC_SUPABASE_ANON_KEY` 등록
-      (스코프 Production / Preview / Development **전부** 체크) → **3번에서 한다.** Vercel 프로젝트가 있어야 넣는다
 
-> 로컬 `.env.local`은 아직 만들지 않았다. 채우는 순간 `isSupabaseConfigured`가 켜져서
-> 고정 데이터가 꺼지고 실제 로그인을 요구하는데, OAuth(2번)가 아직 없어서 `/login`에서 막힌다.
-> **2번을 끝내고 채우는 게 맞다.**
+> 로컬 `.env.local`에 Supabase 값을 채우면 `isSupabaseConfigured`가 켜져서 고정 데이터가 꺼지고
+> 실제 로그인을 요구한다. OAuth(2번)가 끝나기 전에는 `/login`에서 막히니 그때 채우는 게 맞다.
+> (`vercel link`가 만든 `.env.local`에는 OIDC 토큰만 있고 Supabase 값은 없다.)
 
 ### 2. OAuth
 
 - [ ] **Google Cloud** OAuth 클라이언트 생성
-  - 승인된 리디렉션 URI는 `https://<ref>.supabase.co/auth/v1/callback` **하나만**
+  - 승인된 리디렉션 URI는 이것 **하나만**: `https://alafyhejiaxukrkrmehh.supabase.co/auth/v1/callback`
   - 우리 도메인을 여기 넣는 게 아니다. 자주 틀리는 지점
+  - 결제 계정은 필요 없다. `cloud.google.com/free`(카드 등록 안내)로 가지 말 것
+  - 콘솔 바로가기: 프로젝트 생성 `console.cloud.google.com/projectcreate` →
+    동의 화면 `console.cloud.google.com/auth/overview` →
+    클라이언트 `console.cloud.google.com/auth/clients` →
+    테스트 사용자 `console.cloud.google.com/auth/audience`
+  - 앱이 "테스트" 상태인 동안에는 테스트 사용자에 등록된 계정만 로그인된다
   - client ID/secret → Supabase → Authentication → Providers → Google
 - [ ] **Kakao** 개발자 앱 생성 → Supabase → Providers → Kakao 활성화
   - 버튼·로고·색은 이미 만들어져 있다 (`src/components/app/OAuthButton.tsx`)
   - 켠 뒤 `src/lib/auth-providers.ts`에서 kakao의 `status`를
     `"preparing"` → `"ready"` **한 단어만** 바꾸면 동작한다
-- [ ] Supabase → Authentication → URL Configuration
-  - Site URL: `https://ai-daeyeok.vercel.app`
-  - Redirect URLs: `https://ai-daeyeok.vercel.app/**`
+- [x] Supabase → Authentication → URL Configuration — **완료**
+  - `supabase/config.toml`에 적고 `npx supabase config push`로 반영했다. 대시보드에서 손으로 고치지 말 것 —
+    다음 push가 이 파일 값으로 되돌린다
+  - Site URL `https://ai-daeyeok.vercel.app` · Redirect URLs는 운영 + 프리뷰 와일드카드
   - 로컬을 안 쓰기로 해서 `localhost` 줄은 넣지 않는다
 
-### 3. Vercel
+### 3. Vercel — 끝났다
+
+프로젝트 **`ai-daeyeok`** (`jung2uns-projects`) · 운영 URL **https://ai-daeyeok.vercel.app**
 
 - [x] GitHub 레포 생성 — `Jung2un/ai-daeyeok-web` (private)
-- [ ] Vercel에 Import
-- [ ] 위 1번의 Supabase 환경변수 두 개 등록 (스코프 세 개 전부)
-- [ ] **함수 리전을 `icn1`(서울)로** — `vercel.json`에 이미 박아 뒀지만 대시보드에서 확인
-- [ ] 배포 후 실제 URL 확인
-- [ ] **실제 URL이 `ai-daeyeok.vercel.app`이 아니면** `src/lib/site-url.ts`의
-      `PRODUCTION_URL` 한 줄을 고친다 (URL이 코드에 있는 자리는 여기 하나뿐이다)
+- [x] Vercel에 Import — `vercel link`가 GitHub 레포까지 자동 연결했다. main에 push하면 배포된다
+- [x] Supabase 환경변수 두 개 등록 — Production / Preview / Development 전부
+- [x] 함수 리전 `icn1` — `vercel.json`
+- [x] 프로덕션 배포 완료. `/` → `/login`(307), `/dashboard` → `/login?next=/dashboard` 확인
+- [x] **실제 URL이 `ai-daeyeok.vercel.app`으로 잡혔다** — `site-url.ts`의 `PRODUCTION_URL`을 고칠 필요가 없었다
 
 ### 4. Edge Function — 아직 하나도 없다
 
@@ -222,7 +229,7 @@ Supabase 환경변수가 비어 있으면 데이터 레이어가 **타입만 같
 | S7 | 작업물 | 목록·상세·Realtime 상태 갱신 | 완료 |
 | S8 | 크레딧 + Edge Function | 실제 차감이 일어난다 | 화면·원장 완료 · **함수 아직** |
 | S9 | 마감 | 빈 상태·에러·모바일·접근성 | 빈 상태·에러 완료 · **375px 미확인** |
-| S10 | 배포 정리 | 운영 도메인에서 전부 돈다 | 아직 |
+| S10 | 배포 정리 | 운영 도메인에서 전부 돈다 | 배포는 떴다 · **로그인은 OAuth 대기** |
 
 **S1이 끝나기 전에는 화면을 만들지 않는다.** 토큰이 자리잡기 전에 화면이 생기면 나중에 전부 다시 칠하게 된다.
 
