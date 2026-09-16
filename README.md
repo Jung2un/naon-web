@@ -5,139 +5,78 @@
 
 ---
 
-## TODO — 다음에 할 것
+## TODO — 남은 것
 
-웹 코드(S0~S9)는 만들어져 있고 `npm run build`가 통과한다.
-아래는 **계정이 있어야 되는 일**이라 아직 못 한 것들. 위에서부터 순서대로 하면 된다.
+2026-09-16에 계정 세팅(Supabase · Google OAuth · Vercel)과 Edge Function을 끝냈다.
+**끝난 내용은 이 문서 아래 "끝난 것"에 있다.** 여기는 아직 안 된 것만 둔다.
 
-### 0. 계정 전환 — 이게 먼저다
+| 막는 것 | 누가 | 없으면 |
+|---|---|---|
+| **fal.ai 모델 두 개** | 결정이 필요하다 | 캐릭터·룩 만들기가 503에서 멈춘다 |
+| 카카오 개발자 앱 | 계정 작업 | 로그인 화면에서 "곧 열려요"로 비활성 |
+| 프리셋 썸네일 16장 | 이미지가 필요하다 | 프리셋이 이름만 나온다 |
 
-- [x] Claude Desktop / Claude Code를 **개인 계정**으로 전환 — 완료
-  - 아래 1~4의 리소스는 개인 계정 소유여야 한다. 나중에 옮기기 어렵다
+### A. fal.ai — **가장 큰 구멍. 결정이 안 됐다**
 
-### 1. Supabase — 거의 끝났다
+`docs/배포.md`에 영상용 **Wan-Animate Replace**만 있고,
+캐릭터(5각도 → 캐릭터 이미지)와 룩(프리셋 4슬롯 → 스타일 이미지)에 쓸 모델은
+설계 어디에도 정해진 적이 없다. **지어내지 말 것.** fal 콘솔에서 골라야 한다.
 
-프로젝트: **`ai-web`** · ref **`alafyhejiaxukrkrmehh`** · 리전 `ap-northeast-2`(서울) · 조직 `Jung2un`
+- [ ] fal.ai 계정 + 결제 수단 (종량제라 첫 변환부터 돈이 나간다)
+- [ ] 캐릭터용 모델 고르기 — 입력 5장, 출력 이미지 1장
+- [ ] 룩용 모델 고르기 — 입력 캐릭터 이미지 1장 + 프리셋 4개(텍스트), 출력 이미지 1장
+- [ ] 시크릿 등록
 
-CLI는 레포에 devDependency로 들어 있다. 전역 설치 필요 없이 `npx supabase …`로 쓴다.
-`supabase link`는 이미 걸려 있다.
+```bash
+cd /d/p/ai-sp
+npx supabase secrets set FAL_KEY=... FAL_CHARACTER_MODEL=... FAL_LOOK_MODEL=...
+```
 
-- [x] 프로젝트 생성 — 리전 `ap-northeast-2` 확인됨 (나중에 못 바꾼다)
-- [x] `Project URL` · `anon key` · `ref` — `npx supabase projects api-keys --project-ref <ref>`로 언제든 꺼낸다
-- [x] `supabase db push` — 마이그레이션 4개 적용 완료 (init · ledger_reasons · presets_seed · credit_functions)
-- [x] `supabase gen types typescript --linked > src/types/database.ts` — 손으로 옮겨 적던 상태를 실제 생성물로 교체. 빌드 통과
-- [x] `presets` 테이블 시드 — 16종(머리·상의·하의·장소 각 4) 마이그레이션으로 들어감. id 고정
-- [x] Vercel 환경변수 등록 — 3번에서 완료 (Production / Preview / Development 전부)
-- [ ] `presets` 버킷에 썸네일 업로드 — **이미지가 아직 없다.** 지금은 이름만 나온다
-      경로는 DB에 미리 적혀 있다(`hair/1.jpg` … `scene/4.jpg`). 같은 경로로 올리면 SQL을 안 건드려도 붙는다.
-      presets 버킷에는 INSERT 정책이 없다 — 대시보드나 service_role로 올린다
+**Vercel에 넣지 말 것.** 시크릿이 없는 동안에는 함수가 **크레딧을 깎기 전에** 503으로 막는다
+(`falConfig()`가 null이면 차감 앞에서 돌아선다). 모델을 고르기 전에 버튼을 눌러도 크레딧이 안 날아간다.
 
-> 로컬 `.env.local`에 Supabase 값을 채우면 `isSupabaseConfigured`가 켜져서 고정 데이터가 꺼지고
-> 실제 로그인을 요구한다. OAuth(2번)가 끝나기 전에는 `/login`에서 막히니 그때 채우는 게 맞다.
-> (`vercel link`가 만든 `.env.local`에는 OIDC 토큰만 있고 Supabase 값은 없다.)
+**모델이 정해지면 코드에서 고칠 곳은 세 군데뿐이다.**
 
-### 2. OAuth
+| 자리 | 지금 | 해야 할 일 |
+|---|---|---|
+| `create-character/index.ts` | `{ image_urls, prompt }` | 고른 모델의 입력 스키마로 |
+| `create-look/index.ts` | `{ image_url, prompt }` | 고른 모델의 입력 스키마로 |
+| `_shared/fal.ts`의 `resultUrl()` | 흔한 응답 모양 여럿을 훑는다 | 그 모델의 모양 하나만 보게 줄인다 |
 
-- [x] **Google Cloud** OAuth 클라이언트 생성 — 완료. Supabase에서 google 공급자가 켜진 것까지 확인했다
-      (`/auth/v1/settings`의 external이 google만 true, email은 false)
-  - 승인된 리디렉션 URI는 이것 **하나만**: `https://alafyhejiaxukrkrmehh.supabase.co/auth/v1/callback`
-  - 우리 도메인을 여기 넣는 게 아니다. 자주 틀리는 지점
-  - 결제 계정은 필요 없다. `cloud.google.com/free`(카드 등록 안내)로 가지 말 것
-  - 콘솔 바로가기: 프로젝트 생성 `console.cloud.google.com/projectcreate` →
-    동의 화면 `console.cloud.google.com/auth/overview` →
-    클라이언트 `console.cloud.google.com/auth/clients` →
-    테스트 사용자 `console.cloud.google.com/auth/audience`
-  - 앱이 "테스트" 상태인 동안에는 테스트 사용자에 등록된 계정만 로그인된다
-  - client ID/secret → Supabase → Authentication → Providers → Google
-- [ ] **Kakao** 개발자 앱 생성 — 아직. 지금은 로그인 화면에서 "곧 열려요"로 비활성이다 → Supabase → Providers → Kakao 활성화
-  - 버튼·로고·색은 이미 만들어져 있다 (`src/components/app/OAuthButton.tsx`)
-  - 켠 뒤 `src/lib/auth-providers.ts`에서 kakao의 `status`를
-    `"preparing"` → `"ready"` **한 단어만** 바꾸면 동작한다
-- [x] Supabase → Authentication → URL Configuration — **완료**
-  - `supabase/config.toml`에 적고 `npx supabase config push`로 반영했다. 대시보드에서 손으로 고치지 말 것 —
-    다음 push가 이 파일 값으로 되돌린다
-  - Site URL `https://ai-daeyeok.vercel.app` · Redirect URLs는 운영 + 프리뷰 와일드카드
-  - 로컬을 안 쓰기로 해서 `localhost` 줄은 넣지 않는다
+> **지켜볼 것 — 함수 게이트웨이 404.** 배포 직후부터, 같은 요청을 반복하면 40~60%가
+> `{"code":"NOT_FOUND"}`로 떨어진다. 나머지는 설계대로 401/400을 준다.
+> 404에는 `x-deno-execution-id`가 **없다** — 워커에 닿기 전에 게이트웨이가 끊는다는 뜻이라
+> 우리 코드 문제가 아니다. 재배포로도 안 바뀌었다.
+> 실제로 함수를 쓰기 시작할 때까지 안 풀리면 `sb-request-id`를 들고 Supabase 지원에 문의할 것.
 
-### 3. Vercel — 끝났다
+### B. 카카오 로그인
 
-프로젝트 **`ai-daeyeok`** (`jung2uns-projects`) · 운영 URL **https://ai-daeyeok.vercel.app**
+Google과 같은 자리에 붙인다. 버튼·로고·색은 이미 만들어져 있다 (`src/components/app/OAuthButton.tsx`).
 
-- [x] GitHub 레포 생성 — `Jung2un/ai-daeyeok-web` (private)
-- [x] Vercel에 Import — `vercel link`가 GitHub 레포까지 자동 연결했다. main에 push하면 배포된다
-- [x] Supabase 환경변수 두 개 등록 — Production / Preview / Development 전부
-- [x] 함수 리전 `icn1` — `vercel.json`
-- [x] 프로덕션 배포 완료. `/` → `/login`(307), `/dashboard` → `/login?next=/dashboard` 확인
-- [x] **실제 URL이 `ai-daeyeok.vercel.app`으로 잡혔다** — `site-url.ts`의 `PRODUCTION_URL`을 고칠 필요가 없었다
+- [ ] Kakao Developers에서 앱 생성 → 카카오 로그인 활성화
+- [ ] Redirect URI 등록 — 구글과 **같은 값** `https://alafyhejiaxukrkrmehh.supabase.co/auth/v1/callback`
+- [ ] 보안 메뉴에서 Client Secret 생성 + **사용함**으로 (Supabase가 secret을 요구한다)
+- [ ] Supabase → Authentication → Providers → Kakao 에 **REST API 키**와 Client Secret
+- [ ] `src/lib/auth-providers.ts`에서 kakao의 `status`를 `"preparing"` → `"ready"` (한 단어)
 
-### 4. Edge Function — 코드는 다 나왔다. fal 계정만 남았다
+> 걸리기 쉬운 곳: 동의항목. 닉네임은 기본으로 받지만 **이메일은 비즈 앱 전환이 필요할 수 있다.**
+> 이메일 동의를 필수로 걸어두면 심사 전에는 로그인이 막힌다. 선택으로 두거나 닉네임만으로 시작할 것.
 
-- [x] `create-character` — 2크레딧 차감 + `characters`/`character_refs` INSERT + fal 큐 등록
-- [x] `create-look` — 1크레딧 차감 + 프리셋 슬롯 검증 + `looks` INSERT + fal 큐 등록
-- [x] 변환 완료 웹훅 (`fal-webhook`) — 조건부 상태 전이, 결과를 우리 버킷으로, 실패 시 환불
-- [x] `WEBHOOK_SECRET` 시크릿 등록 — 웹훅 위조 방지 HMAC 키
-- [x] 세 함수 배포 완료 (`npx supabase functions deploy`)
-- [ ] `npx supabase secrets set FAL_KEY=... FAL_CHARACTER_MODEL=... FAL_LOOK_MODEL=...`
-      (**Vercel에 넣지 말 것.** 모델을 고르기 전에는 함수가 차감 전에 503으로 막는다)
+### C. 프리셋 썸네일 16장
 
-> **지켜볼 것 — 함수 게이트웨이 404.** 배포 직후, 같은 요청을 반복하면 절반쯤이
-> `{"code":"NOT_FOUND"}`로 떨어진다. 나머지 절반은 설계대로 401/400을 준다.
-> 404 응답에는 `x-deno-execution-id`가 없다 — 워커에 닿기도 전에 게이트웨이가 끊는다는 뜻이라
-> 우리 코드 문제가 아니다. 재배포로도 안 바뀌었다. 새 프로젝트의 함수 레지스트리가
-> 게이트웨이 인스턴스 사이에 덜 퍼진 것으로 보인다. 계속되면 Supabase 지원에 문의할 것.
+경로는 DB에 이미 적혀 있다. 같은 이름으로 올리면 SQL을 안 건드려도 붙는다.
 
-함수를 고칠 때 알아야 할 것들. 전부 코드에서 읽어낸 값이라 추측이 아니다.
+- [ ] `presets` 버킷에 `hair/1.jpg` … `scene/4.jpg` (머리·상의·하의·장소 각 4장)
+- `presets` 버킷에는 INSERT 정책이 없다 — 대시보드나 service_role로 올린다
+- 파일이 없는 동안에는 signed URL이 null이라 `PresetTile`이 이름만 그린다. 깨지지 않는다
 
-**호출 계약** — 화면이 이미 이 모양으로 부른다. 바꾸면 화면도 같이 고쳐야 한다.
+### D. 마감 (S9~S10)
 
-| 함수 | body | 응답 | 부르는 곳 |
-|---|---|---|---|
-| `create-character` | `{ name, refs: { front, left45, right45, left90, right90 } }` (값은 Storage 경로) | `{ character_id }` | `CharacterForm.tsx:98` |
-| `create-look` | `{ character_id, name, hair_preset_id, top_preset_id, bottom_preset_id, scene_preset_id }` | `{ look_id }` | `LookBuilder.tsx:78` |
-
-**크레딧 값** — 화면에 이미 박혀 있다. 함수도 같은 값을 써야 한다.
-
-| 행위 | 비용 | 원장 사유 | 화면 |
-|---|---|---|---|
-| 캐릭터 만들기 | **2** | `character_charge` | `CharacterForm.tsx:20` |
-| 룩 만들기 | **1** | `look_charge` | `LookBuilder.tsx:24` |
-| 영상 변환 | **1** | `job_charge` | 앱 쪽 |
-
-**차감은 SQL 함수로 한다. 이건 이미 만들어져 있고 DB에 올라가 있다.**
-`charge_credits(user_id, amount, reason, job_id, memo)` · `refund_credits(...)`
-— `supabase/migrations/20260916000004_credit_functions.sql`
-
-`update ... where credits >= ? returning credits` 한 문장으로 확인과 차감을 끝내고
-같은 트랜잭션에서 `credit_ledger`에 남긴다. **잔액이 모자라면 예외가 아니라 `null`을 돌려준다** —
-호출부가 문자열을 비교하지 않게 하려는 것이다. 실행 권한은 `service_role`에만 있다.
-
-**웹훅 멱등성.** fal이 같은 알림을 두 번 보낼 수 있다. 상태 전이를 조건부로 걸어
-(`update ... where status <> 'failed' returning id`) 행이 안 돌아오면 환불을 건너뛴다.
-`credit_ledger.job_id`는 `jobs`만 가리켜서 캐릭터·룩 환불은 이 방식으로 막아야 한다.
-
-**되돌아올 주소.** fal 콜백에 어느 행인지 실어야 한다. 스키마를 안 건드리려면
-웹훅 URL에 `?type=character&id=<uuid>&token=<HMAC>`을 달고 공유 시크릿으로 검증한다.
-
-**아직 못 정한 것 — fal.ai 모델 ID.** `docs/배포.md`에 영상용 Wan-Animate Replace만 있고,
-캐릭터(5각도 → 캐릭터 이미지)와 룩(프리셋 4슬롯 → 스타일 이미지)에 쓸 모델은 정해진 적이 없다.
-지어내지 말고 fal 콘솔에서 고른 뒤 `FAL_CHARACTER_MODEL` / `FAL_LOOK_MODEL` 시크릿으로 넣을 것.
-
-모델이 정해지면 **코드에서 고칠 곳은 두 군데뿐**이다.
-`create-character`의 `{ image_urls, prompt }`와 `create-look`의 `{ image_url, prompt }` —
-지금 값은 고른 모델의 입력 스키마에 맞춰야 한다. 그리고 응답 모양이 확정되면
-`_shared/fal.ts`의 `resultUrl()`이 여러 모양을 훑는 대신 그 모델의 모양 하나만 보게 줄인다.
-
-**에러 코드는 `src/lib/errors.ts`에 있는 것만 쓴다.** 화면이 그 코드만 사람 말로 바꾼다.
-없는 코드를 던지면 "문제가 생겼어요"라는 기본 문구로 떨어진다.
-`INSUFFICIENT_CREDITS` · `REF_INCOMPLETE` · `SESSION_EXPIRED` · `UPSTREAM_ERROR` 등.
-
-### 5. 마감 (S9~S10)
-
-- [~] 375px 가로 스크롤 — `/login`과 `/kitchen-sink`는 실제 브라우저에서 확인했다
-      (둘 다 `scrollWidth === clientWidth === 375`). kitchen-sink의 표는 `min-w-[520px]`이지만
-      자체 스크롤 컨테이너 안이라 페이지는 안 밀린다. **로그인 후 화면은 아직 못 봄**
+- [ ] **로그인 후 화면들을 실제로 돌아보기** — 대시보드·캐릭터·룩·작업물·크레딧·설정
+- [ ] 375px — `/login`과 `/kitchen-sink`는 확인했다(둘 다 `scrollWidth === clientWidth === 375`).
+      **로그인 후 화면은 아직 못 봄**
 - [ ] 크레딧 0인 계정으로 전 화면 돌아보기
-- [ ] job을 일부러 실패시켜 에러 문구가 사람 말로 나오는지 확인
+- [ ] job을 일부러 실패시켜 에러 문구가 사람 말로 나오는지 확인 (fal이 붙은 뒤에 된다)
 - [ ] 커스텀 도메인 + Google 동의 화면 프로덕션 게시
 - [ ] 결제 켜기 전에 **Vercel Pro 전환** (Hobby는 비상업용 전용)
 
@@ -148,15 +87,79 @@ CLI는 레포에 devDependency로 들어 있다. 전역 설치 필요 없이 `np
 
 ---
 
+## 끝난 것 — 2026-09-16
+
+다시 안 해도 되는 것들. 값이 필요하면 여기서 찾는다.
+
+**Supabase** — 프로젝트 `ai-web` · ref `alafyhejiaxukrkrmehh` · 리전 `ap-northeast-2`(서울) · 조직 `Jung2un`
+
+- CLI가 레포에 devDependency로 들어 있다. 전역 설치 없이 `npx supabase …`. link는 걸려 있다
+- 마이그레이션 4개 적용 — `init` · `ledger_reasons` · `presets_seed` · `credit_functions`
+- `src/types/database.ts`는 이제 진짜 생성물이다 (`gen types typescript --linked`). 손으로 고치지 않는다
+- 프리셋 16종 시드 완료. id 고정이라 환경 사이에서 참조가 유지된다
+- `charge_credits` / `refund_credits` — 확인과 차감이 SQL 한 문장. 잔액 부족은 예외가 아니라 `null`.
+  실행 권한은 `service_role`에만
+- API 키가 필요하면 `npx supabase projects api-keys --project-ref alafyhejiaxukrkrmehh`
+
+**인증** — Google만 켜져 있다 (`/auth/v1/settings`에서 external.google만 true, email은 false)
+
+- Google 승인된 리디렉션 URI는 `https://alafyhejiaxukrkrmehh.supabase.co/auth/v1/callback` 하나
+- 동의 화면은 아직 "테스트" 상태다. 등록된 테스트 사용자만 로그인된다
+- **Site URL·Redirect URLs는 `supabase/config.toml`이 원본이다.** 대시보드에서 손으로 고치지 말 것 —
+  다음 `npx supabase config push`가 이 파일 값으로 되돌린다.
+  무관한 값들은 원격 현재 값에 맞춰 놨으니, 새 값을 바꿀 때는 `config diff`로 먼저 볼 것
+
+**Vercel** — 프로젝트 `ai-daeyeok` (`jung2uns-projects`) · https://ai-daeyeok.vercel.app
+
+- GitHub 레포가 연결돼 있다. `main`에 push하면 배포된다
+- `NEXT_PUBLIC_SUPABASE_URL` · `NEXT_PUBLIC_SUPABASE_ANON_KEY`가 Production/Preview/Development 전부에
+- 함수 리전 `icn1` (`vercel.json`)
+- 운영 URL이 `ai-daeyeok.vercel.app`으로 잡혀서 `site-url.ts`의 `PRODUCTION_URL`을 고칠 일이 없었다
+
+**Edge Function** — 셋 다 배포됨
+
+| 함수 | 하는 일 | JWT |
+|---|---|---|
+| `create-character` | 2크레딧 · 5각도 검증 · `characters`+`character_refs` INSERT · fal 큐 | 검증함 |
+| `create-look` | 1크레딧 · 프리셋 슬롯 검증 · `looks` INSERT · fal 큐 | 검증함 |
+| `fal-webhook` | 조건부 상태 전이 · 결과를 우리 버킷으로 · 실패 시 환불 | **끔** (HMAC로 대신) |
+
+- 실패 순서를 맞춰 뒀다. 입력 검증 → fal 설정 확인 → 차감 → INSERT → 큐 등록이고,
+  어디서 깨지든 앞에서 깎은 크레딧을 되돌린다
+- 웹훅 멱등성은 `status in ('queued','processing')` 조건부 전이로 잡는다.
+  행이 안 돌아오면 이미 처리된 것이라 환불을 건너뛴다
+- `WEBHOOK_SECRET` 시크릿 등록됨
+- **에러 코드는 `src/lib/errors.ts`에 있는 것만 쓴다.** 없는 코드를 던지면 "문제가 생겼어요"로 떨어진다
+- `src/lib/supabase/functions.ts`의 `invokeFunction`을 거쳐 부른다.
+  `functions.invoke`를 직접 쓰면 본문의 에러 코드가 화면에 닿지 않는다
+
+**호출 계약** — 화면이 이 모양으로 부른다. 바꾸면 화면도 같이 고쳐야 한다.
+
+| 함수 | body | 응답 |
+|---|---|---|
+| `create-character` | `{ name, refs: { front, left45, right45, left90, right90 } }` (값은 Storage 경로) | `{ character_id }` |
+| `create-look` | `{ character_id, name, hair_preset_id, top_preset_id, bottom_preset_id, scene_preset_id }` | `{ look_id }` |
+
+**크레딧 값** — 화면에 박혀 있다. 함수도 같은 값을 쓴다.
+
+| 행위 | 비용 | 원장 사유 |
+|---|---|---|
+| 캐릭터 만들기 | 2 | `character_charge` / `character_refund` |
+| 룩 만들기 | 1 | `look_charge` / `look_refund` |
+| 영상 변환 | 1 | `job_charge` / `job_refund` |
+
+
 ## 없는 문서
 
-`CLAUDE.md`·`DESIGN.md`·이 파일이 참조하는데 **실제로는 없는** 파일이 둘 있다.
+이 문서가 참조하는데 **실제로는 없는** 파일이 둘 있다.
 
 | 파일 | 원래 내용 | 지금 |
 |---|---|---|
 | `docs/기획서.md` | 화면·데이터 모델·RLS | 없음. README의 S0~S10 + CLAUDE.md 9규칙 + DESIGN.md 컴포넌트 명세에서 복원해 만들었다 |
 | `docs/claude-code-프롬프트.md` | S0~S10 붙여넣기용 | 없음. S0~S9는 이미 만들어져서 당장은 필요 없다 |
-| ~~`CLAUDE.md`의 9규칙~~ | 아키텍처 규칙 1~9 | **복원했다.** 코드 주석 열 곳이 가리키던 자리에서 되살렸다 |
+
+`CLAUDE.md`의 9규칙은 **복원했다.** 코드 주석 열 곳이 가리키던 자리에서 되살린 것이라
+번호를 바꾸면 주석이 어긋난다.
 
 원본이 남아 있으면 넣어두는 게 좋다. 데이터 모델이 기획서와 다르면 마이그레이션부터 어긋난다.
 
@@ -236,14 +239,14 @@ Supabase 환경변수가 비어 있으면 데이터 레이어가 **타입만 같
 | S0 | 프로젝트 초기화 | 빈 Next 앱이 뜬다 | 완료 |
 | S1 | **디자인 토큰** | `/kitchen-sink`가 Lovable 톤으로 보인다 | 완료 |
 | S2 | Supabase 스키마 + RLS | 마이그레이션이 돌고 타입이 생성된다 | 완료 — push·타입 생성까지 |
-| S3 | 인증 (Google OAuth) | 구글 계정으로 로그인된다 | 코드 완료 · **공급자 설정 아직** |
+| S3 | 인증 (Google OAuth) | 구글 계정으로 로그인된다 | 완료 · 카카오만 남음 |
 | S4 | 앱 셸 + 빈 대시보드 | 사이드바와 온보딩 화면 | 완료 |
-| S5 | 캐릭터 | 목록·생성·상세 | 화면 완료 · **생성은 Edge Function 필요** |
-| S6 | 룩 | 프리셋 4슬롯 선택과 채택 | 화면 완료 · **생성은 Edge Function 필요** |
+| S5 | 캐릭터 | 목록·생성·상세 | 완료 · **생성은 fal 모델 대기** |
+| S6 | 룩 | 프리셋 4슬롯 선택과 채택 | 완료 · **생성은 fal 모델 대기** |
 | S7 | 작업물 | 목록·상세·Realtime 상태 갱신 | 완료 |
-| S8 | 크레딧 + Edge Function | 실제 차감이 일어난다 | 화면·원장 완료 · **함수 아직** |
-| S9 | 마감 | 빈 상태·에러·모바일·접근성 | 빈 상태·에러 완료 · **375px 미확인** |
-| S10 | 배포 정리 | 운영 도메인에서 전부 돈다 | 배포는 떴다 · **로그인은 OAuth 대기** |
+| S8 | 크레딧 + Edge Function | 실제 차감이 일어난다 | 완료 — 함수 배포까지 |
+| S9 | 마감 | 빈 상태·에러·모바일·접근성 | **로그인 후 화면 확인이 남음** |
+| S10 | 배포 정리 | 운영 도메인에서 전부 돈다 | 배포·로그인 됨 · 커스텀 도메인은 나중 |
 
 **S1이 끝나기 전에는 화면을 만들지 않는다.** 토큰이 자리잡기 전에 화면이 생기면 나중에 전부 다시 칠하게 된다.
 
