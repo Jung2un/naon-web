@@ -25,7 +25,8 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
             onClick={onNavigate}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "flex items-center gap-2.5 rounded-[6px] px-3 py-2 text-sm transition-colors duration-150 ease-out",
+              // 터치 대상 최소 44px — DESIGN.md §6
+              "flex min-h-11 items-center gap-2.5 rounded-[6px] px-3 py-2 text-sm transition-colors duration-150 ease-out",
               active
                 ? "bg-hover text-ink"
                 : "text-muted hover:bg-hover hover:text-ink",
