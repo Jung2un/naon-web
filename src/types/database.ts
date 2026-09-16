@@ -39,6 +39,92 @@ export type Database = {
   }
   public: {
     Tables: {
+      character_images: {
+        Row: {
+          angle: Database["public"]["Enums"]["ref_angle"] | null
+          character_id: string
+          created_at: string
+          error_code: string | null
+          id: string
+          image_path: string | null
+          kind: Database["public"]["Enums"]["character_image_kind"]
+          round: number
+          source_image_path: string | null
+          status: Database["public"]["Enums"]["job_status"]
+          traits: Json
+          updated_at: string
+        }
+        Insert: {
+          angle?: Database["public"]["Enums"]["ref_angle"] | null
+          character_id: string
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          image_path?: string | null
+          kind: Database["public"]["Enums"]["character_image_kind"]
+          round?: number
+          source_image_path?: string | null
+          status?: Database["public"]["Enums"]["job_status"]
+          traits?: Json
+          updated_at?: string
+        }
+        Update: {
+          angle?: Database["public"]["Enums"]["ref_angle"] | null
+          character_id?: string
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          image_path?: string | null
+          kind?: Database["public"]["Enums"]["character_image_kind"]
+          round?: number
+          source_image_path?: string | null
+          status?: Database["public"]["Enums"]["job_status"]
+          traits?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "character_images_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      character_options: {
+        Row: {
+          description: string | null
+          id: string
+          is_active: boolean
+          kind: Database["public"]["Enums"]["character_option_kind"]
+          name: string
+          prompt: string
+          sort_order: number
+          thumbnail_path: string | null
+        }
+        Insert: {
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          kind: Database["public"]["Enums"]["character_option_kind"]
+          name: string
+          prompt: string
+          sort_order?: number
+          thumbnail_path?: string | null
+        }
+        Update: {
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          kind?: Database["public"]["Enums"]["character_option_kind"]
+          name?: string
+          prompt?: string
+          sort_order?: number
+          thumbnail_path?: string | null
+        }
+        Relationships: []
+      }
       character_refs: {
         Row: {
           angle: Database["public"]["Enums"]["ref_angle"]
@@ -73,36 +159,56 @@ export type Database = {
       }
       characters: {
         Row: {
+          base_image_path: string | null
           created_at: string
           error_code: string | null
           id: string
           name: string
+          stage: Database["public"]["Enums"]["character_stage"]
           status: Database["public"]["Enums"]["job_status"]
           thumbnail_path: string | null
+          tone_id: string | null
+          traits: Json
           updated_at: string
           user_id: string
         }
         Insert: {
+          base_image_path?: string | null
           created_at?: string
           error_code?: string | null
           id?: string
           name: string
+          stage?: Database["public"]["Enums"]["character_stage"]
           status?: Database["public"]["Enums"]["job_status"]
           thumbnail_path?: string | null
+          tone_id?: string | null
+          traits?: Json
           updated_at?: string
           user_id: string
         }
         Update: {
+          base_image_path?: string | null
           created_at?: string
           error_code?: string | null
           id?: string
           name?: string
+          stage?: Database["public"]["Enums"]["character_stage"]
           status?: Database["public"]["Enums"]["job_status"]
           thumbnail_path?: string | null
+          tone_id?: string | null
+          traits?: Json
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "characters_tone_id_fkey"
+            columns: ["tone_id"]
+            isOneToOne: false
+            referencedRelation: "character_options"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       credit_ledger: {
         Row: {
@@ -370,6 +476,14 @@ export type Database = {
         }
         Returns: number
       }
+      finish_character_batch: {
+        Args: {
+          p_character_id: string
+          p_kind: Database["public"]["Enums"]["character_image_kind"]
+          p_round: number
+        }
+        Returns: string
+      }
       refund_credits: {
         Args: {
           p_amount: number
@@ -380,8 +494,22 @@ export type Database = {
         }
         Returns: number
       }
+      select_character_image: {
+        Args: { p_character_id: string; p_image_id: string }
+        Returns: string
+      }
     }
     Enums: {
+      character_image_kind: "candidate" | "refined" | "view"
+      character_option_kind:
+        | "tone"
+        | "gender"
+        | "age"
+        | "hair"
+        | "hair_color"
+        | "body"
+        | "vibe"
+      character_stage: "draft" | "refining" | "building" | "ready"
       job_status: "queued" | "processing" | "done" | "failed"
       ledger_reason:
         | "signup_bonus"
@@ -393,6 +521,10 @@ export type Database = {
         | "character_refund"
         | "look_charge"
         | "look_refund"
+        | "character_draft_charge"
+        | "character_draft_refund"
+        | "character_edit_charge"
+        | "character_edit_refund"
       preset_slot: "hair" | "top" | "bottom" | "scene"
       ref_angle: "front" | "left45" | "right45" | "left90" | "right90"
     }
@@ -525,6 +657,17 @@ export const Constants = {
   },
   public: {
     Enums: {
+      character_image_kind: ["candidate", "refined", "view"],
+      character_option_kind: [
+        "tone",
+        "gender",
+        "age",
+        "hair",
+        "hair_color",
+        "body",
+        "vibe",
+      ],
+      character_stage: ["draft", "refining", "building", "ready"],
       job_status: ["queued", "processing", "done", "failed"],
       ledger_reason: [
         "signup_bonus",
@@ -536,6 +679,10 @@ export const Constants = {
         "character_refund",
         "look_charge",
         "look_refund",
+        "character_draft_charge",
+        "character_draft_refund",
+        "character_edit_charge",
+        "character_edit_refund",
       ],
       preset_slot: ["hair", "top", "bottom", "scene"],
       ref_angle: ["front", "left45", "right45", "left90", "right90"],
