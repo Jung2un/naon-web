@@ -1,0 +1,51 @@
+import type { Metadata } from "next";
+import { Shirt } from "lucide-react";
+import { PageHeader } from "@/components/app/PageHeader";
+import { LookBuilder } from "@/components/app/LookBuilder";
+import { EmptyState } from "@/components/app/EmptyState";
+import { getCharacters, getPresets } from "@/lib/data/queries";
+
+export const metadata: Metadata = { title: "룩 만들기" };
+
+export default async function NewLookPage({
+  searchParams,
+}: PageProps<"/looks/new">) {
+  const [params, characters, presets] = await Promise.all([
+    searchParams,
+    getCharacters(),
+    getPresets(),
+  ]);
+
+  const usable = characters.filter((c) => c.status === "done");
+
+  if (usable.length === 0) {
+    return (
+      <>
+        <PageHeader title="룩 만들기" back={{ href: "/looks", label: "룩" }} />
+        <EmptyState
+          icon={Shirt}
+          title="쓸 수 있는 캐릭터가 없어요"
+          description="룩은 완성된 캐릭터 위에만 입힐 수 있어요. 캐릭터가 만들어지면 여기로 돌아와 주세요."
+          action={{ label: "캐릭터 만들기", href: "/characters/new" }}
+        />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <PageHeader
+        title="룩 만들기"
+        description="머리·상의·하의·장소를 하나씩 고르면 돼요."
+        back={{ href: "/looks", label: "룩" }}
+      />
+      <LookBuilder
+        presets={presets}
+        characters={characters}
+        defaultCharacterId={
+          typeof params.character === "string" ? params.character : undefined
+        }
+      />
+    </>
+  );
+}
