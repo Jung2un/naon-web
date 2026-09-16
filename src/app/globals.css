@@ -1,0 +1,207 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------
+   AI 대역 — 디자인 토큰
+   전문은 DESIGN.md. 여기 없는 색을 컴포넌트에서 새로 만들지 않는다.
+------------------------------------------------------------------- */
+
+@theme {
+  /* 바탕 */
+  --color-cream: #f7f4ed;
+  --color-sunken: #f0eee7;
+
+  /* 글자 */
+  --color-ink: #1c1c1c;
+  --color-body: rgba(28, 28, 28, 0.82);
+  --color-muted: #5f5f5d;
+  --color-on-dark: #fcfbf8;
+
+  /* 선 */
+  --color-line: #eceae4;
+  --color-line-strong: rgba(28, 28, 28, 0.4);
+
+  /* 표면 상호작용 */
+  --color-hover: rgba(28, 28, 28, 0.04);
+  --color-faint: rgba(28, 28, 28, 0.03);
+  /* 입력 포커스 링. 드래그 선택(0.12)과 같은 차콜 계열로 톤을 맞춘다. */
+  --color-ring-subtle: rgba(28, 28, 28, 0.1);
+
+  /* 상태 — DESIGN.md §4 */
+  --color-danger: #b3261e;
+  --color-danger-bg: rgba(179, 38, 30, 0.06);
+  --color-danger-line: rgba(179, 38, 30, 0.25);
+
+  /* 오버레이 */
+  --color-scrim: rgba(28, 28, 28, 0.32);
+
+  /* 깊이 */
+  --shadow-inset:
+    rgba(255, 255, 255, 0.2) 0px 0.5px 0px 0px inset,
+    rgba(0, 0, 0, 0.2) 0px 0px 0px 0.5px inset,
+    rgba(0, 0, 0, 0.05) 0px 1px 2px 0px;
+  --shadow-focus: rgba(0, 0, 0, 0.1) 0px 4px 12px;
+  --shadow-overlay: rgba(28, 28, 28, 0.12) 0px 8px 32px;
+
+  /* 라운드 */
+  --radius-micro: 4px;
+  --radius-standard: 6px;
+  --radius-compact: 8px;
+  --radius-card: 12px;
+  --radius-container: 16px;
+
+  /* 폰트 */
+  --font-sans:
+    "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
+    system-ui, sans-serif;
+  --font-display:
+    var(--font-figtree), "Pretendard Variable", Pretendard, system-ui,
+    sans-serif;
+
+  /* 타이포 스케일 — DESIGN.md §3 */
+  --text-title: 30px;
+  --text-title--line-height: 1.15;
+  --text-title--letter-spacing: -0.6px;
+
+  --text-section: 20px;
+  --text-section--line-height: 1.25;
+  --text-section--letter-spacing: -0.3px;
+
+  --text-card: 16px;
+  --text-card--line-height: 1.35;
+
+  --text-base: 15px;
+  --text-base--line-height: 1.55;
+
+  --text-sm: 14px;
+  --text-sm--line-height: 1.5;
+
+  --text-caption: 13px;
+  --text-caption--line-height: 1.45;
+
+  --text-badge: 12px;
+  --text-badge--line-height: 1.4;
+
+  --text-label: 11px;
+  --text-label--line-height: 1.4;
+  --text-label--letter-spacing: 0.08em;
+  --text-label--font-weight: 600;
+
+  --text-metric: 36px;
+  --text-metric--line-height: 1;
+  --text-metric--letter-spacing: -0.8px;
+
+  --text-metric-sm: 20px;
+  --text-metric-sm--line-height: 1.1;
+  --text-metric-sm--letter-spacing: -0.3px;
+
+  /* 레이아웃 */
+  --container-content: 1200px;
+  --spacing-sidebar: 240px;
+
+  /* 모션 */
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+}
+
+@layer base {
+  html {
+    background-color: var(--color-cream);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-cream);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: 1.55;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* 웨이트는 400과 600 둘뿐. 브라우저 기본 bold(700)를 눌러둔다. */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  th,
+  strong,
+  b {
+    font-weight: 600;
+    text-wrap: balance;
+  }
+
+  ::selection {
+    background-color: rgba(28, 28, 28, 0.12);
+  }
+
+  /* 날카로운 기본 아웃라인 대신 소프트 섀도 — DESIGN.md §9 */
+  :focus-visible {
+    outline: 2px solid rgba(59, 130, 246, 0.5);
+    outline-offset: 2px;
+    box-shadow: var(--shadow-focus);
+  }
+
+  input,
+  textarea,
+  select,
+  button {
+    font: inherit;
+    color: inherit;
+  }
+}
+
+@layer utilities {
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .skeleton {
+    background-color: var(--color-faint);
+    animation: aisp-pulse 1.4s ease-in-out infinite;
+  }
+
+  /* 처리 중 스피너. reduced-motion에서는 회전 대신 투명도 펄스로 바꾼다. */
+  .motion-spin {
+    animation: aisp-spin 800ms linear infinite;
+  }
+}
+
+@keyframes aisp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes aisp-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/*
+  reduced-motion에서 모든 transition/animation을 끈다.
+  단 "처리 중"은 진행 신호가 필요하므로 data-motion="keep"으로 예외를 두고
+  회전 대신 느린 투명도 펄스로 대체한다. — DESIGN.md §7
+*/
+@media (prefers-reduced-motion: reduce) {
+  *:not([data-motion="keep"]),
+  *:not([data-motion="keep"])::before,
+  *:not([data-motion="keep"])::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .motion-spin {
+    animation: aisp-pulse 1.6s ease-in-out infinite !important;
+    transform: none !important;
+  }
+}
