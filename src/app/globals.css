@@ -103,6 +103,21 @@
 }
 
 @layer base {
+  :root {
+    /*
+      모바일 하단 탭이 차지하는 높이. 탭 줄 56px + 홈 인디케이터 안전영역.
+      본문 아래 여백과 하단 고정 바(SummaryBar)가 이 값만큼 비켜간다.
+      1024px 이상에서는 탭이 없으므로 0으로 돌린다.
+    */
+    --bottom-nav-h: calc(3.5rem + env(safe-area-inset-bottom));
+  }
+
+  @media (min-width: 1024px) {
+    :root {
+      --bottom-nav-h: 0px;
+    }
+  }
+
   html {
     background-color: var(--color-cream);
     -webkit-text-size-adjust: 100%;

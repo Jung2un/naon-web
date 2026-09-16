@@ -14,7 +14,7 @@ export function AccountMenu({
     <div className="border-t border-line pt-3">
       <Link
         href="/credits"
-        className="flex items-center justify-between rounded-[6px] px-3 py-2 transition-colors duration-150 ease-out hover:bg-hover"
+        className="flex items-center justify-between min-h-11 rounded-[6px] px-3 py-2 transition-colors duration-150 ease-out hover:bg-hover"
       >
         <span className="min-w-0 truncate text-sm text-ink">{name}</span>
         <span className="ml-2 shrink-0 text-caption tabular text-muted">
@@ -25,7 +25,7 @@ export function AccountMenu({
       <form action="/auth/signout" method="post">
         <button
           type="submit"
-          className="flex w-full items-center gap-2.5 rounded-[6px] px-3 py-2 text-sm text-muted transition-colors duration-150 ease-out hover:bg-hover hover:text-ink"
+          className="flex w-full items-center gap-2.5 min-h-11 rounded-[6px] px-3 py-2 text-sm text-muted transition-colors duration-150 ease-out hover:bg-hover hover:text-ink"
         >
           <LogOut className="size-4 shrink-0" strokeWidth={1.75} aria-hidden />
           로그아웃
