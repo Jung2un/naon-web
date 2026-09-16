@@ -1,22 +1,23 @@
 # AI 대역 — 웹 관리 화면
 
 내 대신 연기하는 AI 캐릭터 앱의 **웹 관리 화면**.
-2026-09-16 · 솔로 개발
+2026-09-17 · 솔로 개발
 
 ---
 
 ## TODO — 남은 것
 
-2026-09-16에 계정 세팅(Supabase · Google OAuth · Vercel)과 Edge Function을 끝냈다.
+2026-09-16에 계정 세팅(Supabase · Google OAuth · Vercel)과 Edge Function을 끝냈고,
+2026-09-17에 **캐릭터 스튜디오**와 **이미지 모델 전환(fal → Gemini)**을 올렸다.
 **끝난 내용은 이 문서 아래 "끝난 것"에 있다.** 여기는 아직 안 된 것만 둔다.
 
 | 막는 것 | 누가 | 없으면 |
 |---|---|---|
-| **Gemini API 키** | 결제가 붙은 키가 필요하다 | 캐릭터·룩 만들기가 503에서 멈춘다 |
+| **Gemini API 키 + 결제 연결** | 계정 작업 | **지금 유일하게 막는 것.** 캐릭터·룩 만들기가 503에서 멈춘다 |
 | 카카오 개발자 앱 | 계정 작업 | 로그인 화면에서 "곧 열려요"로 비활성 |
-| 프리셋 썸네일 16장 + 톤 6장 | 이미지가 필요하다 | 프리셋·톤이 이름만 나온다 |
+| 프리셋 16장 + 톤 6장 | 키가 생기면 같은 API로 뽑는다 | 타일이 이름만 나온다 (깨지지는 않는다) |
 
-### A. 모델 — **이미지는 Gemini, 영상은 fal. 지금 막는 건 Gemini 키다**
+### A. Gemini 키 — **코드는 다 붙었다. 키만 넣으면 돈다**
 
 캐릭터 후보·수정·3방향·룩은 전부 **Gemini 이미지 모델 하나**가 만든다.
 얼굴을 유지한 채 고치는 게 이 모델의 대표 기능이고, 그게 3·4단계의 전부다.
@@ -33,13 +34,26 @@
 npx supabase secrets set GEMINI_API_KEY=... GEMINI_IMAGE_MODEL=gemini-3.1-flash-lite-image
 ```
 
-**품질을 올리는 손잡이는 `GEMINI_IMAGE_MODEL` 한 줄이다.** 시크릿만 바꾸고 재배포하면 끝이다.
+**품질을 올리는 손잡이는 `GEMINI_IMAGE_MODEL` 한 줄이다.** 시크릿만 바꾸고 재배포하면 끝이고,
+코드는 하나도 안 바뀐다. 싼 걸로 돌려보고 아쉬우면 올린다.
 
 | 모델 | 장당 | 캐릭터 하나(8장) |
 |---|---|---|
 | `gemini-3.1-flash-lite-image` | $0.0168 | 약 200원 |
 | `gemini-3.1-flash-image` | $0.034 | 약 400원 |
 | `gemini-3-pro-image` | $0.067 | 약 800원 |
+
+#### 키를 넣고 **첫 한 판**에서 확인할 것
+
+아직 아무도 실제 응답을 못 봤다. 아래는 한 번 돌려보면 전부 드러난다.
+실패해도 **크레딧은 환불되고** 응답 본문이 로그에 찍힌다 (`npx supabase functions logs draft-character`).
+
+- [ ] 응답 JSON 모양 — `_shared/gemini.ts`의 파서가 지금 두 모양을 훑는다. **실제 모양 하나로 줄일 것**
+- [ ] `aspect_ratio: "3:4"` · `image_size: "1K"`를 그 모델이 받아주는지 (거절하면 UPSTREAM_ERROR)
+- [ ] 좌45·우45가 화면에서 보는 방향과 맞는지. 뒤집혔으면 `_shared/prompt.ts` 문구로 잡는다
+- [ ] 안전 필터에 걸리는 톤·속성 조합이 있는지 (`CONTENT_BLOCKED` 문구가 나오는지)
+- [ ] 배경 작업이 후보 4장을 끝까지 채우는지 (Edge Function 실행 시간 안에 들어오는지)
+- [ ] 다듬기 → 되돌리기 → 다시 뽑기 → 완성까지 한 바퀴
 
 **fal은 영상에만 남는다.** 영상에서 사람을 캐릭터로 갈아끼우는 **Wan-Animate Replace**는
 무료로도 Gemini로도 대체할 게 없다. 앱이 큐에 넣고 `fal-webhook`이 결과를 받는다.
@@ -58,9 +72,6 @@ npx supabase secrets set GEMINI_API_KEY=... GEMINI_IMAGE_MODEL=gemini-3.1-flash-
 | `_shared/prompt.ts` | 조각을 잇는 규칙 — 수정 지시문, 각도 문구, 룩 문구 |
 | `GEMINI_IMAGE_MODEL` (시크릿) | 모델 자체를 올린다 |
 
-`_shared/gemini.ts`의 응답 파서는 지금 두 가지 응답 모양을 훑는다.
-실제 응답을 한 번 보고 나면 그 모양 하나만 남기고 줄일 것.
-
 ### B. 카카오 로그인
 
 Google과 같은 자리에 붙인다. 버튼·로고·색은 이미 만들어져 있다 (`src/components/app/OAuthButton.tsx`).
@@ -74,13 +85,15 @@ Google과 같은 자리에 붙인다. 버튼·로고·색은 이미 만들어져
 > 걸리기 쉬운 곳: 동의항목. 닉네임은 기본으로 받지만 **이메일은 비즈 앱 전환이 필요할 수 있다.**
 > 이메일 동의를 필수로 걸어두면 심사 전에는 로그인이 막힌다. 선택으로 두거나 닉네임만으로 시작할 것.
 
-### C. 프리셋 썸네일 16장
+### C. 썸네일 22장 — 프리셋 16 + 톤 6
 
 경로는 DB에 이미 적혀 있다. 같은 이름으로 올리면 SQL을 안 건드려도 붙는다.
+**A의 키가 생기면 같은 API로 뽑아서 올리면 된다** (22장이면 400원쯤).
 
 - [ ] `presets` 버킷에 `hair/1.jpg` … `scene/4.jpg` (머리·상의·하의·장소 각 4장)
+- [ ] `presets` 버킷에 `tone/1.jpg` … `tone/6.jpg` (실사·시네마틱·화보·일상 스냅·애니·3D)
 - `presets` 버킷에는 INSERT 정책이 없다 — 대시보드나 service_role로 올린다
-- 파일이 없는 동안에는 signed URL이 null이라 `PresetTile`이 이름만 그린다. 깨지지 않는다
+- 파일이 없는 동안에는 signed URL이 null이라 `PresetTile`·`ToneTile`이 이름만 그린다. 깨지지 않는다
 
 ### D. 마감 (S9~S10)
 
@@ -91,23 +104,25 @@ Google과 같은 자리에 붙인다. 버튼·로고·색은 이미 만들어져
       모든 라우트가 `scrollWidth === clientWidth === 375`다.
       `/credits`·`/kitchen-sink`의 표는 `min-w-[520px]`로 545px까지 뻗지만
       자체 스크롤 컨테이너 안이라 페이지는 안 밀린다 — 의도된 패턴
-- [ ] 프리셋 그리드는 아직 눈으로 못 봤다. `/looks/new`가 "쓸 수 있는 캐릭터가 없어요"에서 멈춰서
-      `PresetTile` 16개가 그려지는 화면까지 못 간다. **캐릭터가 하나 생겨야 볼 수 있다 → fal 대기**
+- [ ] **스튜디오 화면은 아직 눈으로 못 봤다.** 후보 그리드·버전 스트립·3방향 진행이
+      실제로 그려지는 걸 못 본 상태다 — **키가 있어야 첫 캐릭터가 생긴다 → A번 대기**
+- [ ] 프리셋 그리드도 같은 이유로 못 봤다. `/looks/new`가 "쓸 수 있는 캐릭터가 없어요"에서 멈춘다
 - [ ] 크레딧 0인 계정으로 전 화면 돌아보기
-- [ ] 생성을 일부러 실패시켜 에러 문구가 사람 말로 나오는지 확인 (키가 붙은 뒤에 된다)
+- [ ] 생성을 일부러 실패시켜 에러 문구가 사람 말로 나오는지 확인 (A번 뒤에 된다)
 - [ ] 커스텀 도메인 + Google 동의 화면 프로덕션 게시
 - [ ] 결제 켜기 전에 **Vercel Pro 전환** (Hobby는 비상업용 전용)
 
-### E. 캐릭터 스튜디오 — **올라갔다. fal 모델만 기다린다**
+### E. 캐릭터 스튜디오 — **올라갔다**
 
 `docs/기획서.md`대로 캐릭터 만들기를 다시 지었다(톤 → 후보 4장 → 다듬기 → 3방향).
+2026-09-17 기준 코드·스키마·함수가 전부 운영에 올라가 있고, 남은 건 A번 키뿐이다.
 
 - [x] 마이그레이션 3개 push — `character_ledger_reasons` · `character_studio` · `character_options_seed`
 - [x] 타입 재생성. `tsc` · `lint` · `build` 전부 통과
-- [x] 함수 5개 배포. 넷 다 게이트웨이에서 401로 답한다 (404 없음)
-- [ ] `create-character` 원격 함수 삭제 — 코드는 지웠는데 배포본이 남아 있다
-      (`npx supabase functions delete create-character`)
-- [ ] 톤 썸네일 6장 (`presets` 버킷 `tone/1.jpg` … `tone/6.jpg`) — 없으면 이름만 나온다
+- [x] 함수 5개 배포 — `draft` · `refine` · `build-character` · `create-look` · `fal-webhook`
+- [x] `create-character` 원격 함수 삭제 (옛 5각도 계약)
+- [x] 이미지 공급자 전환 — fal 큐·웹훅 → Gemini 동기 호출 + 배경 작업.
+      행 구조·`finish_character_batch`·환불·Realtime은 그대로다
 
 > 시드에서 한 번 걸렸다. 속성 35행에 `thumbnail_path` 자리를 빠뜨려서 값이 6개라
 > `VALUES lists must all be the same length`로 떨어졌다. 0005·0006은 이미 적용된 뒤였고
@@ -117,10 +132,11 @@ Google과 같은 자리에 붙인다. 버튼·로고·색은 이미 만들어져
 
 - [ ] 결제 (토스/Stripe) — S10 이후 별도
 - [ ] 파일 1GB / egress 5GB 근접하면 Supabase Pro, 그 뒤 `videos`만 R2로
+- [ ] 룩 지시문이 프리셋 **한글 이름**을 그대로 싣는다. 흔들리면 `presets`에도 `prompt` 열을 더한다
 
 ---
 
-## 끝난 것 — 2026-09-16
+## 끝난 것 — 2026-09-16 · 09-17
 
 다시 안 해도 되는 것들. 값이 필요하면 여기서 찾는다.
 
@@ -135,6 +151,14 @@ Google과 같은 자리에 붙인다. 버튼·로고·색은 이미 만들어져
 - `charge_credits` / `refund_credits` — 확인과 차감이 SQL 한 문장. 잔액 부족은 예외가 아니라 `null`.
   실행 권한은 `service_role`에만
 - API 키가 필요하면 `npx supabase projects api-keys --project-ref alafyhejiaxukrkrmehh`
+
+**이미지 생성** — 2026-09-17에 fal에서 Gemini로 옮겼다
+
+- 캐릭터(후보·수정·3방향)와 룩 이미지는 전부 Gemini 이미지 모델 하나가 만든다
+- **큐도 웹훅도 없다.** 함수는 행만 만들고 `EdgeRuntime.waitUntil`로 배경에서 채운다 —
+  `_shared/gemini.ts`(호출·파싱) · `_shared/batch.ts`(배치 한 판)
+- `_shared/fal.ts`는 웹훅 확인과 결과 URL 꺼내기만 남았다. 영상 전용이다
+- 필요한 시크릿은 `GEMINI_API_KEY` · `GEMINI_IMAGE_MODEL` 둘 (**아직 안 넣었다 — TODO A번**)
 
 **인증** — Google만 켜져 있다 (`/auth/v1/settings`에서 external.google만 true, email은 false)
 
@@ -283,8 +307,8 @@ Supabase 환경변수가 비어 있으면 데이터 레이어가 **타입만 같
 | S2 | Supabase 스키마 + RLS | 마이그레이션이 돌고 타입이 생성된다 | 완료 — push·타입 생성까지 |
 | S3 | 인증 (Google OAuth) | 구글 계정으로 로그인된다 | 완료 · 카카오만 남음 |
 | S4 | 앱 셸 + 빈 대시보드 | 사이드바와 온보딩 화면 | 완료 |
-| S5 | 캐릭터 | 목록·생성·상세 | 2026-09-16 스튜디오로 재작성 · **생성은 fal 모델 대기** |
-| S6 | 룩 | 프리셋 4슬롯 선택과 채택 | 완료 · **생성은 fal 모델 대기** |
+| S5 | 캐릭터 | 목록·생성·상세 | 2026-09-17 스튜디오로 재작성 · **생성은 Gemini 키 대기** |
+| S6 | 룩 | 프리셋 4슬롯 선택과 채택 | 완료 · **생성은 Gemini 키 대기** |
 | S7 | 작업물 | 목록·상세·Realtime 상태 갱신 | 완료 |
 | S8 | 크레딧 + Edge Function | 실제 차감이 일어난다 | 완료 — 함수 배포까지 |
 | S9 | 마감 | 빈 상태·에러·모바일·접근성 | **로그인 후 화면 확인이 남음** |
