@@ -14,13 +14,16 @@ const MESSAGES: Record<string, string> = {
   TIMEOUT: "변환이 예상보다 오래 걸려 중단됐어요. 크레딧은 돌려드렸어요.",
   UPSTREAM_ERROR: "변환 서버에 문제가 있었어요. 크레딧은 돌려드렸어요.",
 
-  // 캐릭터
-  REF_INCOMPLETE: "레퍼런스 5각도가 다 채워지지 않았어요.",
-  REF_FACE_MISMATCH: "각도별 사진의 인물이 서로 달라 보여요. 다시 올려 주세요.",
+  // 캐릭터 만들기 — docs/기획서.md
+  TRAITS_INCOMPLETE: "톤과 성별·나이대를 골라 주세요.",
+  NO_CHANGES: "바꿀 항목을 골라 주세요. 지금은 고른 게 그대로예요.",
+  CHARACTER_BUSY: "아직 뽑는 중이에요. 끝나면 이어서 할 수 있어요.",
+  CHARACTER_NOT_FOUND: "그 캐릭터를 찾을 수 없어요. 목록에서 다시 골라 주세요.",
+  CHARACTER_NOT_READY:
+    "캐릭터가 아직 준비되지 않았어요. 얼굴을 고르고 완성한 뒤에 쓸 수 있어요.",
 
   // 룩
   LOOK_INCOMPLETE: "머리·상의·하의·장소를 다 골라 주세요.",
-  CHARACTER_NOT_READY: "캐릭터가 아직 준비 중이에요. 완료된 뒤에 룩을 만들 수 있어요.",
 
   // 크레딧
   INSUFFICIENT_CREDITS: "크레딧이 모자라요. 충전하고 다시 시도해 주세요.",

@@ -19,7 +19,7 @@ export default async function CharactersPage() {
         <EmptyState
           icon={Users}
           title="아직 캐릭터가 없어요"
-          description="정면·좌우 45°·좌우 90° 다섯 장이면 캐릭터 하나가 만들어져요."
+          description="톤을 고르면 후보 4장을 뽑아 드려요. 마음에 드는 얼굴을 골라 다듬으면 돼요."
           action={{ label: "캐릭터 만들기", href: "/characters/new" }}
         />
       </>
@@ -30,7 +30,7 @@ export default async function CharactersPage() {
     <>
       <PageHeader
         title="캐릭터"
-        description="레퍼런스 5각도로 만든 내 대역이에요. 룩과 작업물이 캐릭터에 붙어요."
+        description="톤을 골라 뽑고 다듬은 내 대역이에요. 룩과 작업물이 캐릭터에 붙어요."
         action={
           <Button variant="primary" asChild>
             <Link href="/characters/new">캐릭터 만들기</Link>

@@ -5,10 +5,24 @@
  * 끝나면 fal이 우리 웹훅을 부른다. 웹은 그동안 Realtime으로 status만 본다.
  */
 
-/** 모델 ID는 코드에 박지 않는다. 아직 정해진 적이 없다 — README 4번 */
-export type FalKind = "character" | "look";
+/** 모델 ID는 코드에 박지 않는다. 아직 정해진 적이 없다 — README A · 기획서 §7 */
+export type FalKind =
+  | "character_draft"
+  | "character_edit"
+  | "character_view"
+  | "look";
+
+/** 웹훅이 돌아와서 고칠 행이 어느 테이블인가. 모델 갈래와는 다른 축이다. */
+export type WebhookSubject = "character_image" | "look" | "job";
 
 export type FalConfig = { key: string; model: string };
+
+const MODEL_ENV: Record<FalKind, string> = {
+  character_draft: "FAL_CHARACTER_DRAFT_MODEL",
+  character_edit: "FAL_CHARACTER_EDIT_MODEL",
+  character_view: "FAL_CHARACTER_VIEW_MODEL",
+  look: "FAL_LOOK_MODEL",
+};
 
 /**
  * 설정이 없으면 null. 호출부는 **크레딧을 깎기 전에** 이걸 확인해야 한다.
@@ -16,15 +30,31 @@ export type FalConfig = { key: string; model: string };
  */
 export function falConfig(kind: FalKind): FalConfig | null {
   const key = Deno.env.get("FAL_KEY");
-  const model = Deno.env.get(
-    kind === "character" ? "FAL_CHARACTER_MODEL" : "FAL_LOOK_MODEL",
-  );
+  const model = Deno.env.get(MODEL_ENV[kind]);
   if (!key || !model) return null;
   return { key, model };
 }
 
+/**
+ * 모델에 넘기는 입력 모양. **모델이 정해지면 여기부터 고친다.**
+ * 캐릭터 쪽 세 함수가 전부 이 한 곳을 쓴다 — 세 군데에 흩어져 있으면
+ * 모델을 바꿀 때 한 곳을 빠뜨리고 그 단계만 조용히 깨진다. — README A
+ *
+ * 한 번 호출에 한 장만 받는다. `num_images` 같은 모델별 옵션에 기대지 않는다. — 기획서 §7
+ */
+export function characterInput(
+  kind: FalKind,
+  args: { prompt: string; imageUrl?: string },
+): Record<string, unknown> {
+  if (kind === "character_draft") return { prompt: args.prompt };
+  return { image_url: args.imageUrl, prompt: args.prompt };
+}
+
 /** 웹훅이 돌아올 주소. 어느 행인지와 위조 방지 토큰을 쿼리에 싣는다. */
-export async function webhookUrl(type: FalKind, id: string): Promise<string> {
+export async function webhookUrl(
+  type: WebhookSubject,
+  id: string,
+): Promise<string> {
   const base = Deno.env.get("SUPABASE_URL")!;
   const url = new URL(`${base}/functions/v1/fal-webhook`);
   url.searchParams.set("type", type);
