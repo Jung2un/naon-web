@@ -12,13 +12,13 @@
  */
 import { preflight, ok, fail } from "../_shared/http.ts";
 import { adminClient, callerId, charge, refund } from "../_shared/supabase.ts";
-import { falConfig, submit, webhookUrl, characterInput } from "../_shared/fal.ts";
+import { geminiConfig } from "../_shared/gemini.ts";
+import { inBackground, runImageBatch } from "../_shared/batch.ts";
 import { viewInstruction } from "../_shared/prompt.ts";
 
 const COST = 2;
 /** 정면·좌45·우45. 측면 90°는 얼굴 정보가 적어서 안 뽑는다. — 기획서 §9 */
 const ANGLES = ["front", "left45", "right45"] as const;
-const ONE_HOUR = 60 * 60;
 
 Deno.serve(async (req) => {
   const pre = preflight(req);
@@ -51,9 +51,9 @@ Deno.serve(async (req) => {
     return fail(req, 409, "CHARACTER_NOT_READY");
   }
 
-  const fal = falConfig("character_view");
-  if (!fal) {
-    console.error("FAL_KEY 또는 FAL_CHARACTER_VIEW_MODEL이 없습니다");
+  const gemini = geminiConfig();
+  if (!gemini) {
+    console.error("GEMINI_API_KEY 또는 GEMINI_IMAGE_MODEL이 없습니다");
     return fail(req, 503, "UPSTREAM_ERROR");
   }
 
@@ -98,41 +98,17 @@ Deno.serve(async (req) => {
     })
     .eq("id", characterId);
 
-  try {
-    const { data: signed, error: signError } = await admin.storage
-      .from("characters")
-      .createSignedUrl(character.base_image_path, ONE_HOUR);
-    if (signError || !signed?.signedUrl) {
-      throw signError ?? new Error("서명 URL 생성 실패");
-    }
-
-    for (const row of rows) {
-      await submit(
-        fal,
-        characterInput("character_view", {
-          prompt: viewInstruction(row.angle),
-          imageUrl: signed.signedUrl,
-        }),
-        await webhookUrl("character_image", row.id),
-      );
-    }
-  } catch (e) {
-    // 3장이 다 필요하므로 한 장이라도 못 넣으면 이번 판은 없던 일이다.
-    // 이미 들어간 장이 나중에 돌아와도 행이 failed라 웹훅이 잡지 못하고 그냥 지나간다.
-    console.error("fal 큐 등록 실패", e);
-    await admin
-      .from("character_images")
-      .update({ status: "failed", error_code: "UPSTREAM_ERROR" })
-      .eq("character_id", characterId)
-      .eq("kind", "view")
-      .eq("round", round);
-    await admin
-      .from("characters")
-      .update({ stage: "refining", status: "failed", error_code: "UPSTREAM_ERROR" })
-      .eq("id", characterId);
-    await refund(admin, userId, COST, "character_refund", memo);
-    return fail(req, 502, "UPSTREAM_ERROR");
-  }
+  // 세 장을 배경에서 나란히 만든다. 하나라도 실패하면 배치가 닫히며 2크레딧을 돌려준다.
+  inBackground(
+    runImageBatch(admin, gemini, {
+      userId,
+      characterId,
+      kind: "view",
+      round,
+      rows: rows.map((row) => ({ id: row.id, prompt: viewInstruction(row.angle) })),
+      sourcePath: character.base_image_path,
+    }),
+  );
 
   return ok(req, { character_id: characterId });
 });

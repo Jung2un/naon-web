@@ -13,6 +13,9 @@ const MESSAGES: Record<string, string> = {
   LOW_RESOLUTION: "화질이 낮아 변환할 수 없어요. 720p 이상으로 찍어 주세요.",
   TIMEOUT: "변환이 예상보다 오래 걸려 중단됐어요. 크레딧은 돌려드렸어요.",
   UPSTREAM_ERROR: "변환 서버에 문제가 있었어요. 크레딧은 돌려드렸어요.",
+  RATE_LIMITED: "지금은 만들 수 있는 양을 넘었어요. 잠시 뒤 다시 시도해 주세요.",
+  CONTENT_BLOCKED:
+    "이 조합은 만들 수 없었어요. 톤이나 속성을 바꿔서 다시 시도해 주세요.",
 
   // 캐릭터 만들기 — docs/기획서.md
   TRAITS_INCOMPLETE: "톤과 성별·나이대를 골라 주세요.",

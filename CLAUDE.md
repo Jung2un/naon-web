@@ -48,7 +48,7 @@ URL은 서버에서 만료 1시간짜리로 만들어 붙인다.
 
 **9. 웹에 존재해도 되는 환경변수는 둘뿐이다.** — `src/lib/env.ts`
 `NEXT_PUBLIC_SUPABASE_URL` · `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
-`SUPABASE_SERVICE_ROLE_KEY`와 `FAL_KEY`는 **Supabase Edge Function 시크릿에만** 둔다.
+`SUPABASE_SERVICE_ROLE_KEY` · `GEMINI_API_KEY` · `FAL_KEY`는 **Supabase Edge Function 시크릿에만** 둔다.
 Vercel에 없으면 실수로 클라이언트 번들에 섞일 경로 자체가 사라진다.
 
 ---
