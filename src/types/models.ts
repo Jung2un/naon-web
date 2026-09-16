@@ -97,6 +97,10 @@ export const LEDGER_REASON_LABEL: Record<LedgerReason, string> = {
   signup_bonus: "가입 보너스",
   job_charge: "영상 변환",
   job_refund: "변환 실패 환불",
+  character_charge: "캐릭터 만들기",
+  character_refund: "캐릭터 실패 환불",
+  look_charge: "룩 만들기",
+  look_refund: "룩 실패 환불",
   purchase: "크레딧 충전",
   adjustment: "조정",
 };

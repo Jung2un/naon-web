@@ -46,7 +46,8 @@
 
 ### 3. Vercel
 
-- [ ] GitHub 레포 생성 + Vercel에 Import
+- [x] GitHub 레포 생성 — `Jung2un/ai-daeyeok-web` (private)
+- [ ] Vercel에 Import
 - [ ] **함수 리전을 `icn1`(서울)로** — `vercel.json`에 이미 박아 뒀지만 대시보드에서 확인
 - [ ] 배포 후 실제 URL 확인
 - [ ] **실제 URL이 `ai-daeyeok.vercel.app`이 아니면** `src/lib/site-url.ts`의
@@ -61,6 +62,42 @@
 - [ ] `create-look` — 크레딧 차감 + `looks` INSERT
 - [ ] 변환 완료 웹훅 — `jobs` 상태 갱신, 실패 시 크레딧 환불
 - [ ] `supabase secrets set FAL_KEY=...` (Vercel에 넣지 말 것)
+
+함수를 쓰기 전에 알아야 할 것들. 전부 코드에서 읽어낸 값이라 추측이 아니다.
+
+**호출 계약** — 화면이 이미 이 모양으로 부른다. 바꾸면 화면도 같이 고쳐야 한다.
+
+| 함수 | body | 응답 | 부르는 곳 |
+|---|---|---|---|
+| `create-character` | `{ name, refs: { front, left45, right45, left90, right90 } }` (값은 Storage 경로) | `{ character_id }` | `CharacterForm.tsx:98` |
+| `create-look` | `{ character_id, name, hair_preset_id, top_preset_id, bottom_preset_id, scene_preset_id }` | `{ look_id }` | `LookBuilder.tsx:78` |
+
+**크레딧 값** — 화면에 이미 박혀 있다. 함수도 같은 값을 써야 한다.
+
+| 행위 | 비용 | 원장 사유 | 화면 |
+|---|---|---|---|
+| 캐릭터 만들기 | **2** | `character_charge` | `CharacterForm.tsx:20` |
+| 룩 만들기 | **1** | `look_charge` | `LookBuilder.tsx:24` |
+| 영상 변환 | **1** | `job_charge` | 앱 쪽 |
+
+**차감은 SQL 함수로 한다.** Edge Function에서 잔액을 읽고 쓰면 동시 요청에 새는 구간이 생긴다.
+`update ... where credits >= ? returning credits` 한 문장으로 확인과 차감을 같이 끝내고,
+같은 트랜잭션에서 `credit_ledger`에 남긴다. 아직 안 만들었다 — `charge_credits` / `refund_credits`.
+
+**웹훅 멱등성.** fal이 같은 알림을 두 번 보낼 수 있다. 상태 전이를 조건부로 걸어
+(`update ... where status <> 'failed' returning id`) 행이 안 돌아오면 환불을 건너뛴다.
+`credit_ledger.job_id`는 `jobs`만 가리켜서 캐릭터·룩 환불은 이 방식으로 막아야 한다.
+
+**되돌아올 주소.** fal 콜백에 어느 행인지 실어야 한다. 스키마를 안 건드리려면
+웹훅 URL에 `?type=character&id=<uuid>&token=<HMAC>`을 달고 공유 시크릿으로 검증한다.
+
+**아직 못 정한 것 — fal.ai 모델 ID.** `docs/배포.md`에 영상용 Wan-Animate Replace만 있고,
+캐릭터(5각도 → 캐릭터 이미지)와 룩(프리셋 4슬롯 → 스타일 이미지)에 쓸 모델은 정해진 적이 없다.
+지어내지 말고 fal 콘솔에서 고른 뒤 `FAL_CHARACTER_MODEL` / `FAL_LOOK_MODEL` 시크릿으로 넣을 것.
+
+**에러 코드는 `src/lib/errors.ts`에 있는 것만 쓴다.** 화면이 그 코드만 사람 말로 바꾼다.
+없는 코드를 던지면 "문제가 생겼어요"라는 기본 문구로 떨어진다.
+`INSUFFICIENT_CREDITS` · `REF_INCOMPLETE` · `SESSION_EXPIRED` · `UPSTREAM_ERROR` 등.
 
 ### 5. 마감 (S9~S10)
 

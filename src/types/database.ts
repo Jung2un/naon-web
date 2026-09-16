@@ -226,6 +226,10 @@ export type Database = {
         | "signup_bonus"
         | "job_charge"
         | "job_refund"
+        | "character_charge"
+        | "character_refund"
+        | "look_charge"
+        | "look_refund"
         | "purchase"
         | "adjustment";
     };
