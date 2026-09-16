@@ -14,7 +14,8 @@
  */
 import { preflight, ok, fail } from "../_shared/http.ts";
 import { adminClient, callerId, charge, refund } from "../_shared/supabase.ts";
-import { falConfig, submit, webhookUrl, characterInput } from "../_shared/fal.ts";
+import { geminiConfig } from "../_shared/gemini.ts";
+import { inBackground, runImageBatch } from "../_shared/batch.ts";
 import {
   loadOptions,
   editInstruction,
@@ -23,7 +24,6 @@ import {
 } from "../_shared/prompt.ts";
 
 const COST = 1;
-const ONE_HOUR = 60 * 60;
 
 Deno.serve(async (req) => {
   const pre = preflight(req);
@@ -79,9 +79,9 @@ Deno.serve(async (req) => {
   const instruction = editInstruction(before, merged, options);
   if (!instruction) return fail(req, 400, "NO_CHANGES");
 
-  const fal = falConfig("character_edit");
-  if (!fal) {
-    console.error("FAL_KEY 또는 FAL_CHARACTER_EDIT_MODEL이 없습니다");
+  const gemini = geminiConfig();
+  if (!gemini) {
+    console.error("GEMINI_API_KEY 또는 GEMINI_IMAGE_MODEL이 없습니다");
     return fail(req, 503, "UPSTREAM_ERROR");
   }
 
@@ -128,37 +128,17 @@ Deno.serve(async (req) => {
     })
     .eq("id", characterId);
 
-  try {
-    // 버킷이 private이라 fal이 경로로는 못 읽는다. 서명 URL을 만들어 넘긴다.
-    const { data: signed, error: signError } = await admin.storage
-      .from("characters")
-      .createSignedUrl(character.base_image_path, ONE_HOUR);
-    if (signError || !signed?.signedUrl) {
-      throw signError ?? new Error("서명 URL 생성 실패");
-    }
-
-    await submit(
-      fal,
-      characterInput("character_edit", {
-        prompt: instruction,
-        imageUrl: signed.signedUrl,
-      }),
-      await webhookUrl("character_image", imageId),
-    );
-  } catch (e) {
-    console.error("fal 큐 등록 실패", e);
-    await admin
-      .from("character_images")
-      .update({ status: "failed", error_code: "UPSTREAM_ERROR" })
-      .eq("id", imageId);
-    // 고치던 얼굴은 그대로 둔다. 실패한 건 이번 수정뿐이다.
-    await admin
-      .from("characters")
-      .update({ status: "failed", error_code: "UPSTREAM_ERROR" })
-      .eq("id", characterId);
-    await refund(admin, userId, COST, "character_edit_refund", memo);
-    return fail(req, 502, "UPSTREAM_ERROR");
-  }
+  // 고치는 건 배경에서. 입력 이미지는 배치가 버킷에서 직접 내려받는다.
+  inBackground(
+    runImageBatch(admin, gemini, {
+      userId,
+      characterId,
+      kind: "refined",
+      round,
+      rows: [{ id: imageId, prompt: instruction }],
+      sourcePath: character.base_image_path,
+    }),
+  );
 
   return ok(req, { image_id: imageId });
 });

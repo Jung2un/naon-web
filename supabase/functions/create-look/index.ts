@@ -1,10 +1,12 @@
 /**
- * create-look — 크레딧 차감 + looks INSERT + fal.ai 큐 등록
+ * create-look — 크레딧 차감 + looks INSERT + 이미지 생성(Gemini)
  *
  * 화면 계약 (`src/components/app/LookBuilder.tsx`)
  *   body     { character_id, name, hair_preset_id, top_preset_id, bottom_preset_id, scene_preset_id }
  *   응답     { look_id }
  *   비용     1크레딧 · 원장 사유 look_charge
+ *
+ * 그림은 응답을 보낸 뒤 배경에서 만든다. 화면은 Realtime으로 status만 본다. — 기획서 §7
  *
  * 화면이 4슬롯을 다 고르기 전에는 버튼을 막지만(SummaryBar), 서버는 그걸 믿지 않는다.
  * 프리셋 id가 실제로 그 슬롯의 활성 프리셋인지까지 확인한다 —
@@ -12,11 +14,18 @@
  */
 import { preflight, ok, fail } from "../_shared/http.ts";
 import { adminClient, callerId, charge, refund } from "../_shared/supabase.ts";
-import { falConfig, submit, webhookUrl } from "../_shared/fal.ts";
+import {
+  geminiConfig,
+  generateImage,
+  GenerationError,
+  toSourceImage,
+  type GeminiConfig,
+} from "../_shared/gemini.ts";
+import { extensionOf, inBackground } from "../_shared/batch.ts";
+import { lookInstruction } from "../_shared/prompt.ts";
 
 const COST = 1;
 const SLOTS = ["hair", "top", "bottom", "scene"] as const;
-const ONE_HOUR = 60 * 60;
 
 Deno.serve(async (req) => {
   const pre = preflight(req);
@@ -77,10 +86,10 @@ Deno.serve(async (req) => {
   const raw = typeof body.name === "string" ? body.name.trim() : "";
   const name = (raw || fallbackName).slice(0, 40);
 
-  // 모델을 안 고른 상태에서는 깎기 전에 멈춘다.
-  const fal = falConfig("look");
-  if (!fal) {
-    console.error("FAL_KEY 또는 FAL_LOOK_MODEL이 없습니다");
+  // 키가 없으면 깎기 전에 멈춘다.
+  const gemini = geminiConfig();
+  if (!gemini) {
+    console.error("GEMINI_API_KEY 또는 GEMINI_IMAGE_MODEL이 없습니다");
     return fail(req, 503, "UPSTREAM_ERROR");
   }
 
@@ -107,36 +116,79 @@ Deno.serve(async (req) => {
     return fail(req, 500, "UPSTREAM_ERROR");
   }
 
-  try {
-    // 캐릭터의 지금 얼굴이 룩의 입력이다. private 버킷이라 서명 URL로 넘긴다.
-    const basePath = character.base_image_path ?? character.thumbnail_path;
-    let characterUrl: string | null = null;
-    if (basePath) {
-      const { data } = await admin.storage
-        .from("characters")
-        .createSignedUrl(basePath, ONE_HOUR);
-      characterUrl = data?.signedUrl ?? null;
-    }
-    if (!characterUrl) throw new Error("캐릭터 이미지가 없습니다");
-
-    // 입력 모양은 고른 모델에 맞춰야 한다. 모델이 정해지면 여기부터 고친다. — README 4번
-    await submit(
-      fal,
-      {
-        image_url: characterUrl,
-        prompt: SLOTS.map((s) => bySlot.get(s)!.name).join(", "),
-      },
-      await webhookUrl("look", lookId),
-    );
-  } catch (e) {
-    console.error("fal 큐 등록 실패", e);
-    await admin
-      .from("looks")
-      .update({ status: "failed", error_code: "UPSTREAM_ERROR" })
-      .eq("id", lookId);
-    await refund(admin, userId, COST, "look_refund", memo);
-    return fail(req, 502, "UPSTREAM_ERROR");
-  }
+  // 룩도 이미지 한 장이다. 캐릭터와 같은 방식으로 배경에서 만들어 꽂는다.
+  inBackground(
+    renderLook(admin, gemini, {
+      userId,
+      lookId,
+      sourcePath: character.base_image_path ?? character.thumbnail_path,
+      prompt: lookInstruction({
+        hair: bySlot.get("hair")!.name,
+        top: bySlot.get("top")!.name,
+        bottom: bySlot.get("bottom")!.name,
+        scene: bySlot.get("scene")!.name,
+      }),
+    }),
+  );
 
   return ok(req, { look_id: lookId });
 });
+
+/**
+ * 캐릭터의 지금 얼굴 위에 룩을 입힌다.
+ *
+ * 실패 처리는 조건부 전이로 한 번만 한다 — 행을 못 잡으면 이미 누가 처리한 것이라
+ * 환불을 건너뛴다. 캐릭터 쪽 finish_character_batch와 같은 장치다.
+ */
+async function renderLook(
+  admin: ReturnType<typeof adminClient>,
+  gemini: GeminiConfig,
+  args: {
+    userId: string;
+    lookId: string;
+    sourcePath: string | null;
+    prompt: string;
+  },
+): Promise<void> {
+  try {
+    if (!args.sourcePath) throw new Error("캐릭터 이미지가 없습니다");
+
+    const { data: file, error: downloadError } = await admin.storage
+      .from("characters")
+      .download(args.sourcePath);
+    if (downloadError || !file) throw downloadError ?? new Error("캐릭터 이미지를 못 읽었습니다");
+
+    const image = await generateImage(gemini, {
+      prompt: args.prompt,
+      image: toSourceImage(await file.arrayBuffer(), file.type || "image/jpeg"),
+    });
+
+    const path = `${args.userId}/${args.lookId}/result.${extensionOf(image.contentType)}`;
+    const { error: uploadError } = await admin.storage
+      .from("looks")
+      .upload(path, image.bytes, { contentType: image.contentType, upsert: true });
+    if (uploadError) throw uploadError;
+
+    const { error: doneError } = await admin
+      .from("looks")
+      .update({ status: "done", thumbnail_path: path, error_code: null })
+      .eq("id", args.lookId)
+      .in("status", ["queued", "processing"]);
+    if (doneError) throw doneError;
+  } catch (e) {
+    const code = e instanceof GenerationError ? e.code : "UPSTREAM_ERROR";
+    console.error("룩 생성 실패", { look: args.lookId, code, e });
+
+    const { data: claimed } = await admin
+      .from("looks")
+      .update({ status: "failed", error_code: code })
+      .eq("id", args.lookId)
+      .in("status", ["queued", "processing"])
+      .select("id")
+      .maybeSingle();
+
+    if (claimed) {
+      await refund(admin, args.userId, COST, "look_refund", `look:${args.lookId}`);
+    }
+  }
+}

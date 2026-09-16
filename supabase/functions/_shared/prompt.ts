@@ -160,3 +160,24 @@ export function viewInstruction(angle: string): string {
     "plain neutral background, upper body",
   ].join(". ");
 }
+
+/**
+ * 룩 — 사람은 그대로 두고 스타일만 바꾼다.
+ *
+ * 프리셋 이름이 한글이라 지시문에 그대로 싣는다. `presets`에는 아직 prompt 열이 없다
+ * (캐릭터 옵션에만 있다). 결과가 흔들리면 프리셋에도 prompt 열을 더하는 게 맞다. — 기획서 §10
+ */
+export function lookInstruction(names: {
+  hair: string;
+  top: string;
+  bottom: string;
+  scene: string;
+}): string {
+  return [
+    `change this person's hairstyle to "${names.hair}"`,
+    `change the top to "${names.top}" and the bottom to "${names.bottom}"`,
+    `place them in "${names.scene}"`,
+    "keep the same person, the same face and identity",
+    "natural lighting, one person only",
+  ].join(". ");
+}

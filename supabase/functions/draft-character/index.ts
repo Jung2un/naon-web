@@ -12,14 +12,15 @@
  * 순서는 기존 함수들과 같다. 실패했을 때 크레딧이 남아 있으면 안 되고,
  * 성공하지 않았는데 깎여 있어도 안 된다.
  *   1. 누구인지 · 입력이 온전한지    — 여기서 막히면 아무것도 안 깎는다
- *   2. fal 설정이 있는지             — 모델을 안 고른 상태에서 깎지 않는다
+ *   2. 모델 설정이 있는지             — 키를 넣기 전에 깎지 않는다
  *   3. 차감
  *   4. characters + character_images  — 실패하면 환불
- *   5. fal 큐 등록 4번               — 한 장도 못 넣었으면 환불
+ *   5. 배경 작업 시작 후 바로 응답    — 그림이 실패하면 배치가 닫히며 환불한다
  */
 import { preflight, ok, fail } from "../_shared/http.ts";
 import { adminClient, callerId, charge, refund } from "../_shared/supabase.ts";
-import { falConfig, submit, webhookUrl, characterInput } from "../_shared/fal.ts";
+import { geminiConfig } from "../_shared/gemini.ts";
+import { inBackground, runImageBatch } from "../_shared/batch.ts";
 import {
   loadOptions,
   validateTraits,
@@ -99,10 +100,10 @@ Deno.serve(async (req) => {
   const name = rawName || character?.name || "";
   if (!name || name.length > 20) return fail(req, 400, "TRAITS_INCOMPLETE");
 
-  // 모델을 안 고른 상태에서는 깎기 전에 멈춘다. — README A
-  const fal = falConfig("character_draft");
-  if (!fal) {
-    console.error("FAL_KEY 또는 FAL_CHARACTER_DRAFT_MODEL이 없습니다");
+  // 키가 없으면 깎기 전에 멈춘다. — README A
+  const gemini = geminiConfig();
+  if (!gemini) {
+    console.error("GEMINI_API_KEY 또는 GEMINI_IMAGE_MODEL이 없습니다");
     return fail(req, 503, "UPSTREAM_ERROR");
   }
 
@@ -148,7 +149,7 @@ Deno.serve(async (req) => {
     }
   }
 
-  // 행을 먼저 만든다. 웹훅이 돌아올 자리가 있어야 결과를 꽂을 수 있다.
+  // 행을 먼저 만든다. 배경 작업이 결과를 꽂을 자리이자, 화면이 스켈레톤을 세우는 자리다.
   const rows = Array.from({ length: CANDIDATES }, () => ({
     id: crypto.randomUUID(),
     character_id: characterId,
@@ -169,36 +170,17 @@ Deno.serve(async (req) => {
     return fail(req, 500, "UPSTREAM_ERROR");
   }
 
+  // 그림은 배경에서 채운다. 사람을 30초~2분 기다리게 하지 않는다 — 화면은 Realtime으로 본다.
   const prompt = draftPrompt(tone, traits, options);
-  let queued = 0;
-
-  for (const row of rows) {
-    try {
-      await submit(
-        fal,
-        characterInput("character_draft", { prompt }),
-        await webhookUrl("character_image", row.id),
-      );
-      queued++;
-    } catch (e) {
-      // 한 장이 안 들어가도 나머지로 고를 수 있다. 그 칸만 실패로 둔다.
-      console.error("fal 큐 등록 실패", { image: row.id, e });
-      await admin
-        .from("character_images")
-        .update({ status: "failed", error_code: "UPSTREAM_ERROR" })
-        .eq("id", row.id);
-    }
-  }
-
-  // 한 장도 못 넣었으면 값을 한 게 없다.
-  if (queued === 0) {
-    await admin
-      .from("characters")
-      .update({ status: "failed", error_code: "UPSTREAM_ERROR" })
-      .eq("id", characterId);
-    await refund(admin, userId, COST, "character_draft_refund", memo);
-    return fail(req, 502, "UPSTREAM_ERROR");
-  }
+  inBackground(
+    runImageBatch(admin, gemini, {
+      userId,
+      characterId,
+      kind: "candidate",
+      round,
+      rows: rows.map((row) => ({ id: row.id, prompt })),
+    }),
+  );
 
   return ok(req, { character_id: characterId });
 });

@@ -17,6 +17,8 @@ export type ErrorCode =
   | "LOOK_INCOMPLETE"
   | "SESSION_EXPIRED"
   | "UPSTREAM_ERROR"
+  | "RATE_LIMITED"
+  | "CONTENT_BLOCKED"
   | "TIMEOUT"
   | "FACE_NOT_FOUND"
   | "MULTIPLE_FACES";
