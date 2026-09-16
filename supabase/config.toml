@@ -419,3 +419,17 @@ enabled = true
 # formatted with uppercase keywords, indent 2, max width 180, trailing commas,
 # and column/key alignment. Set to "null" to emit raw, unformatted SQL.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":180,\"commaStyle\":\"trailing\"}"
+
+# ---------------------------------------------------------------- Edge Functions
+
+# 화면이 부르는 함수들. 사용자 JWT를 검증해서 누가 불렀는지 확인한다.
+[functions.create-character]
+verify_jwt = true
+
+[functions.create-look]
+verify_jwt = true
+
+# fal이 부르는 함수. fal은 우리 사용자 토큰을 모르니 JWT 검증을 끈다.
+# 대신 쿼리의 HMAC 토큰을 함수 안에서 직접 확인한다. — supabase/functions/fal-webhook/index.ts
+[functions.fal-webhook]
+verify_jwt = false

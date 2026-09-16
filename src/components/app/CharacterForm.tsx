@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input, FieldError } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
+import { invokeFunction } from "@/lib/supabase/functions";
 import { isSupabaseConfigured } from "@/lib/env";
 import { humanError } from "@/lib/errors";
 import { cn } from "@/lib/utils";
@@ -95,14 +96,13 @@ export function CharacterForm() {
 
       // 캐릭터 생성은 크레딧이 움직이므로 Edge Function을 거친다.
       // 클라이언트가 characters에 직접 INSERT 하지 않는다. — CLAUDE.md 아키텍처 규칙 2
-      const { data, error: fnError } = await supabase.functions.invoke<{
-        character_id: string;
-      }>("create-character", {
-        body: { name: getValues("name").trim(), refs: paths },
-      });
+      const data = await invokeFunction<{ character_id: string }>(
+        supabase,
+        "create-character",
+        { name: getValues("name").trim(), refs: paths },
+      );
 
-      if (fnError) throw fnError;
-      router.push(`/characters/${data?.character_id ?? ""}`);
+      router.push(`/characters/${data.character_id}`);
       router.refresh();
     } catch (e) {
       const code =

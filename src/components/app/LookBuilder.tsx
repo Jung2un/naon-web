@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
+import { invokeFunction } from "@/lib/supabase/functions";
 import { isSupabaseConfigured } from "@/lib/env";
 import { humanError } from "@/lib/errors";
 import { cn } from "@/lib/utils";
@@ -75,10 +76,10 @@ export function LookBuilder({
     try {
       const supabase = createClient();
       // 룩 생성도 GPU가 도는 행위라 Edge Function을 거친다. — CLAUDE.md 아키텍처 규칙 2
-      const { data, error: fnError } = await supabase.functions.invoke<{
-        look_id: string;
-      }>("create-look", {
-        body: {
+      const data = await invokeFunction<{ look_id: string }>(
+        supabase,
+        "create-look",
+        {
           character_id: characterId,
           name:
             name.trim() ||
@@ -90,10 +91,9 @@ export function LookBuilder({
           bottom_preset_id: selection.bottom,
           scene_preset_id: selection.scene,
         },
-      });
+      );
 
-      if (fnError) throw fnError;
-      router.push(data?.look_id ? `/looks?look=${data.look_id}` : "/looks");
+      router.push(`/looks?look=${data.look_id}`);
       router.refresh();
     } catch (e) {
       const code =

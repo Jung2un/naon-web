@@ -18,6 +18,10 @@ const MESSAGES: Record<string, string> = {
   REF_INCOMPLETE: "레퍼런스 5각도가 다 채워지지 않았어요.",
   REF_FACE_MISMATCH: "각도별 사진의 인물이 서로 달라 보여요. 다시 올려 주세요.",
 
+  // 룩
+  LOOK_INCOMPLETE: "머리·상의·하의·장소를 다 골라 주세요.",
+  CHARACTER_NOT_READY: "캐릭터가 아직 준비 중이에요. 완료된 뒤에 룩을 만들 수 있어요.",
+
   // 크레딧
   INSUFFICIENT_CREDITS: "크레딧이 모자라요. 충전하고 다시 시도해 주세요.",
 
