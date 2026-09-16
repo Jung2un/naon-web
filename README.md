@@ -12,22 +12,30 @@
 
 ### 0. 계정 전환 — 이게 먼저다
 
-- [ ] Claude Desktop / Claude Code를 **개인 계정**으로 전환
-  - 지금 `lje@archseoul.com`(회사 계정)으로 로그인돼 있다
-  - 여기서 만든 Supabase·Vercel 리소스는 **회사 계정 소유가 된다.** 나중에 옮기기 어렵다
-  - 아래 1~4를 회사 계정으로 진행하지 말 것
+- [x] Claude Desktop / Claude Code를 **개인 계정**으로 전환 — 완료
+  - 아래 1~4의 리소스는 개인 계정 소유여야 한다. 나중에 옮기기 어렵다
 
-### 1. Supabase
+### 1. Supabase — 거의 끝났다
 
-- [ ] 프로젝트 생성 — 리전 **Northeast Asia (Seoul) / `ap-northeast-2`** (나중에 못 바꾼다)
-- [ ] Project Settings → API에서 `Project URL` · `anon key` · 프로젝트 `ref` 메모
+프로젝트: **`ai-web`** · ref **`alafyhejiaxukrkrmehh`** · 리전 `ap-northeast-2`(서울) · 조직 `Jung2un`
+
+CLI는 레포에 devDependency로 들어 있다. 전역 설치 필요 없이 `npx supabase …`로 쓴다.
+`supabase link`는 이미 걸려 있다.
+
+- [x] 프로젝트 생성 — 리전 `ap-northeast-2` 확인됨 (나중에 못 바꾼다)
+- [x] `Project URL` · `anon key` · `ref` — `npx supabase projects api-keys --project-ref <ref>`로 언제든 꺼낸다
+- [x] `supabase db push` — 마이그레이션 4개 적용 완료 (init · ledger_reasons · presets_seed · credit_functions)
+- [x] `supabase gen types typescript --linked > src/types/database.ts` — 손으로 옮겨 적던 상태를 실제 생성물로 교체. 빌드 통과
+- [x] `presets` 테이블 시드 — 16종(머리·상의·하의·장소 각 4) 마이그레이션으로 들어감. id 고정
+- [ ] `presets` 버킷에 썸네일 업로드 — **이미지가 아직 없다.** 지금은 이름만 나온다
+      경로는 DB에 미리 적혀 있다(`hair/1.jpg` … `scene/4.jpg`). 같은 경로로 올리면 SQL을 안 건드려도 붙는다.
+      presets 버킷에는 INSERT 정책이 없다 — 대시보드나 service_role로 올린다
 - [ ] Vercel 환경변수에 `NEXT_PUBLIC_SUPABASE_URL` · `NEXT_PUBLIC_SUPABASE_ANON_KEY` 등록
-      (스코프 Production / Preview / Development **전부** 체크)
-- [ ] `supabase db push` — `supabase/migrations/20260916000001_init.sql`
-- [ ] `supabase gen types typescript --project-id <ref> > src/types/database.ts`
-      로 덮어쓰기 (지금은 마이그레이션을 손으로 옮겨 적어 둔 상태다)
-- [ ] `presets` 테이블 시드 + `presets` 버킷에 썸네일 업로드
-      (머리·상의·하의·장소 각 4종 — 지금은 이미지 없이 이름만 나온다)
+      (스코프 Production / Preview / Development **전부** 체크) → **3번에서 한다.** Vercel 프로젝트가 있어야 넣는다
+
+> 로컬 `.env.local`은 아직 만들지 않았다. 채우는 순간 `isSupabaseConfigured`가 켜져서
+> 고정 데이터가 꺼지고 실제 로그인을 요구하는데, OAuth(2번)가 아직 없어서 `/login`에서 막힌다.
+> **2번을 끝내고 채우는 게 맞다.**
 
 ### 2. OAuth
 
@@ -48,6 +56,7 @@
 
 - [x] GitHub 레포 생성 — `Jung2un/ai-daeyeok-web` (private)
 - [ ] Vercel에 Import
+- [ ] 위 1번의 Supabase 환경변수 두 개 등록 (스코프 세 개 전부)
 - [ ] **함수 리전을 `icn1`(서울)로** — `vercel.json`에 이미 박아 뒀지만 대시보드에서 확인
 - [ ] 배포 후 실제 URL 확인
 - [ ] **실제 URL이 `ai-daeyeok.vercel.app`이 아니면** `src/lib/site-url.ts`의
@@ -80,9 +89,13 @@
 | 룩 만들기 | **1** | `look_charge` | `LookBuilder.tsx:24` |
 | 영상 변환 | **1** | `job_charge` | 앱 쪽 |
 
-**차감은 SQL 함수로 한다.** Edge Function에서 잔액을 읽고 쓰면 동시 요청에 새는 구간이 생긴다.
-`update ... where credits >= ? returning credits` 한 문장으로 확인과 차감을 같이 끝내고,
-같은 트랜잭션에서 `credit_ledger`에 남긴다. 아직 안 만들었다 — `charge_credits` / `refund_credits`.
+**차감은 SQL 함수로 한다. 이건 이미 만들어져 있고 DB에 올라가 있다.**
+`charge_credits(user_id, amount, reason, job_id, memo)` · `refund_credits(...)`
+— `supabase/migrations/20260916000004_credit_functions.sql`
+
+`update ... where credits >= ? returning credits` 한 문장으로 확인과 차감을 끝내고
+같은 트랜잭션에서 `credit_ledger`에 남긴다. **잔액이 모자라면 예외가 아니라 `null`을 돌려준다** —
+호출부가 문자열을 비교하지 않게 하려는 것이다. 실행 권한은 `service_role`에만 있다.
 
 **웹훅 멱등성.** fal이 같은 알림을 두 번 보낼 수 있다. 상태 전이를 조건부로 걸어
 (`update ... where status <> 'failed' returning id`) 행이 안 돌아오면 환불을 건너뛴다.
@@ -122,6 +135,7 @@
 |---|---|---|
 | `docs/기획서.md` | 화면·데이터 모델·RLS | 없음. README의 S0~S10 + CLAUDE.md 9규칙 + DESIGN.md 컴포넌트 명세에서 복원해 만들었다 |
 | `docs/claude-code-프롬프트.md` | S0~S10 붙여넣기용 | 없음. S0~S9는 이미 만들어져서 당장은 필요 없다 |
+| ~~`CLAUDE.md`의 9규칙~~ | 아키텍처 규칙 1~9 | **복원했다.** 코드 주석 열 곳이 가리키던 자리에서 되살렸다 |
 
 원본이 남아 있으면 넣어두는 게 좋다. 데이터 모델이 기획서와 다르면 마이그레이션부터 어긋난다.
 
@@ -200,7 +214,7 @@ Supabase 환경변수가 비어 있으면 데이터 레이어가 **타입만 같
 |---|---|---|---|
 | S0 | 프로젝트 초기화 | 빈 Next 앱이 뜬다 | 완료 |
 | S1 | **디자인 토큰** | `/kitchen-sink`가 Lovable 톤으로 보인다 | 완료 |
-| S2 | Supabase 스키마 + RLS | 마이그레이션이 돌고 타입이 생성된다 | 마이그레이션 작성 완료 · **push는 아직** |
+| S2 | Supabase 스키마 + RLS | 마이그레이션이 돌고 타입이 생성된다 | 완료 — push·타입 생성까지 |
 | S3 | 인증 (Google OAuth) | 구글 계정으로 로그인된다 | 코드 완료 · **공급자 설정 아직** |
 | S4 | 앱 셸 + 빈 대시보드 | 사이드바와 온보딩 화면 | 완료 |
 | S5 | 캐릭터 | 목록·생성·상세 | 화면 완료 · **생성은 Edge Function 필요** |
