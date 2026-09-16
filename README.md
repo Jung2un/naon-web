@@ -12,7 +12,6 @@
 
 | 막는 것 | 누가 | 없으면 |
 |---|---|---|
-| **스튜디오 push·배포** | 아래 E번 | 캐릭터 만들기 화면이 없는 테이블을 찾는다 |
 | **fal.ai 모델 네 개** | 결정이 필요하다 | 캐릭터·룩 만들기가 503에서 멈춘다 |
 | 카카오 개발자 앱 | 계정 작업 | 로그인 화면에서 "곧 열려요"로 비활성 |
 | 프리셋 썸네일 16장 + 톤 6장 | 이미지가 필요하다 | 프리셋·톤이 이름만 나온다 |
@@ -89,22 +88,20 @@ Google과 같은 자리에 붙인다. 버튼·로고·색은 이미 만들어져
 - [ ] 커스텀 도메인 + Google 동의 화면 프로덕션 게시
 - [ ] 결제 켜기 전에 **Vercel Pro 전환** (Hobby는 비상업용 전용)
 
-### E. 캐릭터 스튜디오 올리기 — **이번 개편. 코드는 됐고 올리는 게 남았다**
+### E. 캐릭터 스튜디오 — **올라갔다. fal 모델만 기다린다**
 
 `docs/기획서.md`대로 캐릭터 만들기를 다시 지었다(톤 → 후보 4장 → 다듬기 → 3방향).
-**마이그레이션이 먼저, 코드가 나중이다.** — `docs/배포.md` §8
 
-```bash
-npx supabase login
-npx supabase db push
-npx supabase gen types typescript --linked > src/types/database.ts
-npx supabase functions deploy draft-character refine-character build-character fal-webhook create-look
-```
-
-- [ ] 마이그레이션 3개 push — `character_ledger_reasons` · `character_studio` · `character_options_seed`
-- [ ] 타입 재생성 (`src/types/database.ts`는 손으로 고치지 않는다 — CLAUDE.md 규칙 5)
-- [ ] 함수 배포. `create-character`는 없어졌으니 대시보드에서 지운다
+- [x] 마이그레이션 3개 push — `character_ledger_reasons` · `character_studio` · `character_options_seed`
+- [x] 타입 재생성. `tsc` · `lint` · `build` 전부 통과
+- [x] 함수 5개 배포. 넷 다 게이트웨이에서 401로 답한다 (404 없음)
+- [ ] `create-character` 원격 함수 삭제 — 코드는 지웠는데 배포본이 남아 있다
+      (`npx supabase functions delete create-character`)
 - [ ] 톤 썸네일 6장 (`presets` 버킷 `tone/1.jpg` … `tone/6.jpg`) — 없으면 이름만 나온다
+
+> 시드에서 한 번 걸렸다. 속성 35행에 `thumbnail_path` 자리를 빠뜨려서 값이 6개라
+> `VALUES lists must all be the same length`로 떨어졌다. 0005·0006은 이미 적용된 뒤였고
+> 0007만 고쳐 다시 올렸다. **여러 열을 한 INSERT로 시드할 때 열 수를 세어볼 것.**
 
 ### 나중에
 
@@ -120,7 +117,9 @@ npx supabase functions deploy draft-character refine-character build-character f
 **Supabase** — 프로젝트 `ai-web` · ref `alafyhejiaxukrkrmehh` · 리전 `ap-northeast-2`(서울) · 조직 `Jung2un`
 
 - CLI가 레포에 devDependency로 들어 있다. 전역 설치 없이 `npx supabase …`. link는 걸려 있다
-- 마이그레이션 4개 적용 — `init` · `ledger_reasons` · `presets_seed` · `credit_functions`
+- 마이그레이션 7개 적용 — `init` · `ledger_reasons` · `presets_seed` · `credit_functions` ·
+  `character_ledger_reasons` · `character_studio` · `character_options_seed`
+- 톤·속성 35종 시드 완료. 프리셋과 같은 이유로 id를 고정했다
 - `src/types/database.ts`는 이제 진짜 생성물이다 (`gen types typescript --linked`). 손으로 고치지 않는다
 - 프리셋 16종 시드 완료. id 고정이라 환경 사이에서 참조가 유지된다
 - `charge_credits` / `refund_credits` — 확인과 차감이 SQL 한 문장. 잔액 부족은 예외가 아니라 `null`.
@@ -142,8 +141,7 @@ npx supabase functions deploy draft-character refine-character build-character f
 - 함수 리전 `icn1` (`vercel.json`)
 - 운영 URL이 `ai-daeyeok.vercel.app`으로 잡혀서 `site-url.ts`의 `PRODUCTION_URL`을 고칠 일이 없었다
 
-**Edge Function** — `create-look`·`fal-webhook`은 배포됨.
-**캐릭터 3종은 아직 안 올라갔다 — 위 E번.**
+**Edge Function** — 다섯 다 배포됨
 
 | 함수 | 하는 일 | JWT |
 |---|---|---|
