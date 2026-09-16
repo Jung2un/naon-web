@@ -38,7 +38,8 @@ CLI는 레포에 devDependency로 들어 있다. 전역 설치 필요 없이 `np
 
 ### 2. OAuth
 
-- [ ] **Google Cloud** OAuth 클라이언트 생성
+- [x] **Google Cloud** OAuth 클라이언트 생성 — 완료. Supabase에서 google 공급자가 켜진 것까지 확인했다
+      (`/auth/v1/settings`의 external이 google만 true, email은 false)
   - 승인된 리디렉션 URI는 이것 **하나만**: `https://alafyhejiaxukrkrmehh.supabase.co/auth/v1/callback`
   - 우리 도메인을 여기 넣는 게 아니다. 자주 틀리는 지점
   - 결제 계정은 필요 없다. `cloud.google.com/free`(카드 등록 안내)로 가지 말 것
@@ -48,7 +49,7 @@ CLI는 레포에 devDependency로 들어 있다. 전역 설치 필요 없이 `np
     테스트 사용자 `console.cloud.google.com/auth/audience`
   - 앱이 "테스트" 상태인 동안에는 테스트 사용자에 등록된 계정만 로그인된다
   - client ID/secret → Supabase → Authentication → Providers → Google
-- [ ] **Kakao** 개발자 앱 생성 → Supabase → Providers → Kakao 활성화
+- [ ] **Kakao** 개발자 앱 생성 — 아직. 지금은 로그인 화면에서 "곧 열려요"로 비활성이다 → Supabase → Providers → Kakao 활성화
   - 버튼·로고·색은 이미 만들어져 있다 (`src/components/app/OAuthButton.tsx`)
   - 켠 뒤 `src/lib/auth-providers.ts`에서 kakao의 `status`를
     `"preparing"` → `"ready"` **한 단어만** 바꾸면 동작한다
@@ -69,17 +70,23 @@ CLI는 레포에 devDependency로 들어 있다. 전역 설치 필요 없이 `np
 - [x] 프로덕션 배포 완료. `/` → `/login`(307), `/dashboard` → `/login?next=/dashboard` 확인
 - [x] **실제 URL이 `ai-daeyeok.vercel.app`으로 잡혔다** — `site-url.ts`의 `PRODUCTION_URL`을 고칠 필요가 없었다
 
-### 4. Edge Function — 아직 하나도 없다
+### 4. Edge Function — 코드는 다 나왔다. fal 계정만 남았다
 
-웹은 읽기만 한다. 쓰기는 전부 Edge Function 몫인데 아직 안 만들었다.
-지금 화면에서 "만들기" 버튼을 누르면 함수가 없어서 실패한다.
+- [x] `create-character` — 2크레딧 차감 + `characters`/`character_refs` INSERT + fal 큐 등록
+- [x] `create-look` — 1크레딧 차감 + 프리셋 슬롯 검증 + `looks` INSERT + fal 큐 등록
+- [x] 변환 완료 웹훅 (`fal-webhook`) — 조건부 상태 전이, 결과를 우리 버킷으로, 실패 시 환불
+- [x] `WEBHOOK_SECRET` 시크릿 등록 — 웹훅 위조 방지 HMAC 키
+- [x] 세 함수 배포 완료 (`npx supabase functions deploy`)
+- [ ] `npx supabase secrets set FAL_KEY=... FAL_CHARACTER_MODEL=... FAL_LOOK_MODEL=...`
+      (**Vercel에 넣지 말 것.** 모델을 고르기 전에는 함수가 차감 전에 503으로 막는다)
 
-- [ ] `create-character` — 크레딧 차감 + `characters` INSERT + fal.ai 호출
-- [ ] `create-look` — 크레딧 차감 + `looks` INSERT
-- [ ] 변환 완료 웹훅 — `jobs` 상태 갱신, 실패 시 크레딧 환불
-- [ ] `supabase secrets set FAL_KEY=...` (Vercel에 넣지 말 것)
+> **지켜볼 것 — 함수 게이트웨이 404.** 배포 직후, 같은 요청을 반복하면 절반쯤이
+> `{"code":"NOT_FOUND"}`로 떨어진다. 나머지 절반은 설계대로 401/400을 준다.
+> 404 응답에는 `x-deno-execution-id`가 없다 — 워커에 닿기도 전에 게이트웨이가 끊는다는 뜻이라
+> 우리 코드 문제가 아니다. 재배포로도 안 바뀌었다. 새 프로젝트의 함수 레지스트리가
+> 게이트웨이 인스턴스 사이에 덜 퍼진 것으로 보인다. 계속되면 Supabase 지원에 문의할 것.
 
-함수를 쓰기 전에 알아야 할 것들. 전부 코드에서 읽어낸 값이라 추측이 아니다.
+함수를 고칠 때 알아야 할 것들. 전부 코드에서 읽어낸 값이라 추측이 아니다.
 
 **호출 계약** — 화면이 이미 이 모양으로 부른다. 바꾸면 화면도 같이 고쳐야 한다.
 
@@ -115,13 +122,20 @@ CLI는 레포에 devDependency로 들어 있다. 전역 설치 필요 없이 `np
 캐릭터(5각도 → 캐릭터 이미지)와 룩(프리셋 4슬롯 → 스타일 이미지)에 쓸 모델은 정해진 적이 없다.
 지어내지 말고 fal 콘솔에서 고른 뒤 `FAL_CHARACTER_MODEL` / `FAL_LOOK_MODEL` 시크릿으로 넣을 것.
 
+모델이 정해지면 **코드에서 고칠 곳은 두 군데뿐**이다.
+`create-character`의 `{ image_urls, prompt }`와 `create-look`의 `{ image_url, prompt }` —
+지금 값은 고른 모델의 입력 스키마에 맞춰야 한다. 그리고 응답 모양이 확정되면
+`_shared/fal.ts`의 `resultUrl()`이 여러 모양을 훑는 대신 그 모델의 모양 하나만 보게 줄인다.
+
 **에러 코드는 `src/lib/errors.ts`에 있는 것만 쓴다.** 화면이 그 코드만 사람 말로 바꾼다.
 없는 코드를 던지면 "문제가 생겼어요"라는 기본 문구로 떨어진다.
 `INSUFFICIENT_CREDITS` · `REF_INCOMPLETE` · `SESSION_EXPIRED` · `UPSTREAM_ERROR` 등.
 
 ### 5. 마감 (S9~S10)
 
-- [ ] 375px에서 가로 스크롤 없는지 실제 기기/브라우저로 확인 — **아직 눈으로 못 봄**
+- [~] 375px 가로 스크롤 — `/login`과 `/kitchen-sink`는 실제 브라우저에서 확인했다
+      (둘 다 `scrollWidth === clientWidth === 375`). kitchen-sink의 표는 `min-w-[520px]`이지만
+      자체 스크롤 컨테이너 안이라 페이지는 안 밀린다. **로그인 후 화면은 아직 못 봄**
 - [ ] 크레딧 0인 계정으로 전 화면 돌아보기
 - [ ] job을 일부러 실패시켜 에러 문구가 사람 말로 나오는지 확인
 - [ ] 커스텀 도메인 + Google 동의 화면 프로덕션 게시
