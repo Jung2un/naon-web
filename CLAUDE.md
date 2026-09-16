@@ -17,10 +17,11 @@
 전역 상태가 필요 없어진다. 클라이언트 컴포넌트는 입력과 상호작용만 맡는다.
 
 **2. 돈이 움직이거나 GPU가 도는 행위는 Edge Function만 한다.**
-— `supabase/migrations/…_init.sql` · `CharacterForm.tsx` · `LookBuilder.tsx`
-클라이언트는 `characters` · `looks` · `jobs`에 직접 INSERT 하지 않고 `profiles.credits`를
-건드리지 않는다. anon 키로 가능한 건 SELECT와 본인 소유 row의 제한된 UPDATE/DELETE뿐이다.
-INSERT 정책이 아예 없는 것이 이 규칙의 강제 수단이다.
+— `supabase/migrations/…_init.sql` · `CharacterDraftForm.tsx` · `CharacterStudio.tsx` · `LookBuilder.tsx`
+클라이언트는 `characters` · `character_images` · `looks` · `jobs`에 직접 INSERT 하지 않고
+`profiles.credits`를 건드리지 않는다. anon 키로 가능한 건 SELECT와 본인 소유 row의 제한된
+UPDATE/DELETE뿐이다. INSERT 정책이 아예 없는 것이 이 규칙의 강제 수단이다.
+돈도 GPU도 안 쓰는 행위(후보 고르기·되돌리기)는 예외로 SQL 함수를 쓴다 — `docs/기획서.md` §6.
 
 **3. RLS 없는 테이블을 만들지 않는다.** — `supabase/migrations/…_init.sql`
 테이블을 만들면 **같은 파일에** 정책도 같이 쓴다. 나중에 붙이겠다고 미루면 안 붙는다.
@@ -67,6 +68,7 @@ Vercel에 없으면 실수로 클라이언트 번들에 섞일 경로 자체가 
 ## 화면을 만들 때
 
 `DESIGN.md`를 먼저 읽는다. 토큰·간격·컴포넌트 명세가 거기 있다.
+**캐릭터 만들기를 건드릴 거면 `docs/기획서.md`가 먼저다** — 흐름·데이터 모델·크레딧이 거기 있다.
 크림 배경(`#f7f4ed`) 위 차콜(`#1c1c1c`). **순백을 페이지 배경으로 쓰지 않는다.**
 다크 모드는 만들지 않는다 — 크림 배경이 이 디자인 시스템의 정체성이다.
 색 규칙이 면제되는 유일한 자리는 OAuth 브랜드 버튼이다 (각 사 가이드라인을 따라야 한다).

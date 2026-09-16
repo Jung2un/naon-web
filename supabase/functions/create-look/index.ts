@@ -44,15 +44,18 @@ Deno.serve(async (req) => {
 
   const admin = adminClient();
 
-  // 본인 캐릭터인지, 그리고 이미 완성된 캐릭터인지.
+  // 본인 캐릭터인지, 그리고 **끝까지** 만들어진 캐릭터인지.
+  // status='done'만 보면 후보가 나온 단계(stage='draft')에서도 룩이 만들어진다. — 기획서 §5
   const { data: character } = await admin
     .from("characters")
-    .select("id, name, status, thumbnail_path")
+    .select("id, name, status, stage, base_image_path, thumbnail_path")
     .eq("id", characterId)
     .eq("user_id", userId)
     .maybeSingle();
   if (!character) return fail(req, 404, "LOOK_INCOMPLETE");
-  if (character.status !== "done") return fail(req, 409, "CHARACTER_NOT_READY");
+  if (character.stage !== "ready" || character.status !== "done") {
+    return fail(req, 409, "CHARACTER_NOT_READY");
+  }
 
   // 고른 프리셋이 정말 그 슬롯의 활성 프리셋인지.
   const { data: presets } = await admin
@@ -105,12 +108,13 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // 캐릭터 이미지가 룩의 입력이다. private 버킷이라 서명 URL로 넘긴다.
+    // 캐릭터의 지금 얼굴이 룩의 입력이다. private 버킷이라 서명 URL로 넘긴다.
+    const basePath = character.base_image_path ?? character.thumbnail_path;
     let characterUrl: string | null = null;
-    if (character.thumbnail_path) {
+    if (basePath) {
       const { data } = await admin.storage
         .from("characters")
-        .createSignedUrl(character.thumbnail_path, ONE_HOUR);
+        .createSignedUrl(basePath, ONE_HOUR);
       characterUrl = data?.signedUrl ?? null;
     }
     if (!characterUrl) throw new Error("캐릭터 이미지가 없습니다");

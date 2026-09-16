@@ -4,17 +4,24 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/env";
 import { signedUrl, signedUrls } from "@/lib/storage";
 import type {
+  CharacterBuild,
   CharacterDetail,
+  CharacterImage,
+  CharacterImageWithUrl,
   CharacterListItem,
+  CharacterOption,
+  CharacterOptionWithUrl,
   JobDetail,
   JobListItem,
   LedgerEntry,
   LookListItem,
+  OptionKind,
   Preset,
   PresetSlot,
   PresetWithUrl,
   Profile,
 } from "@/types/models";
+import { asTraits } from "@/types/models";
 import * as fixtures from "./fixtures";
 
 /**
@@ -79,6 +86,7 @@ export async function getCharacter(id: string): Promise<CharacterDetail | null> 
     return {
       ...character,
       refs: [],
+      option_names: {},
       looks: fixtures.fixtureLooks.filter((l) => l.character_id === id),
       recent_jobs: fixtures.fixtureJobs.filter((j) => j.character_id === id).slice(0, 4),
     };
@@ -112,8 +120,123 @@ export async function getCharacter(id: string): Promise<CharacterDetail | null> 
     ...character,
     thumbnail_url: await signedUrl(supabase, "characters", character.thumbnail_path),
     refs: refRows.map((r, i) => ({ ...r, image_url: refUrls[i] })),
+    option_names: await optionNames(character.tone_id, character.traits),
     looks,
     recent_jobs: jobs,
+  };
+}
+
+/** 톤·속성 id를 사람이 읽는 이름으로 바꾼다. id는 화면에 내보내지 않는다. */
+async function optionNames(
+  toneId: string | null,
+  traits: unknown,
+): Promise<Partial<Record<OptionKind, string>>> {
+  const selected = asTraits(traits);
+  const ids = [toneId, ...Object.values(selected)].filter(
+    (id): id is string => Boolean(id),
+  );
+  if (ids.length === 0) return {};
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("character_options")
+    .select("id, kind, name")
+    .in("id", ids);
+
+  const out: Partial<Record<OptionKind, string>> = {};
+  for (const option of data ?? []) out[option.kind] = option.name;
+  return out;
+}
+
+/** 톤·속성 카탈로그. 갈래별로 묶어서 돌려준다 — 화면이 갈래마다 한 줄씩 그린다. */
+export async function getCharacterOptions(): Promise<
+  Record<OptionKind, CharacterOptionWithUrl[]>
+> {
+  const empty: Record<OptionKind, CharacterOptionWithUrl[]> = {
+    tone: [],
+    gender: [],
+    age: [],
+    hair: [],
+    hair_color: [],
+    body: [],
+    vibe: [],
+  };
+
+  const rows: CharacterOptionWithUrl[] = await (async () => {
+    if (!isSupabaseConfigured) return fixtures.fixtureCharacterOptions;
+
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("character_options")
+      .select("*")
+      .eq("is_active", true)
+      .order("sort_order");
+    if (!data) return [];
+
+    // 썸네일은 톤만 쓴다. 속성은 글자 칩이라 이미지가 없어도 화면이 완성된다.
+    const urls = await signedUrls(
+      supabase,
+      "presets",
+      data.map((o: CharacterOption) => o.thumbnail_path),
+    );
+    return data.map((o: CharacterOption, i: number) => ({
+      ...o,
+      thumbnail_url: urls[i],
+    }));
+  })();
+
+  return rows.reduce((acc, option) => {
+    acc[option.kind].push(option);
+    return acc;
+  }, empty);
+}
+
+/**
+ * 캐릭터 스튜디오(2~4단계)가 읽는 것. 후보·수정본·3방향이 전부 여기 들어 있다.
+ * 완성된 캐릭터에는 쓰지 않는다 — 그건 `getCharacter`가 그린다.
+ */
+export async function getCharacterBuild(
+  id: string,
+): Promise<CharacterBuild | null> {
+  const options = await getCharacterOptions();
+
+  if (!isSupabaseConfigured) {
+    const character = fixtures.fixtureCharacters.find((c) => c.id === id);
+    if (!character) return null;
+    return { ...character, base_image_url: null, images: [], options };
+  }
+
+  const supabase = await createClient();
+  const { data: character } = await supabase
+    .from("characters")
+    .select("*")
+    .eq("id", id)
+    .single();
+  if (!character) return null;
+
+  const { data: rows } = await supabase
+    .from("character_images")
+    .select("*")
+    .eq("character_id", id)
+    .order("created_at", { ascending: true });
+
+  const images = rows ?? [];
+  const urls = await signedUrls(
+    supabase,
+    "characters",
+    images.map((r: CharacterImage) => r.image_path),
+  );
+
+  return {
+    ...character,
+    base_image_url: await signedUrl(supabase, "characters", character.base_image_path),
+    images: images.map(
+      (row: CharacterImage, i: number): CharacterImageWithUrl => ({
+        ...row,
+        image_url: urls[i],
+      }),
+    ),
+    options,
   };
 }
 

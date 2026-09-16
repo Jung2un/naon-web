@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Shirt, Film } from "lucide-react";
 import { PageHeader, SectionHeader } from "@/components/app/PageHeader";
 import { StatusBadge } from "@/components/app/StatusBadge";
@@ -13,7 +13,7 @@ import { MicroLabel } from "@/components/ui/label";
 import { getCharacter } from "@/lib/data/queries";
 import { humanError } from "@/lib/errors";
 import { fullTime } from "@/lib/format";
-import { ANGLE_LABEL, REF_ANGLES } from "@/types/models";
+import { ANGLE_LABEL, REF_ANGLES, TRAIT_KINDS } from "@/types/models";
 
 export async function generateMetadata({
   params,
@@ -30,7 +30,13 @@ export default async function CharacterDetailPage({
   const character = await getCharacter(id);
   if (!character) notFound();
 
+  // 아직 만드는 중이면 스튜디오가 이어서 그린다. — docs/기획서.md §8
+  if (character.stage !== "ready") redirect(`/characters/${id}/build`);
+
   const refByAngle = new Map(character.refs.map((r) => [r.angle, r]));
+  const traitNames = TRAIT_KINDS.map((kind) => character.option_names[kind]).filter(
+    Boolean,
+  );
 
   return (
     <>
@@ -62,9 +68,18 @@ export default async function CharacterDetailPage({
         </p>
       )}
 
+      {(character.option_names.tone || traitNames.length > 0) && (
+        <section className="mt-8">
+          <MicroLabel>톤과 속성</MicroLabel>
+          <p className="mt-2 text-base text-body">
+            {[character.option_names.tone, ...traitNames].filter(Boolean).join(" · ")}
+          </p>
+        </section>
+      )}
+
       <section className="mt-8">
-        <MicroLabel>레퍼런스 5각도</MicroLabel>
-        <div className="mt-3 grid grid-cols-5 gap-4">
+        <MicroLabel>3방향</MicroLabel>
+        <div className="mt-3 grid max-w-[560px] grid-cols-3 gap-4">
           {REF_ANGLES.map((angle) => {
             const ref = refByAngle.get(angle);
             return (
@@ -75,7 +90,7 @@ export default async function CharacterDetailPage({
                       src={ref.image_url}
                       alt={ANGLE_LABEL[angle]}
                       fill
-                      sizes="(max-width: 640px) 20vw, 160px"
+                      sizes="(max-width: 640px) 30vw, 180px"
                       className="object-cover"
                     />
                   ) : null}

@@ -1,0 +1,166 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Stepper } from "./Stepper";
+import { ToneTile } from "./ToneTile";
+import { TraitRow } from "./TraitChip";
+import { ActionBar } from "./ActionBar";
+import { Input } from "@/components/ui/input";
+import { Label, MicroLabel } from "@/components/ui/label";
+import { createClient } from "@/lib/supabase/client";
+import { invokeFunction } from "@/lib/supabase/functions";
+import { isSupabaseConfigured } from "@/lib/env";
+import { humanError } from "@/lib/errors";
+import {
+  CHARACTER_COST,
+  CHARACTER_STEPS,
+  OPTION_KIND_LABEL,
+  REQUIRED_TRAIT_KINDS,
+  TRAIT_KINDS,
+  type CharacterOptionWithUrl,
+  type OptionKind,
+  type Traits,
+} from "@/types/models";
+
+/**
+ * 캐릭터 만들기 1단계 — 톤과 속성을 고른다. — docs/기획서.md §2
+ *
+ * 사진을 올리지 않는다. 캐릭터는 처음부터 생성물이다.
+ * 후보 뽑기는 GPU가 도는 행위라 Edge Function을 거친다. — CLAUDE.md 아키텍처 규칙 2
+ */
+export function CharacterDraftForm({
+  options,
+}: {
+  options: Record<OptionKind, CharacterOptionWithUrl[]>;
+}) {
+  const router = useRouter();
+  const [name, setName] = useState("");
+  const [toneId, setToneId] = useState<string>("");
+  const [traits, setTraits] = useState<Traits>({});
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const missing: string[] = [];
+  if (!name.trim()) missing.push("이름");
+  if (!toneId) missing.push("톤");
+  for (const kind of REQUIRED_TRAIT_KINDS) {
+    if (!traits[kind]) missing.push(OPTION_KIND_LABEL[kind]);
+  }
+  const complete = missing.length === 0;
+
+  const chosen = [
+    options.tone.find((o) => o.id === toneId)?.name,
+    ...TRAIT_KINDS.map(
+      (kind) => options[kind].find((o) => o.id === traits[kind])?.name,
+    ),
+  ].filter(Boolean);
+
+  async function draft() {
+    if (!isSupabaseConfigured) {
+      setError("아직 서버가 연결되지 않았어요.");
+      return;
+    }
+    setPending(true);
+    setError(null);
+
+    try {
+      const supabase = createClient();
+      const data = await invokeFunction<{ character_id: string }>(
+        supabase,
+        "draft-character",
+        { name: name.trim(), tone_id: toneId, traits },
+      );
+
+      router.push(`/characters/${data.character_id}/build`);
+      router.refresh();
+    } catch (e) {
+      const code =
+        typeof e === "object" && e && "message" in e ? String(e.message) : null;
+      setError(humanError(code));
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <div className="pb-4">
+      <Stepper steps={CHARACTER_STEPS} current={0} />
+
+      <div className="mt-8 max-w-[420px]">
+        <Label htmlFor="name">캐릭터 이름</Label>
+        <Input
+          id="name"
+          className="mt-2"
+          placeholder="기본 나"
+          value={name}
+          maxLength={20}
+          autoFocus
+          onChange={(e) => setName(e.target.value)}
+        />
+        <p className="mt-2 text-caption text-muted">
+          나중에 룩과 작업물을 고를 때 이 이름으로 찾게 돼요.
+        </p>
+      </div>
+
+      <section className="mt-8">
+        <MicroLabel>톤</MicroLabel>
+        <p className="mt-1 text-caption text-muted">
+          톤은 지금만 정해요. 나중에 바꾸려면 후보부터 다시 뽑아야 해요.
+        </p>
+        <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+          {options.tone.map((option) => (
+            <ToneTile
+              key={option.id}
+              option={option}
+              selected={toneId === option.id}
+              onSelect={setToneId}
+            />
+          ))}
+        </div>
+      </section>
+
+      <div className="mt-8 flex flex-col gap-6">
+        {TRAIT_KINDS.map((kind) => (
+          <TraitRow
+            key={kind}
+            kind={kind}
+            options={options[kind]}
+            value={traits[kind]}
+            onChange={(id) => setTraits((prev) => ({ ...prev, [kind]: id }))}
+          />
+        ))}
+      </div>
+
+      {error && (
+        <p role="alert" className="mt-6 text-caption text-danger">
+          {error}
+        </p>
+      )}
+
+      <p className="mt-6 text-caption text-muted">
+        후보 4장을 뽑는 데 30초~2분 걸려요. 그중 하나를 골라서 다듬게 돼요.
+      </p>
+
+      {/* 래퍼로 감싸지 않는다 — sticky가 움직일 공간이 없어진다. ActionBar 주석 참고 */}
+      <ActionBar
+        className="mt-4"
+        cost={CHARACTER_COST.draft}
+        label="후보 뽑기"
+        pendingLabel="뽑는 중…"
+        pending={pending}
+        disabled={!complete}
+        onSubmit={draft}
+        summary={
+          complete ? (
+            chosen.join(" · ")
+          ) : (
+            <span className="text-muted">
+              {missing.join(" · ")}을 정하면 뽑을 수 있어요
+            </span>
+          )
+        }
+      />
+    </div>
+  );
+}

@@ -25,7 +25,7 @@ export default async function DashboardPage() {
         <EmptyState
           icon={Users}
           title="아직 캐릭터가 없어요"
-          description="셀피 5장으로 나를 대신할 캐릭터를 만들면, 앱에서 찍은 영상을 그 얼굴로 바꿀 수 있어요."
+          description="톤을 골라 캐릭터를 만들면, 앱에서 찍은 영상을 그 얼굴로 바꿀 수 있어요."
           action={{ label: "캐릭터 만들기", href: "/characters/new" }}
         />
       </>

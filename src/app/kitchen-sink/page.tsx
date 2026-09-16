@@ -226,7 +226,7 @@ export default function KitchenSinkPage() {
         <EmptyState
           icon={Users}
           title="아직 캐릭터가 없어요"
-          description="셀피 5장으로 나를 대신할 캐릭터를 만들 수 있어요."
+          description="톤을 골라 나를 대신할 캐릭터를 만들 수 있어요."
           action={{ label: "캐릭터 만들기", href: "/characters/new" }}
         />
       </Section>

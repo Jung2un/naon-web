@@ -423,7 +423,14 @@ enabled = true
 # ---------------------------------------------------------------- Edge Functions
 
 # 화면이 부르는 함수들. 사용자 JWT를 검증해서 누가 불렀는지 확인한다.
-[functions.create-character]
+# 캐릭터 만들기는 세 단계라 함수도 셋이다. 셋 다 크레딧이 움직인다. — docs/기획서.md §6
+[functions.draft-character]
+verify_jwt = true
+
+[functions.refine-character]
+verify_jwt = true
+
+[functions.build-character]
 verify_jwt = true
 
 [functions.create-look]

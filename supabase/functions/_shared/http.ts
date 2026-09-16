@@ -9,9 +9,12 @@
 /** `src/lib/errors.ts`에 문구가 있는 코드만 쓴다. 새 코드를 만들려면 거기부터 추가한다. */
 export type ErrorCode =
   | "INSUFFICIENT_CREDITS"
-  | "REF_INCOMPLETE"
-  | "LOOK_INCOMPLETE"
+  | "TRAITS_INCOMPLETE"
+  | "NO_CHANGES"
+  | "CHARACTER_BUSY"
+  | "CHARACTER_NOT_FOUND"
   | "CHARACTER_NOT_READY"
+  | "LOOK_INCOMPLETE"
   | "SESSION_EXPIRED"
   | "UPSTREAM_ERROR"
   | "TIMEOUT"

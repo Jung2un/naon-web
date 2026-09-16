@@ -6,8 +6,8 @@ export default function Loading() {
     <>
       <PageHeaderSkeleton />
       <Skeleton className="h-[22px] w-20 rounded-full" />
-      <div className="mt-8 grid grid-cols-5 gap-4">
-        {Array.from({ length: 5 }, (_, i) => (
+      <div className="mt-8 grid max-w-[560px] grid-cols-3 gap-4">
+        {Array.from({ length: 3 }, (_, i) => (
           <Skeleton key={i} className="aspect-[3/4] w-full rounded-[12px]" />
         ))}
       </div>

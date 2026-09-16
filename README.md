@@ -12,24 +12,26 @@
 
 | 막는 것 | 누가 | 없으면 |
 |---|---|---|
-| **fal.ai 모델 두 개** | 결정이 필요하다 | 캐릭터·룩 만들기가 503에서 멈춘다 |
+| **fal.ai 모델 네 개** | 결정이 필요하다 | 캐릭터·룩 만들기가 503에서 멈춘다 |
 | 카카오 개발자 앱 | 계정 작업 | 로그인 화면에서 "곧 열려요"로 비활성 |
-| 프리셋 썸네일 16장 | 이미지가 필요하다 | 프리셋이 이름만 나온다 |
+| 프리셋 썸네일 16장 + 톤 6장 | 이미지가 필요하다 | 프리셋·톤이 이름만 나온다 |
 
 ### A. fal.ai — **가장 큰 구멍. 결정이 안 됐다**
 
 `docs/배포.md`에 영상용 **Wan-Animate Replace**만 있고,
-캐릭터(5각도 → 캐릭터 이미지)와 룩(프리셋 4슬롯 → 스타일 이미지)에 쓸 모델은
+캐릭터(톤 → 후보 → 수정 → 3방향)와 룩(프리셋 4슬롯 → 스타일 이미지)에 쓸 모델은
 설계 어디에도 정해진 적이 없다. **지어내지 말 것.** fal 콘솔에서 골라야 한다.
+어떤 모델이 어디에 들어가는지는 `docs/기획서.md` §7.
 
 - [ ] fal.ai 계정 + 결제 수단 (종량제라 첫 변환부터 돈이 나간다)
-- [ ] 캐릭터용 모델 고르기 — 입력 5장, 출력 이미지 1장
-- [ ] 룩용 모델 고르기 — 입력 캐릭터 이미지 1장 + 프리셋 4개(텍스트), 출력 이미지 1장
+- [ ] 후보용 — 프롬프트 → 이미지 1장 (text-to-image)
+- [ ] 수정용 — 이미지 + 지시문 → 이미지 1장. **얼굴이 유지되는 편집 모델이어야 한다**
+- [ ] 각도용 — 이미지 + 지시문 → 이미지 1장 (수정용과 같은 모델이어도 된다)
+- [ ] 룩용 — 캐릭터 이미지 1장 + 프리셋 4개(텍스트) → 이미지 1장
 - [ ] 시크릿 등록
 
 ```bash
-cd /d/p/ai-sp
-npx supabase secrets set FAL_KEY=... FAL_CHARACTER_MODEL=... FAL_LOOK_MODEL=...
+npx supabase secrets set FAL_KEY=... FAL_CHARACTER_DRAFT_MODEL=... FAL_CHARACTER_EDIT_MODEL=... FAL_CHARACTER_VIEW_MODEL=... FAL_LOOK_MODEL=...
 ```
 
 **Vercel에 넣지 말 것.** 시크릿이 없는 동안에는 함수가 **크레딧을 깎기 전에** 503으로 막는다
@@ -39,7 +41,7 @@ npx supabase secrets set FAL_KEY=... FAL_CHARACTER_MODEL=... FAL_LOOK_MODEL=...
 
 | 자리 | 지금 | 해야 할 일 |
 |---|---|---|
-| `create-character/index.ts` | `{ image_urls, prompt }` | 고른 모델의 입력 스키마로 |
+| `_shared/fal.ts`의 `characterInput()` | `{ prompt }` · `{ image_url, prompt }` | 고른 모델의 입력 스키마로. **세 함수가 다 이 한 곳을 쓴다** |
 | `create-look/index.ts` | `{ image_url, prompt }` | 고른 모델의 입력 스키마로 |
 | `_shared/fal.ts`의 `resultUrl()` | 흔한 응답 모양 여럿을 훑는다 | 그 모델의 모양 하나만 보게 줄인다 |
 
@@ -86,6 +88,21 @@ Google과 같은 자리에 붙인다. 버튼·로고·색은 이미 만들어져
 - [ ] 커스텀 도메인 + Google 동의 화면 프로덕션 게시
 - [ ] 결제 켜기 전에 **Vercel Pro 전환** (Hobby는 비상업용 전용)
 
+### E. 캐릭터 스튜디오 — **올라갔다. fal 모델만 기다린다**
+
+`docs/기획서.md`대로 캐릭터 만들기를 다시 지었다(톤 → 후보 4장 → 다듬기 → 3방향).
+
+- [x] 마이그레이션 3개 push — `character_ledger_reasons` · `character_studio` · `character_options_seed`
+- [x] 타입 재생성. `tsc` · `lint` · `build` 전부 통과
+- [x] 함수 5개 배포. 넷 다 게이트웨이에서 401로 답한다 (404 없음)
+- [ ] `create-character` 원격 함수 삭제 — 코드는 지웠는데 배포본이 남아 있다
+      (`npx supabase functions delete create-character`)
+- [ ] 톤 썸네일 6장 (`presets` 버킷 `tone/1.jpg` … `tone/6.jpg`) — 없으면 이름만 나온다
+
+> 시드에서 한 번 걸렸다. 속성 35행에 `thumbnail_path` 자리를 빠뜨려서 값이 6개라
+> `VALUES lists must all be the same length`로 떨어졌다. 0005·0006은 이미 적용된 뒤였고
+> 0007만 고쳐 다시 올렸다. **여러 열을 한 INSERT로 시드할 때 열 수를 세어볼 것.**
+
 ### 나중에
 
 - [ ] 결제 (토스/Stripe) — S10 이후 별도
@@ -100,7 +117,9 @@ Google과 같은 자리에 붙인다. 버튼·로고·색은 이미 만들어져
 **Supabase** — 프로젝트 `ai-web` · ref `alafyhejiaxukrkrmehh` · 리전 `ap-northeast-2`(서울) · 조직 `Jung2un`
 
 - CLI가 레포에 devDependency로 들어 있다. 전역 설치 없이 `npx supabase …`. link는 걸려 있다
-- 마이그레이션 4개 적용 — `init` · `ledger_reasons` · `presets_seed` · `credit_functions`
+- 마이그레이션 7개 적용 — `init` · `ledger_reasons` · `presets_seed` · `credit_functions` ·
+  `character_ledger_reasons` · `character_studio` · `character_options_seed`
+- 톤·속성 35종 시드 완료. 프리셋과 같은 이유로 id를 고정했다
 - `src/types/database.ts`는 이제 진짜 생성물이다 (`gen types typescript --linked`). 손으로 고치지 않는다
 - 프리셋 16종 시드 완료. id 고정이라 환경 사이에서 참조가 유지된다
 - `charge_credits` / `refund_credits` — 확인과 차감이 SQL 한 문장. 잔액 부족은 예외가 아니라 `null`.
@@ -122,11 +141,13 @@ Google과 같은 자리에 붙인다. 버튼·로고·색은 이미 만들어져
 - 함수 리전 `icn1` (`vercel.json`)
 - 운영 URL이 `ai-daeyeok.vercel.app`으로 잡혀서 `site-url.ts`의 `PRODUCTION_URL`을 고칠 일이 없었다
 
-**Edge Function** — 셋 다 배포됨
+**Edge Function** — 다섯 다 배포됨
 
 | 함수 | 하는 일 | JWT |
 |---|---|---|
-| `create-character` | 2크레딧 · 5각도 검증 · `characters`+`character_refs` INSERT · fal 큐 | 검증함 |
+| `draft-character` | 1크레딧 · 톤·속성 검증 · `characters` + 후보 4행 INSERT · fal 큐 4번 | 검증함 |
+| `refine-character` | 1크레딧 · **바뀐 속성만** 지시문으로 · 수정본 1행 · fal 큐 | 검증함 |
+| `build-character` | 2크레딧 · 3방향 3행 · fal 큐 3번 | 검증함 |
 | `create-look` | 1크레딧 · 프리셋 슬롯 검증 · `looks` INSERT · fal 큐 | 검증함 |
 | `fal-webhook` | 조건부 상태 전이 · 결과를 우리 버킷으로 · 실패 시 환불 | **끔** (HMAC로 대신) |
 
@@ -143,31 +164,34 @@ Google과 같은 자리에 붙인다. 버튼·로고·색은 이미 만들어져
 
 | 함수 | body | 응답 |
 |---|---|---|
-| `create-character` | `{ name, refs: { front, left45, right45, left90, right90 } }` (값은 Storage 경로) | `{ character_id }` |
+| `draft-character` | `{ name, tone_id, traits, character_id? }` — `character_id`가 있으면 다시 뽑기 | `{ character_id }` |
+| `refine-character` | `{ character_id, traits }` | `{ image_id }` |
+| `build-character` | `{ character_id }` | `{ character_id }` |
 | `create-look` | `{ character_id, name, hair_preset_id, top_preset_id, bottom_preset_id, scene_preset_id }` | `{ look_id }` |
 
-**크레딧 값** — 화면에 박혀 있다. 함수도 같은 값을 쓴다.
+후보 고르기·되돌리기는 함수가 아니라 SQL 함수 `select_character_image(character_id, image_id)`다.
+돈도 GPU도 안 쓴다. — `docs/기획서.md` §6
+
+**크레딧 값** — 화면(`CHARACTER_COST`)에 박혀 있다. 함수도 같은 값을 쓴다.
 
 | 행위 | 비용 | 원장 사유 |
 |---|---|---|
-| 캐릭터 만들기 | 2 | `character_charge` / `character_refund` |
+| 캐릭터 후보 뽑기 (다시 뽑기 포함) | 1 | `character_draft_charge` / `character_draft_refund` |
+| 캐릭터 다듬기 1회 | 1 | `character_edit_charge` / `character_edit_refund` |
+| 캐릭터 완성 (3방향) | 2 | `character_charge` / `character_refund` |
 | 룩 만들기 | 1 | `look_charge` / `look_refund` |
 | 영상 변환 | 1 | `job_charge` / `job_refund` |
 
 
 ## 없는 문서
 
-이 문서가 참조하는데 **실제로는 없는** 파일이 둘 있다.
-
 | 파일 | 원래 내용 | 지금 |
 |---|---|---|
-| `docs/기획서.md` | 화면·데이터 모델·RLS | 없음. README의 S0~S10 + CLAUDE.md 9규칙 + DESIGN.md 컴포넌트 명세에서 복원해 만들었다 |
+| `docs/기획서.md` | 화면·데이터 모델·RLS | **2026-09-16에 새로 썼다.** 캐릭터 만들기의 원본은 이제 이 문서다 |
 | `docs/claude-code-프롬프트.md` | S0~S10 붙여넣기용 | 없음. S0~S9는 이미 만들어져서 당장은 필요 없다 |
 
 `CLAUDE.md`의 9규칙은 **복원했다.** 코드 주석 열 곳이 가리키던 자리에서 되살린 것이라
 번호를 바꾸면 주석이 어긋난다.
-
-원본이 남아 있으면 넣어두는 게 좋다. 데이터 모델이 기획서와 다르면 마이그레이션부터 어긋난다.
 
 ---
 
@@ -231,8 +255,9 @@ Supabase 환경변수가 비어 있으면 데이터 레이어가 **타입만 같
 | **Supabase**를 처음부터 | DB·인증·스토리지·Realtime·Edge Function이 한 벌 |
 | 인증은 **OAuth만** (Google → Kakao) | 비밀번호를 받으면 재설정·이메일 인증·유출 대응이 전부 따라온다 |
 | 호스팅은 **Vercel** (`icn1`) | 백엔드가 이미 Supabase에 있어서 돌릴 서버가 없다 |
-| 캐릭터 레퍼런스 **5각도** | 정면/좌우45/좌우90. 씬 표준 (레퍼런스 분석 8번) |
-| 룩은 **프리셋 슬롯만**, 자유 프롬프트 없음 | 설계서 결정. 흔들면 원가와 품질이 같이 무너진다 |
+| 캐릭터는 **생성물**. 사진 업로드는 없다 | 2026-09-16 개정 — `docs/기획서.md` §1. 톤을 고르고 뽑아서 다듬는다 |
+| 캐릭터 각도는 **3방향** (정면·좌45·우45) | 확정하면 자동으로 뽑힌다. 사람이 찍지 않는다 |
+| 룩은 **프리셋 슬롯만**, 자유 프롬프트 없음 | 설계서 결정. 흔들면 원가와 품질이 같이 무너진다. **캐릭터 커스터마이징도 칩이다** |
 | **다크 모드 안 만듦** | 크림 배경이 디자인 시스템의 정체성이다 |
 | MVP 스토리지는 **Supabase 하나** | R2 이관은 파일 1GB / egress 5GB가 신호 |
 
@@ -247,7 +272,7 @@ Supabase 환경변수가 비어 있으면 데이터 레이어가 **타입만 같
 | S2 | Supabase 스키마 + RLS | 마이그레이션이 돌고 타입이 생성된다 | 완료 — push·타입 생성까지 |
 | S3 | 인증 (Google OAuth) | 구글 계정으로 로그인된다 | 완료 · 카카오만 남음 |
 | S4 | 앱 셸 + 빈 대시보드 | 사이드바와 온보딩 화면 | 완료 |
-| S5 | 캐릭터 | 목록·생성·상세 | 완료 · **생성은 fal 모델 대기** |
+| S5 | 캐릭터 | 목록·생성·상세 | 2026-09-16 스튜디오로 재작성 · **생성은 fal 모델 대기** |
 | S6 | 룩 | 프리셋 4슬롯 선택과 채택 | 완료 · **생성은 fal 모델 대기** |
 | S7 | 작업물 | 목록·상세·Realtime 상태 갱신 | 완료 |
 | S8 | 크레딧 + Edge Function | 실제 차감이 일어난다 | 완료 — 함수 배포까지 |

@@ -1,6 +1,7 @@
 import "server-only";
 import type {
   CharacterListItem,
+  CharacterOptionWithUrl,
   JobListItem,
   LedgerEntry,
   LookListItem,
@@ -28,12 +29,65 @@ export const fixtureProfile: Profile = {
   updated_at: ago(30),
 };
 
+/** 톤 6 + 속성. 실제 시드(20260916000007)와 id·이름이 같다. */
+export const fixtureCharacterOptions: CharacterOptionWithUrl[] = [
+  { id: "a1111111-0000-4000-8000-000000000001", kind: "tone", name: "실사", description: "사진처럼", prompt: "", thumbnail_path: null, thumbnail_url: null, sort_order: 1, is_active: true },
+  { id: "a1111111-0000-4000-8000-000000000002", kind: "tone", name: "시네마틱", description: "영화 한 장면처럼", prompt: "", thumbnail_path: null, thumbnail_url: null, sort_order: 2, is_active: true },
+  { id: "a1111111-0000-4000-8000-000000000003", kind: "tone", name: "화보", description: "스튜디오 조명", prompt: "", thumbnail_path: null, thumbnail_url: null, sort_order: 3, is_active: true },
+  { id: "a1111111-0000-4000-8000-000000000004", kind: "tone", name: "일상 스냅", description: "폰으로 찍은 느낌", prompt: "", thumbnail_path: null, thumbnail_url: null, sort_order: 4, is_active: true },
+  { id: "a1111111-0000-4000-8000-000000000005", kind: "tone", name: "애니", description: "그림체", prompt: "", thumbnail_path: null, thumbnail_url: null, sort_order: 5, is_active: true },
+  { id: "a1111111-0000-4000-8000-000000000006", kind: "tone", name: "3D 캐릭터", description: "입체 렌더", prompt: "", thumbnail_path: null, thumbnail_url: null, sort_order: 6, is_active: true },
+
+  { id: "a2222222-0000-4000-8000-000000000001", kind: "gender", name: "여성", description: null, prompt: "", thumbnail_path: null, thumbnail_url: null, sort_order: 1, is_active: true },
+  { id: "a2222222-0000-4000-8000-000000000002", kind: "gender", name: "남성", description: null, prompt: "", thumbnail_path: null, thumbnail_url: null, sort_order: 2, is_active: true },
+  { id: "a2222222-0000-4000-8000-000000000003", kind: "gender", name: "중성적", description: null, prompt: "", thumbnail_path: null, thumbnail_url: null, sort_order: 3, is_active: true },
+
+  { id: "a3333333-0000-4000-8000-000000000001", kind: "age", name: "20대 초반", description: null, prompt: "", thumbnail_path: null, thumbnail_url: null, sort_order: 1, is_active: true },
+  { id: "a3333333-0000-4000-8000-000000000002", kind: "age", name: "20대 후반", description: null, prompt: "", thumbnail_path: null, thumbnail_url: null, sort_order: 2, is_active: true },
+  { id: "a3333333-0000-4000-8000-000000000003", kind: "age", name: "30대", description: null, prompt: "", thumbnail_path: null, thumbnail_url: null, sort_order: 3, is_active: true },
+  { id: "a3333333-0000-4000-8000-000000000004", kind: "age", name: "40대", description: null, prompt: "", thumbnail_path: null, thumbnail_url: null, sort_order: 4, is_active: true },
+  { id: "a3333333-0000-4000-8000-000000000005", kind: "age", name: "50대 이상", description: null, prompt: "", thumbnail_path: null, thumbnail_url: null, sort_order: 5, is_active: true },
+
+  { id: "a4444444-0000-4000-8000-000000000001", kind: "hair", name: "긴 생머리", description: null, prompt: "", thumbnail_path: null, thumbnail_url: null, sort_order: 1, is_active: true },
+  { id: "a4444444-0000-4000-8000-000000000002", kind: "hair", name: "긴 웨이브", description: null, prompt: "", thumbnail_path: null, thumbnail_url: null, sort_order: 2, is_active: true },
+  { id: "a4444444-0000-4000-8000-000000000003", kind: "hair", name: "단발", description: null, prompt: "", thumbnail_path: null, thumbnail_url: null, sort_order: 3, is_active: true },
+  { id: "a4444444-0000-4000-8000-000000000004", kind: "hair", name: "숏컷", description: null, prompt: "", thumbnail_path: null, thumbnail_url: null, sort_order: 4, is_active: true },
+  { id: "a4444444-0000-4000-8000-000000000005", kind: "hair", name: "포니테일", description: null, prompt: "", thumbnail_path: null, thumbnail_url: null, sort_order: 5, is_active: true },
+  { id: "a4444444-0000-4000-8000-000000000006", kind: "hair", name: "반묶음", description: null, prompt: "", thumbnail_path: null, thumbnail_url: null, sort_order: 6, is_active: true },
+
+  { id: "a5555555-0000-4000-8000-000000000001", kind: "hair_color", name: "검정", description: null, prompt: "", thumbnail_path: null, thumbnail_url: null, sort_order: 1, is_active: true },
+  { id: "a5555555-0000-4000-8000-000000000002", kind: "hair_color", name: "진갈색", description: null, prompt: "", thumbnail_path: null, thumbnail_url: null, sort_order: 2, is_active: true },
+  { id: "a5555555-0000-4000-8000-000000000003", kind: "hair_color", name: "밝은 갈색", description: null, prompt: "", thumbnail_path: null, thumbnail_url: null, sort_order: 3, is_active: true },
+  { id: "a5555555-0000-4000-8000-000000000004", kind: "hair_color", name: "애쉬", description: null, prompt: "", thumbnail_path: null, thumbnail_url: null, sort_order: 4, is_active: true },
+  { id: "a5555555-0000-4000-8000-000000000005", kind: "hair_color", name: "금발", description: null, prompt: "", thumbnail_path: null, thumbnail_url: null, sort_order: 5, is_active: true },
+
+  { id: "a6666666-0000-4000-8000-000000000001", kind: "body", name: "마른", description: null, prompt: "", thumbnail_path: null, thumbnail_url: null, sort_order: 1, is_active: true },
+  { id: "a6666666-0000-4000-8000-000000000002", kind: "body", name: "보통", description: null, prompt: "", thumbnail_path: null, thumbnail_url: null, sort_order: 2, is_active: true },
+  { id: "a6666666-0000-4000-8000-000000000003", kind: "body", name: "탄탄", description: null, prompt: "", thumbnail_path: null, thumbnail_url: null, sort_order: 3, is_active: true },
+  { id: "a6666666-0000-4000-8000-000000000004", kind: "body", name: "통통", description: null, prompt: "", thumbnail_path: null, thumbnail_url: null, sort_order: 4, is_active: true },
+
+  { id: "a7777777-0000-4000-8000-000000000001", kind: "vibe", name: "청순", description: null, prompt: "", thumbnail_path: null, thumbnail_url: null, sort_order: 1, is_active: true },
+  { id: "a7777777-0000-4000-8000-000000000002", kind: "vibe", name: "시크", description: null, prompt: "", thumbnail_path: null, thumbnail_url: null, sort_order: 2, is_active: true },
+  { id: "a7777777-0000-4000-8000-000000000003", kind: "vibe", name: "발랄", description: null, prompt: "", thumbnail_path: null, thumbnail_url: null, sort_order: 3, is_active: true },
+  { id: "a7777777-0000-4000-8000-000000000004", kind: "vibe", name: "차분", description: null, prompt: "", thumbnail_path: null, thumbnail_url: null, sort_order: 4, is_active: true },
+  { id: "a7777777-0000-4000-8000-000000000005", kind: "vibe", name: "도도", description: null, prompt: "", thumbnail_path: null, thumbnail_url: null, sort_order: 5, is_active: true },
+  { id: "a7777777-0000-4000-8000-000000000006", kind: "vibe", name: "따뜻", description: null, prompt: "", thumbnail_path: null, thumbnail_url: null, sort_order: 6, is_active: true },
+];
+
 export const fixtureCharacters: CharacterListItem[] = [
   {
     id: "c1000000-0000-4000-8000-000000000001",
     user_id: USER_ID,
     name: "기본 나",
     status: "done",
+    stage: "ready",
+    tone_id: "a1111111-0000-4000-8000-000000000001",
+    traits: {
+      gender: "a2222222-0000-4000-8000-000000000001",
+      age: "a3333333-0000-4000-8000-000000000002",
+      hair: "a4444444-0000-4000-8000-000000000003",
+    },
+    base_image_path: null,
     thumbnail_path: null,
     thumbnail_url: null,
     error_code: null,
@@ -47,6 +101,13 @@ export const fixtureCharacters: CharacterListItem[] = [
     user_id: USER_ID,
     name: "짧은 머리",
     status: "processing",
+    stage: "draft",
+    tone_id: "a1111111-0000-4000-8000-000000000002",
+    traits: {
+      gender: "a2222222-0000-4000-8000-000000000002",
+      age: "a3333333-0000-4000-8000-000000000001",
+    },
+    base_image_path: null,
     thumbnail_path: null,
     thumbnail_url: null,
     error_code: null,

@@ -16,7 +16,10 @@ export default async function NewLookPage({
     getPresets(),
   ]);
 
-  const usable = characters.filter((c) => c.status === "done");
+  // 룩은 끝까지 만들어진 캐릭터 위에만 입힌다. — docs/기획서.md §5
+  const usable = characters.filter(
+    (c) => c.stage === "ready" && c.status === "done",
+  );
 
   if (usable.length === 0) {
     return (
@@ -25,7 +28,7 @@ export default async function NewLookPage({
         <EmptyState
           icon={Shirt}
           title="쓸 수 있는 캐릭터가 없어요"
-          description="룩은 완성된 캐릭터 위에만 입힐 수 있어요. 캐릭터가 만들어지면 여기로 돌아와 주세요."
+          description="룩은 3방향까지 끝난 캐릭터 위에만 입힐 수 있어요. 캐릭터를 완성하고 돌아와 주세요."
           action={{ label: "캐릭터 만들기", href: "/characters/new" }}
         />
       </>

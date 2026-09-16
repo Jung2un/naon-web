@@ -38,7 +38,10 @@ export function LookBuilder({
   defaultCharacterId?: string;
 }) {
   const router = useRouter();
-  const usable = characters.filter((c) => c.status === "done");
+  // 룩은 끝까지 만들어진 캐릭터 위에만 입힌다. — docs/기획서.md §5
+  const usable = characters.filter(
+    (c) => c.stage === "ready" && c.status === "done",
+  );
 
   const [characterId, setCharacterId] = useState(
     defaultCharacterId && usable.some((c) => c.id === defaultCharacterId)
@@ -157,14 +160,14 @@ export function LookBuilder({
         </p>
       )}
 
-      <div className="mt-8">
-        <SummaryBar
-          selectedNames={selectedNames}
-          cost={COST}
-          pending={pending}
-          onSubmit={submit}
-        />
-      </div>
+      {/* 래퍼로 감싸지 않는다 — sticky가 움직일 공간이 없어진다. ActionBar 주석 참고 */}
+      <SummaryBar
+        className="mt-8"
+        selectedNames={selectedNames}
+        cost={COST}
+        pending={pending}
+        onSubmit={submit}
+      />
     </div>
   );
 }
