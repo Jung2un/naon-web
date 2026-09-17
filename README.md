@@ -134,8 +134,9 @@ curl -s -o /dev/null -w "%{http_code}\n" "https://alafyhejiaxukrkrmehh.supabase.
 
 **톤 사진은 성별마다 따로 둔다 (2026-09-17).** 캐릭터 만들기에서 성별을 누르면 톤 6칸이 그 성별 사진으로 바뀐다.
 - [x] 여성 — `tone/1~6.jpg` (기본)
-- [ ] **남성** — `tone/male/1~6.jpg` 넣고 `catalog.ts`의 `READY_TONE_VARIANTS`에 `"male"` 추가
-- [ ] **중성적** — `tone/neutral/1~6.jpg` 넣고 `"neutral"` 추가
+- [x] **남성** — `tone/male/1~6.jpg` (레퍼런스 01~06), 켜짐
+- [x] **중성적** — `tone/neutral/1~6.jpg` (레퍼런스 07~12), 켜짐
+- [x] 여성 애니·3D를 시트에서 자른 작은 이미지 → 1254px 원본(레퍼런스 13·14)으로 교체
 
 켜기 전에는 여성 사진이 그대로 나와서 안 깨진다. 남성 폴더를 임시로 채워 켜 보고,
 남성 → `tone/male/*`, 안 켠 중성적 → 여성 사진으로 돌아가는 것까지 로컬에서 확인했다(테스트 파일은 지움).

@@ -41,7 +41,7 @@ const TONE_GENDER_FOLDER: Record<string, string | null> = {
  * 켜지 않은 변형은 null이 돼서 화면이 기본(여성) 사진을 그대로 보여준다.
  * 사진을 넣으면 "male" / "neutral"을 추가한다. 프롬프트는 docs/카탈로그-이미지-프롬프트.md
  */
-const READY_TONE_VARIANTS = new Set<string>([]);
+const READY_TONE_VARIANTS = new Set<string>(["male", "neutral"]);
 
 export function toneVariantUrl(
   thumbnailPath: string | null,
