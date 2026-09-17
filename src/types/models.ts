@@ -111,7 +111,43 @@ export const SLOT_LABEL: Record<PresetSlot, string> = {
   top: "상의",
   bottom: "하의",
   scene: "장소",
+  outfit: "코디",
 };
+
+/**
+ * 룩의 옷은 두 방식 중 하나다 — 상의·하의를 따로 고르거나, 전신 코디 한 벌을 고르거나.
+ * 머리·장소는 어느 쪽이든 고른다. — 마이그레이션 20260917000010의 looks_outfit_or_separates
+ */
+export type OutfitMode = "separates" | "outfit";
+
+/** 코디 탭 순서. presets.category 값과 같다 */
+export const OUTFIT_CATEGORIES = ["데일리", "무대", "아우터"] as const;
+
+/**
+ * 성별을 바꾼다. 새 성별에 안 맞는 선택(다른 성별의 머리 등)은 같이 풀린다 —
+ * 남성으로 바꿨는데 여성 머리가 골라진 채 남아 있으면 서버가 거절한다.
+ */
+export function setGender(
+  traits: Traits,
+  genderId: string,
+  options: Record<OptionKind, { id: string; gender_id?: string | null }[]>,
+): Traits {
+  const next: Traits = { ...traits, gender: genderId };
+  for (const kind of Object.keys(next) as OptionKind[]) {
+    if (kind === "gender") continue;
+    const option = options[kind]?.find((o) => o.id === next[kind]);
+    if (option && !matchesGender(option, genderId)) delete next[kind];
+  }
+  return next;
+}
+
+/** 옵션이 이 성별에 쓸 수 있는지. gender_id가 없으면 성별 공통이다 */
+export function matchesGender(
+  option: { gender_id?: string | null },
+  genderId: string | undefined,
+): boolean {
+  return !option.gender_id || option.gender_id === genderId;
+}
 
 export const ANGLE_LABEL: Record<RefAngle, string> = {
   front: "정면",

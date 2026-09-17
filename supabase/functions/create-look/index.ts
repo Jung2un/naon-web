@@ -2,7 +2,9 @@
  * create-look — 크레딧 차감 + looks INSERT + 이미지 생성(Gemini)
  *
  * 화면 계약 (`src/components/app/LookBuilder.tsx`)
- *   body     { character_id, name, hair_preset_id, top_preset_id, bottom_preset_id, scene_preset_id }
+ *   body     { character_id, name, hair_preset_id, scene_preset_id,
+ *              top_preset_id + bottom_preset_id  또는  outfit_preset_id }
+ *            옷은 둘 중 하나다 — 상의·하의를 따로 고르거나 전신 코디 한 벌을 고른다.
  *   응답     { look_id }
  *   비용     1크레딧 · 원장 사유 look_charge
  *
@@ -25,7 +27,17 @@ import { extensionOf, inBackground } from "../_shared/batch.ts";
 import { lookInstruction, presetPhrase } from "../_shared/prompt.ts";
 
 const COST = 1;
-const SLOTS = ["hair", "top", "bottom", "scene"] as const;
+type Slot = "hair" | "top" | "bottom" | "scene" | "outfit";
+
+/**
+ * 코디를 보냈으면 코디 방식, 아니면 상의·하의 방식. 둘을 섞어 보내면 코디가 이긴다 —
+ * looks의 looks_outfit_or_separates가 같은 규칙이고, 코디 위에 상의를 또 얹으면 지시문이 싸운다.
+ */
+function requiredSlots(body: Record<string, unknown>): Slot[] {
+  return typeof body.outfit_preset_id === "string" && body.outfit_preset_id
+    ? ["hair", "outfit", "scene"]
+    : ["hair", "top", "bottom", "scene"];
+}
 
 Deno.serve(async (req) => {
   const pre = preflight(req);
@@ -44,7 +56,8 @@ Deno.serve(async (req) => {
   const characterId = typeof body.character_id === "string" ? body.character_id : "";
   if (!characterId) return fail(req, 400, "LOOK_INCOMPLETE");
 
-  const presetIds: Record<string, string> = {};
+  const SLOTS = requiredSlots(body);
+  const presetIds: Partial<Record<Slot, string>> = {};
   for (const slot of SLOTS) {
     const id = body[`${slot}_preset_id`];
     if (typeof id !== "string" || !id) return fail(req, 400, "LOOK_INCOMPLETE");
@@ -70,7 +83,7 @@ Deno.serve(async (req) => {
   const { data: presets } = await admin
     .from("presets")
     .select("id, slot, name, prompt")
-    .in("id", Object.values(presetIds))
+    .in("id", Object.values(presetIds) as string[])
     .eq("is_active", true);
 
   const bySlot = new Map((presets ?? []).map((p) => [p.slot, p]));
@@ -105,8 +118,9 @@ Deno.serve(async (req) => {
     character_id: characterId,
     name,
     hair_preset_id: presetIds.hair,
-    top_preset_id: presetIds.top,
-    bottom_preset_id: presetIds.bottom,
+    top_preset_id: presetIds.top ?? null,
+    bottom_preset_id: presetIds.bottom ?? null,
+    outfit_preset_id: presetIds.outfit ?? null,
     scene_preset_id: presetIds.scene,
     status: "queued",
   });
@@ -124,9 +138,13 @@ Deno.serve(async (req) => {
       sourcePath: character.base_image_path ?? character.thumbnail_path,
       prompt: lookInstruction({
         hair: presetPhrase(bySlot.get("hair")!),
-        top: presetPhrase(bySlot.get("top")!),
-        bottom: presetPhrase(bySlot.get("bottom")!),
         scene: presetPhrase(bySlot.get("scene")!),
+        ...(presetIds.outfit
+          ? { outfit: presetPhrase(bySlot.get("outfit")!) }
+          : {
+              top: presetPhrase(bySlot.get("top")!),
+              bottom: presetPhrase(bySlot.get("bottom")!),
+            }),
       }),
     }),
   );

@@ -23,6 +23,7 @@ import {
   CHARACTER_COST,
   CHARACTER_STEPS,
   REFINABLE_TRAIT_KINDS,
+  setGender,
   REF_ANGLES,
   STAGE_STEP,
   TRAIT_KINDS,
@@ -200,9 +201,16 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
                   key={kind}
                   kind={kind}
                   options={character.options[kind]}
+                  gender={traits.gender}
                   value={traits[kind]}
                   disabled={working}
-                  onChange={(id) => setTraits((prev) => ({ ...prev, [kind]: id }))}
+                  onChange={(id) =>
+                    setTraits((prev) =>
+                      kind === "gender" && id
+                        ? setGender(prev, id, character.options)
+                        : { ...prev, [kind]: id },
+                    )
+                  }
                 />
               ))}
             </div>
@@ -307,6 +315,7 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
                   key={kind}
                   kind={kind}
                   options={character.options[kind]}
+                  gender={traits.gender}
                   value={traits[kind]}
                   disabled={working}
                   onChange={(id) => setTraits((prev) => ({ ...prev, [kind]: id }))}

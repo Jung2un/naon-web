@@ -141,6 +141,17 @@ curl -s -o /dev/null -w "%{http_code}\n" "https://alafyhejiaxukrkrmehh.supabase.
 켜기 전에는 여성 사진이 그대로 나와서 안 깨진다. 남성 폴더를 임시로 채워 켜 보고,
 남성 → `tone/male/*`, 안 켠 중성적 → 여성 사진으로 돌아가는 것까지 로컬에서 확인했다(테스트 파일은 지움).
 프롬프트는 위 문서의 "톤 — 성별별 사진".
+
+**성별별 머리 · 룩 코디 (2026-09-17, 마이그레이션 `0009`·`0010`).** 레퍼런스 시트 15~20번을 넣었다.
+- [x] **캐릭터 만들기 머리** — 성별마다 사진 8장(`trait/hair/{female,male,neutral}/1~8.jpg`).
+      `character_options.gender_id`로 성별에 매었고, 화면은 고른 성별 머리만 보여준다.
+      성별을 바꾸면 안 맞는 머리 선택은 풀린다(`setGender`). 함수도 다른 성별 머리를 거절한다
+      (`draft-character`·`refine-character`의 `matchesGender`). 옛 글자 칩 6개는 껐다(캐릭터 0건일 때라 참조 없음)
+- [x] **룩 코디** — "상의·하의 따로 / 코디 한 벌" 중 고른다. 코디는 데일리 12 · 무대 12 · 아우터 6(`outfit/*`, 3:4 사진).
+      `presets.slot='outfit'` + `category`, `looks.outfit_preset_id`. 상의·하의 NOT NULL을 풀고
+      `looks_outfit_or_separates`로 "코디 한 벌이거나 상의·하의 둘 다"를 DB가 강제한다
+- 머리 24개·코디 30벌의 이름과 영어 지시문은 사진을 보고 붙였다. 결과가 흔들리면 DB의 `prompt` 열만 고친다
+- 시트는 칸이 3:4가 아니라서 — 데일리는 양옆을 배경 띠로 채웠고, 무대·아우터는 양옆을 잘랐다(무대 3번 리본 끝이 살짝 잘림)
 `proxy`의 매처가 이미지 확장자를 빼고 있어서 로그인 없이도 요청이 막히지 않는다.
 
 ### D. 마감 (S9~S10)

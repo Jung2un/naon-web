@@ -281,6 +281,7 @@ export async function getPresets(): Promise<Record<PresetSlot, PresetWithUrl[]>>
     top: [],
     bottom: [],
     scene: [],
+    outfit: [],
   };
 
   const rows: PresetWithUrl[] = await (async () => {
@@ -349,9 +350,11 @@ export async function getLooks(characterId?: string): Promise<LookListItem[]> {
       character_name: characters?.name ?? "",
       preset_names: {
         hair: nameById.get(look.hair_preset_id) ?? "",
-        top: nameById.get(look.top_preset_id) ?? "",
-        bottom: nameById.get(look.bottom_preset_id) ?? "",
+        // 코디를 고른 룩은 상의·하의가 비어 있다
+        top: look.top_preset_id ? (nameById.get(look.top_preset_id) ?? "") : "",
+        bottom: look.bottom_preset_id ? (nameById.get(look.bottom_preset_id) ?? "") : "",
         scene: nameById.get(look.scene_preset_id) ?? "",
+        outfit: look.outfit_preset_id ? (nameById.get(look.outfit_preset_id) ?? "") : "",
       },
     };
   });

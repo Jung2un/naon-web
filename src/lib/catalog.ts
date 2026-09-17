@@ -11,11 +11,19 @@
  */
 const EXT = "jpg";
 
+const range = (count: number) => Array.from({ length: count }, (_, i) => i + 1);
+
 const CATALOG = new Set<string>([
-  ...[1, 2, 3, 4, 5, 6].map((n) => `tone/${n}`),
-  ...["hair", "top", "bottom", "scene"].flatMap((slot) =>
-    [1, 2, 3, 4].map((n) => `${slot}/${n}`),
-  ),
+  // 톤 (캐릭터 만들기)
+  ...range(6).map((n) => `tone/${n}`),
+  // 룩 프리셋 — 머리·상의·하의·장소
+  ...["hair", "top", "bottom", "scene"].flatMap((slot) => range(4).map((n) => `${slot}/${n}`)),
+  // 캐릭터 만들기 머리 — 성별마다 8장 (마이그레이션 20260917000010)
+  ...["female", "male", "neutral"].flatMap((g) => range(8).map((n) => `trait/hair/${g}/${n}`)),
+  // 룩 코디 — 데일리 12 · 무대 12 · 아우터 6. 전신이라 3:4 사진이다
+  ...range(12).map((n) => `outfit/daily/${n}`),
+  ...range(12).map((n) => `outfit/stage/${n}`),
+  ...range(6).map((n) => `outfit/outer/${n}`),
 ]);
 
 export function catalogUrl(thumbnailPath: string | null): string | null {

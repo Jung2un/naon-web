@@ -21,6 +21,7 @@ import {
   OPTION_KIND_LABEL,
   REQUIRED_TRAIT_KINDS,
   TRAIT_KINDS,
+  setGender,
   type CharacterOptionWithUrl,
   type OptionKind,
   type Traits,
@@ -123,7 +124,7 @@ export function CharacterDraftForm({
                 type="button"
                 role="radio"
                 aria-checked={selected}
-                onClick={() => setTraits((prev) => ({ ...prev, gender: option.id }))}
+                onClick={() => setTraits((prev) => setGender(prev, option.id, options))}
                 className={cn(
                   "h-12 rounded-[12px] border text-base",
                   "transition-[background-color,border-color,box-shadow] duration-150 ease-out",
@@ -165,6 +166,7 @@ export function CharacterDraftForm({
             key={kind}
             kind={kind}
             options={options[kind]}
+            gender={traits.gender}
             value={traits[kind]}
             onChange={(id) => setTraits((prev) => ({ ...prev, [kind]: id }))}
           />
