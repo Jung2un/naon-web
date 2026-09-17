@@ -30,7 +30,7 @@ export default async function CharactersPage() {
     <>
       <PageHeader
         title="캐릭터"
-        description="톤을 골라 뽑고 다듬은 내 대역이에요. 룩과 작업물이 캐릭터에 붙어요."
+        description="톤을 골라 뽑고 다듬은 내 캐릭터예요. 룩과 작업물이 캐릭터에 붙어요."
         action={
           <Button variant="primary" asChild>
             <Link href="/characters/new">캐릭터 만들기</Link>

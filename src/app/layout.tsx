@@ -16,11 +16,12 @@ const figtree = Figtree({
 export const metadata: Metadata = {
   // 고정 운영 URL. 값은 src/lib/site-url.ts 한 곳에서만 정한다.
   metadataBase: new URL(SITE_URL),
+  // 탭에는 화면 이름만 둔다. 서비스 이름은 아직 정하지 않았다 — 정해지면 template에 꼬리로 붙인다
   title: {
-    default: "AI 대역",
-    template: "%s · AI 대역",
+    default: "캐릭터 만들기",
+    template: "%s",
   },
-  description: "내 대신 연기하는 AI 캐릭터를 관리하는 곳.",
+  description: "내 대신 연기하는 캐릭터를 만들고, 찍은 영상을 바꿔요.",
 };
 
 export const viewport: Viewport = {

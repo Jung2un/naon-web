@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { credits as fmt } from "@/lib/format";
 
+import { BrandMark } from "./BrandMark";
 /**
  * 모바일 상단 바 — 1024px 미만. 이동은 하단 탭이 맡는다(BottomNav).
  *
@@ -13,9 +14,10 @@ export function MobileNav({ credits }: { credits: number }) {
     <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-line bg-cream px-4 lg:hidden">
       <Link
         href="/dashboard"
-        className="font-display text-card font-semibold text-ink"
+        aria-label="대시보드로 가기"
+        className="flex h-11 items-center"
       >
-        AI 대역
+        <BrandMark size="sm" />
       </Link>
 
       <Link

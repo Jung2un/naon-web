@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "./nav-items";
 
+import { BrandMark } from "./BrandMark";
 /**
  * DESIGN.md §6 — 사이드바
  * 폭 240px, 크림 배경, 오른쪽 1px solid --border-subtle.
@@ -46,9 +47,10 @@ export function Sidebar({ footer }: { footer?: React.ReactNode }) {
     <aside className="fixed inset-y-0 left-0 hidden w-60 flex-col border-r border-line bg-cream px-3 py-5 lg:flex">
       <Link
         href="/dashboard"
-        className="mb-6 block px-3 font-display text-card font-semibold text-ink"
+        aria-label="대시보드로 가기"
+        className="mb-6 flex h-8 items-center px-3"
       >
-        AI 대역
+        <BrandMark size="sm" />
       </Link>
       <SidebarNav />
       <div className="mt-auto">{footer}</div>

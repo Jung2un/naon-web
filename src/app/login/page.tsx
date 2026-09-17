@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { OAuthButtons } from "@/components/app/OAuthButtons";
 import { safeNextPath } from "@/lib/site-url";
 import { humanError } from "@/lib/errors";
-
+import { BrandMark } from "@/components/app/BrandMark";
 export const metadata: Metadata = { title: "로그인" };
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
@@ -15,7 +15,10 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   return (
     <main className="flex min-h-dvh items-center justify-center px-4 py-14">
       <div className="w-full max-w-[380px]">
-        <h1 className="font-display text-title font-semibold text-ink">AI 대역</h1>
+        <BrandMark size="lg" />
+        <h1 className="mt-6 font-display text-title font-semibold text-ink">
+          로그인하고 시작해요
+        </h1>
         <p className="mt-2 text-base text-body">
           내 대신 연기하는 캐릭터를 만들고, 찍은 영상을 바꿔 둘 곳이에요.
         </p>

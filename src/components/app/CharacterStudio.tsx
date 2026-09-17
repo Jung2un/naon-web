@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Check } from "lucide-react";
-import { Stepper } from "./Stepper";
+import { Stepper, scrollToStep, stepAnchor } from "./Stepper";
 import { ToneTile } from "./ToneTile";
 import { TraitRow } from "./TraitChip";
 import { ActionBar } from "./ActionBar";
@@ -145,7 +145,12 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
 
   return (
     <div className="pb-4">
-      <Stepper steps={CHARACTER_STEPS} current={STAGE_STEP[character.stage]} />
+      <Stepper
+        steps={CHARACTER_STEPS}
+        current={STAGE_STEP[character.stage]}
+        onStepClick={scrollToStep}
+        isStepEnabled={(i) => STEPS_ON_SCREEN[character.stage].includes(i)}
+      />
 
       {character.status === "failed" && (
         <p
@@ -163,7 +168,7 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
 
       {character.stage === "draft" && (
         <>
-          <section className="mt-8">
+          <section id={stepAnchor(1)} className="mt-8 scroll-mt-20">
             <SectionHeader title="마음에 드는 얼굴 고르기" />
             <p className="text-base text-body">
               하나를 고르면 그 얼굴을 유지한 채로 다듬을 수 있어요. 고르는 건 크레딧이
@@ -181,7 +186,7 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
             </div>
           </section>
 
-          <section className="mt-10">
+          <section id={stepAnchor(0)} className="mt-10 scroll-mt-20">
             <SectionHeader title="설정 바꿔서 다시 뽑기" />
             <p className="text-caption text-muted">
               톤·성별·나이대는 여기서만 바꿀 수 있어요. 고른 얼굴을 다듬는 단계에서는
@@ -195,6 +200,9 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
                   <ToneTile
                     key={option.id}
                     option={option}
+                    imageUrl={
+                      traits.gender ? option.thumbnail_variants?.[traits.gender] : undefined
+                    }
                     selected={toneId === option.id}
                     disabled={working}
                     onSelect={setToneId}
@@ -249,7 +257,7 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
 
       {character.stage === "refining" && (
         <>
-          <section className="mt-8 flex flex-col gap-6 sm:flex-row">
+          <section id={stepAnchor(1)} className="mt-8 flex scroll-mt-20 flex-col gap-6 sm:flex-row">
             <div className="w-full sm:max-w-[260px]">
               <MicroLabel>지금 얼굴</MicroLabel>
               <div className="relative mt-2 aspect-[3/4] overflow-hidden rounded-[12px] border border-line bg-sunken">
@@ -311,7 +319,7 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
             </div>
           </section>
 
-          <section className="mt-10">
+          <section id={stepAnchor(2)} className="mt-10 scroll-mt-20">
             <SectionHeader title="다듬기" />
             <p className="text-base text-body">
               바꾼 항목만 고쳐져요. 얼굴은 그대로 유지돼요.
@@ -347,7 +355,7 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
               </span>
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center gap-3">
+            <div id={stepAnchor(0)} className="mt-4 flex scroll-mt-20 flex-wrap items-center gap-3">
               <Button
                 variant="ghost"
                 size="sm"
@@ -366,7 +374,7 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
           </section>
 
           {/* 이름은 여기서 정한다 — 얼굴을 다 다듬고 나서야 이름 짓기가 쉽다 */}
-          <section className="mt-10 max-w-[420px]">
+          <section id={stepAnchor(3)} className="mt-10 max-w-[420px] scroll-mt-20">
             <Label htmlFor="character-name">캐릭터 이름</Label>
             <Input
               id="character-name"
@@ -404,7 +412,7 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
       )}
 
       {character.stage === "building" && (
-        <section className="mt-8">
+        <section id={stepAnchor(3)} className="mt-8 scroll-mt-20">
           <SectionHeader title="3방향 뽑는 중" />
           <p className="text-base text-body">
             1~3분 걸려요. 다 되면 캐릭터 화면으로 넘어가요. 이 화면을 닫아도 계속
@@ -428,6 +436,17 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
     </div>
   );
 }
+
+/**
+ * 스튜디오 단계(stage)마다 화면에 실제로 그려지는 스테퍼 칸.
+ * 여기 없는 칸은 누를 수 없다 — 서버에서 렌더할 때도 같은 값이라 하이드레이션이 어긋나지 않는다.
+ */
+const STEPS_ON_SCREEN: Record<CharacterBuild["stage"], number[]> = {
+  draft: [0, 1],
+  refining: [0, 1, 2, 3],
+  building: [3],
+  ready: [],
+};
 
 /** 배치는 회차 단위다. 지난 회차는 화면에 안 그린다. */
 function latestRound(

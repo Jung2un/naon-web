@@ -32,11 +32,11 @@ export const fixtureProfile: Profile = {
 /** 톤 6 + 속성. 실제 시드(20260916000007)와 id·이름이 같다. */
 export const fixtureCharacterOptions: CharacterOptionWithUrl[] = [
   { id: "a1111111-0000-4000-8000-000000000001", kind: "tone", name: "실사", description: "사진처럼", prompt: "", gender_id: null, thumbnail_path: "tone/1.jpg", thumbnail_url: null, sort_order: 1, is_active: true },
-  { id: "a1111111-0000-4000-8000-000000000002", kind: "tone", name: "시네마틱", description: "영화 한 장면처럼", prompt: "", gender_id: null, thumbnail_path: "tone/2.jpg", thumbnail_url: null, sort_order: 2, is_active: true },
+  { id: "a1111111-0000-4000-8000-000000000004", kind: "tone", name: "일상 스냅", description: "폰으로 찍은 느낌", prompt: "", gender_id: null, thumbnail_path: "tone/4.jpg", thumbnail_url: null, sort_order: 2, is_active: true },
   { id: "a1111111-0000-4000-8000-000000000003", kind: "tone", name: "화보", description: "스튜디오 조명", prompt: "", gender_id: null, thumbnail_path: "tone/3.jpg", thumbnail_url: null, sort_order: 3, is_active: true },
-  { id: "a1111111-0000-4000-8000-000000000004", kind: "tone", name: "일상 스냅", description: "폰으로 찍은 느낌", prompt: "", gender_id: null, thumbnail_path: "tone/4.jpg", thumbnail_url: null, sort_order: 4, is_active: true },
-  { id: "a1111111-0000-4000-8000-000000000005", kind: "tone", name: "애니", description: "그림체", prompt: "", gender_id: null, thumbnail_path: "tone/5.jpg", thumbnail_url: null, sort_order: 5, is_active: true },
-  { id: "a1111111-0000-4000-8000-000000000006", kind: "tone", name: "3D 캐릭터", description: "입체 렌더", prompt: "", gender_id: null, thumbnail_path: "tone/6.jpg", thumbnail_url: null, sort_order: 6, is_active: true },
+  { id: "a1111111-0000-4000-8000-000000000002", kind: "tone", name: "시네마틱", description: "영화 한 장면처럼", prompt: "", gender_id: null, thumbnail_path: "tone/2.jpg", thumbnail_url: null, sort_order: 4, is_active: true },
+  { id: "a1111111-0000-4000-8000-000000000006", kind: "tone", name: "3D 캐릭터", description: "입체 렌더", prompt: "", gender_id: null, thumbnail_path: "tone/6.jpg", thumbnail_url: null, sort_order: 5, is_active: true },
+  { id: "a1111111-0000-4000-8000-000000000005", kind: "tone", name: "애니", description: "그림체", prompt: "", gender_id: null, thumbnail_path: "tone/5.jpg", thumbnail_url: null, sort_order: 6, is_active: true },
 
   { id: "a2222222-0000-4000-8000-000000000001", kind: "gender", name: "여성", description: null, prompt: "", gender_id: null, thumbnail_path: null, thumbnail_url: null, sort_order: 1, is_active: true },
   { id: "a2222222-0000-4000-8000-000000000002", kind: "gender", name: "남성", description: null, prompt: "", gender_id: null, thumbnail_path: null, thumbnail_url: null, sort_order: 2, is_active: true },

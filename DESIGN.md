@@ -1,4 +1,4 @@
-# AI 대역 — 디자인 시스템
+# 디자인 시스템
 
 Lovable DESIGN.md(VoltAgent/awesome-design-md)를 기반으로, 이 프로젝트의 **웹 관리 화면**에 맞게 번역한 문서다.
 

@@ -51,6 +51,18 @@ export function TraitChip({
 }
 
 /**
+ * 비워도 되는 갈래 표시. DESIGN.md §4 배지 치수(높이 22px · 좌우 8px · 12px · 필 라운드).
+ * 상태가 아니라 안내라 채움 없이 테두리만 둔다 — 눈이 먼저 가야 하는 건 고를 타일이다.
+ */
+function OptionalBadge() {
+  return (
+    <span className="inline-flex h-[22px] items-center rounded-full border border-line px-2 text-badge font-normal text-muted">
+      선택
+    </span>
+  );
+}
+
+/**
  * 사진이 있는 옵션(성별별 머리)의 타일. PresetTile과 같은 규칙 — 1:1, 라운드 12px,
  * 선택됨 = 테두리 --border-interactive + 우상단 차콜 원 안에 흰 체크.
  */
@@ -119,7 +131,6 @@ export function TraitRow({
   onChange,
   disabled,
   gender,
-  description,
 }: {
   kind: OptionKind;
   options: CharacterOptionWithUrl[];
@@ -127,8 +138,6 @@ export function TraitRow({
   onChange: (id: string | undefined) => void;
   disabled?: boolean;
   gender?: string;
-  /** 라벨 아래 한 줄. 톤 섹션처럼 무엇을 고르는지 알려줄 때 쓴다 */
-  description?: string;
 }) {
   const required = REQUIRED_TRAIT_KINDS.includes(kind);
   const visible = options.filter((option) => matchesGender(option, gender));
@@ -140,11 +149,10 @@ export function TraitRow({
 
   return (
     <div>
-      <MicroLabel>
-        {OPTION_KIND_LABEL[kind]}
-        {!required && <span className="ml-1 normal-case">· 비워도 돼요</span>}
-      </MicroLabel>
-      {description && <p className="mt-1 text-caption text-muted">{description}</p>}
+      <div className="flex items-center gap-2">
+        <MicroLabel>{OPTION_KIND_LABEL[kind]}</MicroLabel>
+        {!required && <OptionalBadge />}
+      </div>
       {asTiles ? (
         <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-8">
           {visible.map((option) => (

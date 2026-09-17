@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Stepper } from "./Stepper";
+import { Stepper, scrollToStep, stepAnchor } from "./Stepper";
 import { ToneTile } from "./ToneTile";
 import { TraitRow } from "./TraitChip";
 import { ActionBar } from "./ActionBar";
@@ -104,13 +104,19 @@ export function CharacterDraftForm({
 
   return (
     <div className="pb-4">
-      <Stepper steps={CHARACTER_STEPS} current={0} />
+      {/* 1단계에서는 1단계만 누를 수 있다. 2~4단계는 후보를 뽑아야 생기는 화면이다 */}
+      <Stepper
+        steps={CHARACTER_STEPS}
+        current={0}
+        onStepClick={scrollToStep}
+        isStepEnabled={(i) => i === 0}
+      />
 
       {/*
         성별은 맨 처음에 정한다. 누구를 만드는지가 정해져야 톤 사진부터 그 성별로 보여줄 수 있다.
         아래 속성 칩 줄에는 다시 나오지 않는다.
       */}
-      <section className="mt-8 max-w-[420px]">
+      <section id={stepAnchor(0)} className="mt-8 max-w-[420px] scroll-mt-20">
         <MicroLabel>성별</MicroLabel>
         <div
           role="radiogroup"
@@ -169,7 +175,6 @@ export function CharacterDraftForm({
           options={options.hair}
           gender={traits.gender}
           value={traits.hair}
-          description="사진을 보고 골라요. 고른 성별에 맞는 머리만 보여요."
           onChange={(id) => setTraits((prev) => ({ ...prev, hair: id }))}
         />
       </section>
