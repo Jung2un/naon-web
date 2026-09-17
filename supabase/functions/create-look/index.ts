@@ -22,7 +22,7 @@ import {
   type GeminiConfig,
 } from "../_shared/gemini.ts";
 import { extensionOf, inBackground } from "../_shared/batch.ts";
-import { lookInstruction } from "../_shared/prompt.ts";
+import { lookInstruction, presetPhrase } from "../_shared/prompt.ts";
 
 const COST = 1;
 const SLOTS = ["hair", "top", "bottom", "scene"] as const;
@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
   // 고른 프리셋이 정말 그 슬롯의 활성 프리셋인지.
   const { data: presets } = await admin
     .from("presets")
-    .select("id, slot, name")
+    .select("id, slot, name, prompt")
     .in("id", Object.values(presetIds))
     .eq("is_active", true);
 
@@ -123,10 +123,10 @@ Deno.serve(async (req) => {
       lookId,
       sourcePath: character.base_image_path ?? character.thumbnail_path,
       prompt: lookInstruction({
-        hair: bySlot.get("hair")!.name,
-        top: bySlot.get("top")!.name,
-        bottom: bySlot.get("bottom")!.name,
-        scene: bySlot.get("scene")!.name,
+        hair: presetPhrase(bySlot.get("hair")!),
+        top: presetPhrase(bySlot.get("top")!),
+        bottom: presetPhrase(bySlot.get("bottom")!),
+        scene: presetPhrase(bySlot.get("scene")!),
       }),
     }),
   );

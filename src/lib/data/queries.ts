@@ -3,6 +3,7 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/env";
 import { signedUrl, signedUrls } from "@/lib/storage";
+import { catalogUrl, toneVariantUrl } from "@/lib/catalog";
 import type {
   CharacterBuild,
   CharacterDetail,
@@ -163,7 +164,12 @@ export async function getCharacterOptions(): Promise<
   };
 
   const rows: CharacterOptionWithUrl[] = await (async () => {
-    if (!isSupabaseConfigured) return fixtures.fixtureCharacterOptions;
+    if (!isSupabaseConfigured) {
+      return fixtures.fixtureCharacterOptions.map((o) => ({
+        ...o,
+        thumbnail_url: catalogUrl(o.thumbnail_path),
+      }));
+    }
 
     const supabase = await createClient();
     const { data } = await supabase
@@ -174,9 +180,8 @@ export async function getCharacterOptions(): Promise<
     if (!data) return [];
 
     // 썸네일은 톤만 쓴다. 속성은 글자 칩이라 이미지가 없어도 화면이 완성된다.
-    const urls = await signedUrls(
+    const urls = await catalogOrSigned(
       supabase,
-      "presets",
       data.map((o: CharacterOption) => o.thumbnail_path),
     );
     return data.map((o: CharacterOption, i: number) => ({
@@ -185,7 +190,20 @@ export async function getCharacterOptions(): Promise<
     }));
   })();
 
-  return rows.reduce((acc, option) => {
+  // 톤마다 성별별 사진을 붙인다. 화면이 성별을 바꿀 때 서버를 다시 부르지 않게 한 번에 내려준다.
+  const genderIds = rows.filter((o) => o.kind === "gender").map((o) => o.id);
+  const withVariants = rows.map((o) =>
+    o.kind === "tone"
+      ? {
+          ...o,
+          thumbnail_variants: Object.fromEntries(
+            genderIds.map((id) => [id, toneVariantUrl(o.thumbnail_path, id)]),
+          ),
+        }
+      : o,
+  );
+
+  return withVariants.reduce((acc, option) => {
     acc[option.kind].push(option);
     return acc;
   }, empty);
@@ -240,6 +258,23 @@ export async function getCharacterBuild(
   };
 }
 
+/**
+ * 톤·프리셋 썸네일. 앱에 실린 카탈로그 그림이 있으면 그걸 쓰고(`src/lib/catalog.ts`),
+ * 없는 경로만 presets 버킷에서 서명한다. 전부 카탈로그면 스토리지를 부르지 않는다.
+ */
+async function catalogOrSigned(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  paths: (string | null)[],
+): Promise<(string | null)[]> {
+  const fixed = paths.map(catalogUrl);
+  const signed = await signedUrls(
+    supabase,
+    "presets",
+    paths.map((p, i) => (fixed[i] ? null : p)),
+  );
+  return fixed.map((url, i) => url ?? signed[i]);
+}
+
 export async function getPresets(): Promise<Record<PresetSlot, PresetWithUrl[]>> {
   const empty: Record<PresetSlot, PresetWithUrl[]> = {
     hair: [],
@@ -249,7 +284,12 @@ export async function getPresets(): Promise<Record<PresetSlot, PresetWithUrl[]>>
   };
 
   const rows: PresetWithUrl[] = await (async () => {
-    if (!isSupabaseConfigured) return fixtures.fixturePresets;
+    if (!isSupabaseConfigured) {
+      return fixtures.fixturePresets.map((p) => ({
+        ...p,
+        thumbnail_url: catalogUrl(p.thumbnail_path),
+      }));
+    }
 
     const supabase = await createClient();
     const { data } = await supabase
@@ -259,9 +299,8 @@ export async function getPresets(): Promise<Record<PresetSlot, PresetWithUrl[]>>
       .order("sort_order");
     if (!data) return [];
 
-    const urls = await signedUrls(
+    const urls = await catalogOrSigned(
       supabase,
-      "presets",
       data.map((p: Preset) => p.thumbnail_path),
     );
     return data.map((p: Preset, i: number) => ({ ...p, thumbnail_url: urls[i] }));

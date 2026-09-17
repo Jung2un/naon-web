@@ -410,6 +410,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          prompt: string
           slot: Database["public"]["Enums"]["preset_slot"]
           sort_order: number
           thumbnail_path: string | null
@@ -419,6 +420,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          prompt?: string
           slot: Database["public"]["Enums"]["preset_slot"]
           sort_order?: number
           thumbnail_path?: string | null
@@ -428,6 +430,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          prompt?: string
           slot?: Database["public"]["Enums"]["preset_slot"]
           sort_order?: number
           thumbnail_path?: string | null
