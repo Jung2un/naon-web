@@ -164,19 +164,24 @@ export function viewInstruction(angle: string): string {
 /**
  * 룩 — 사람은 그대로 두고 스타일만 바꾼다.
  *
- * 프리셋 이름이 한글이라 지시문에 그대로 싣는다. `presets`에는 아직 prompt 열이 없다
- * (캐릭터 옵션에만 있다). 결과가 흔들리면 프리셋에도 prompt 열을 더하는 게 맞다. — 기획서 §10
+ * 프리셋마다 영어 조각(`presets.prompt`)을 싣는다. 캐릭터 옵션과 같은 방식이다.
+ * 조각이 비어 있는 행은 한글 이름으로 되돌아간다 — 새 프리셋을 넣고 조각을 깜빡해도 깨지지 않는다.
+ * 결과를 다듬을 때는 배포 없이 그 열만 고친다. — 마이그레이션 20260917000008
  */
-export function lookInstruction(names: {
+export function presetPhrase(preset: { name: string; prompt?: string | null }): string {
+  return preset.prompt?.trim() || `"${preset.name}"`;
+}
+
+export function lookInstruction(phrases: {
   hair: string;
   top: string;
   bottom: string;
   scene: string;
 }): string {
   return [
-    `change this person's hairstyle to "${names.hair}"`,
-    `change the top to "${names.top}" and the bottom to "${names.bottom}"`,
-    `place them in "${names.scene}"`,
+    `change this person's hairstyle to ${phrases.hair}`,
+    `change the top to ${phrases.top} and the bottom to ${phrases.bottom}`,
+    `place them in ${phrases.scene}`,
     "keep the same person, the same face and identity",
     "natural lighting, one person only",
   ].join(". ");

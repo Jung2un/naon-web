@@ -120,25 +120,25 @@ export const fixtureCharacters: CharacterListItem[] = [
 
 export const fixturePresets: PresetWithUrl[] = [
   // 머리
-  { id: "p-hair-1", slot: "hair", name: "긴 웨이브", description: null, thumbnail_path: "hair/1.jpg", thumbnail_url: null, sort_order: 1, is_active: true },
-  { id: "p-hair-2", slot: "hair", name: "단발", description: null, thumbnail_path: "hair/2.jpg", thumbnail_url: null, sort_order: 2, is_active: true },
-  { id: "p-hair-3", slot: "hair", name: "포니테일", description: null, thumbnail_path: "hair/3.jpg", thumbnail_url: null, sort_order: 3, is_active: true },
-  { id: "p-hair-4", slot: "hair", name: "짧은 컷", description: null, thumbnail_path: "hair/4.jpg", thumbnail_url: null, sort_order: 4, is_active: true },
+  { id: "p-hair-1", slot: "hair", name: "긴 웨이브", prompt: "", description: null, thumbnail_path: "hair/1.jpg", thumbnail_url: null, sort_order: 1, is_active: true },
+  { id: "p-hair-2", slot: "hair", name: "단발", prompt: "", description: null, thumbnail_path: "hair/2.jpg", thumbnail_url: null, sort_order: 2, is_active: true },
+  { id: "p-hair-3", slot: "hair", name: "포니테일", prompt: "", description: null, thumbnail_path: "hair/3.jpg", thumbnail_url: null, sort_order: 3, is_active: true },
+  { id: "p-hair-4", slot: "hair", name: "짧은 컷", prompt: "", description: null, thumbnail_path: "hair/4.jpg", thumbnail_url: null, sort_order: 4, is_active: true },
   // 상의
-  { id: "p-top-1", slot: "top", name: "니트", description: null, thumbnail_path: "top/1.jpg", thumbnail_url: null, sort_order: 1, is_active: true },
-  { id: "p-top-2", slot: "top", name: "셔츠", description: null, thumbnail_path: "top/2.jpg", thumbnail_url: null, sort_order: 2, is_active: true },
-  { id: "p-top-3", slot: "top", name: "후디", description: null, thumbnail_path: "top/3.jpg", thumbnail_url: null, sort_order: 3, is_active: true },
-  { id: "p-top-4", slot: "top", name: "블레이저", description: null, thumbnail_path: "top/4.jpg", thumbnail_url: null, sort_order: 4, is_active: true },
+  { id: "p-top-1", slot: "top", name: "니트", prompt: "", description: null, thumbnail_path: "top/1.jpg", thumbnail_url: null, sort_order: 1, is_active: true },
+  { id: "p-top-2", slot: "top", name: "셔츠", prompt: "", description: null, thumbnail_path: "top/2.jpg", thumbnail_url: null, sort_order: 2, is_active: true },
+  { id: "p-top-3", slot: "top", name: "후디", prompt: "", description: null, thumbnail_path: "top/3.jpg", thumbnail_url: null, sort_order: 3, is_active: true },
+  { id: "p-top-4", slot: "top", name: "블레이저", prompt: "", description: null, thumbnail_path: "top/4.jpg", thumbnail_url: null, sort_order: 4, is_active: true },
   // 하의
-  { id: "p-bottom-1", slot: "bottom", name: "데님", description: null, thumbnail_path: "bottom/1.jpg", thumbnail_url: null, sort_order: 1, is_active: true },
-  { id: "p-bottom-2", slot: "bottom", name: "슬랙스", description: null, thumbnail_path: "bottom/2.jpg", thumbnail_url: null, sort_order: 2, is_active: true },
-  { id: "p-bottom-3", slot: "bottom", name: "플리츠 스커트", description: null, thumbnail_path: "bottom/3.jpg", thumbnail_url: null, sort_order: 3, is_active: true },
-  { id: "p-bottom-4", slot: "bottom", name: "트레이닝 팬츠", description: null, thumbnail_path: "bottom/4.jpg", thumbnail_url: null, sort_order: 4, is_active: true },
+  { id: "p-bottom-1", slot: "bottom", name: "데님", prompt: "", description: null, thumbnail_path: "bottom/1.jpg", thumbnail_url: null, sort_order: 1, is_active: true },
+  { id: "p-bottom-2", slot: "bottom", name: "슬랙스", prompt: "", description: null, thumbnail_path: "bottom/2.jpg", thumbnail_url: null, sort_order: 2, is_active: true },
+  { id: "p-bottom-3", slot: "bottom", name: "플리츠 스커트", prompt: "", description: null, thumbnail_path: "bottom/3.jpg", thumbnail_url: null, sort_order: 3, is_active: true },
+  { id: "p-bottom-4", slot: "bottom", name: "트레이닝 팬츠", prompt: "", description: null, thumbnail_path: "bottom/4.jpg", thumbnail_url: null, sort_order: 4, is_active: true },
   // 장소
-  { id: "p-scene-1", slot: "scene", name: "카페", description: null, thumbnail_path: "scene/1.jpg", thumbnail_url: null, sort_order: 1, is_active: true },
-  { id: "p-scene-2", slot: "scene", name: "거리", description: null, thumbnail_path: "scene/2.jpg", thumbnail_url: null, sort_order: 2, is_active: true },
-  { id: "p-scene-3", slot: "scene", name: "스튜디오", description: null, thumbnail_path: "scene/3.jpg", thumbnail_url: null, sort_order: 3, is_active: true },
-  { id: "p-scene-4", slot: "scene", name: "집", description: null, thumbnail_path: "scene/4.jpg", thumbnail_url: null, sort_order: 4, is_active: true },
+  { id: "p-scene-1", slot: "scene", name: "카페", prompt: "", description: null, thumbnail_path: "scene/1.jpg", thumbnail_url: null, sort_order: 1, is_active: true },
+  { id: "p-scene-2", slot: "scene", name: "거리", prompt: "", description: null, thumbnail_path: "scene/2.jpg", thumbnail_url: null, sort_order: 2, is_active: true },
+  { id: "p-scene-3", slot: "scene", name: "스튜디오", prompt: "", description: null, thumbnail_path: "scene/3.jpg", thumbnail_url: null, sort_order: 3, is_active: true },
+  { id: "p-scene-4", slot: "scene", name: "집", prompt: "", description: null, thumbnail_path: "scene/4.jpg", thumbnail_url: null, sort_order: 4, is_active: true },
 ];
 
 export const fixtureLooks: LookListItem[] = [

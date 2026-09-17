@@ -14,7 +14,7 @@
 | 막는 것 | 누가 | 없으면 |
 |---|---|---|
 | **Gemini API 키 + 결제 연결** | 계정 작업 | **지금 유일하게 막는 것.** 캐릭터·룩 만들기가 503에서 멈춘다 |
-| 카카오 — **Supabase 쪽 저장** | 계정 작업 | 로그인 화면에서 "곧 열려요"로 비활성 |
+| 카카오 — **비즈 앱 전환** (앱 아이콘 + 본인인증) | 계정 작업 · **나중에 하기로 함** | 로그인 화면에서 "곧 열려요"로 비활성 |
 
 ### A. Gemini 키 — **코드는 다 붙었다. 키만 넣으면 돈다**
 
@@ -65,37 +65,53 @@ npx supabase secrets set GEMINI_API_KEY=... GEMINI_IMAGE_MODEL=gemini-3.1-flash-
 **Vercel에 넣지 말 것.** 시크릿이 없는 동안에는 함수가 **크레딧을 깎기 전에** 503으로 막는다
 (`geminiConfig()`가 null이면 차감 앞에서 돌아선다). 키를 넣기 전에 버튼을 눌러도 크레딧이 안 날아간다.
 
-**결과가 마음에 안 들 때 고칠 곳은 세 군데뿐이다.**
+**결과가 마음에 안 들 때 고칠 곳은 네 군데뿐이다.**
 
 | 자리 | 무엇 |
 |---|---|
 | `character_options.prompt` (DB) | 톤·속성의 영어 조각. **배포 없이 고친다** |
+| `presets.prompt` (DB) | 룩 프리셋의 영어 조각. **배포 없이 고친다**. 비어 있으면 한글 이름으로 되돌아간다 |
 | `_shared/prompt.ts` | 조각을 잇는 규칙 — 수정 지시문, 각도 문구, 룩 문구 |
 | `GEMINI_IMAGE_MODEL` (시크릿) | 모델 자체를 올린다 |
 
-### B. 카카오 로그인
+### B. 카카오 로그인 — **이메일 동의항목에서 멈춤. 나중에 하기로 함**
 
 Google과 같은 자리에 붙인다. 버튼·로고·색은 이미 만들어져 있다 (`src/components/app/OAuthButton.tsx`).
+2026-09-17에 Supabase와 카카오 콘솔 설정을 끝냈고, **비즈 앱 전환 하나만 남았다.**
 
-> **2026-09-17 진단 — 카카오 콘솔은 됐는데 Supabase 쪽이 꺼져 있다.**
-> `GET /auth/v1/authorize?provider=kakao` → `400 "Unsupported provider: provider is not enabled"`,
-> 같은 호출에 google은 `302 accounts.google.com`. `/auth/v1/settings`의 external도 google만 true다.
-> 카카오 개발자 콘솔 설정과 별개로 **Supabase 대시보드 Providers → Kakao에서 토글을 켜고 Save**해야 한다.
-> 확인은 이 한 줄이다 — 400이 302로 바뀌면 켜진 것이다.
-> ```bash
-> curl -s -o /dev/null -w "%{http_code}
-" "https://alafyhejiaxukrkrmehh.supabase.co/auth/v1/authorize?provider=kakao"
-> ```
-> 코드의 `status`는 **켜진 걸 확인한 뒤에** `"ready"`로 바꾼다. 먼저 바꾸면 버튼을 누른 사람이 JSON 400 화면을 본다.
+**카카오 콘솔이 개편됐다.** 예전 "카카오 로그인 → 보안" 메뉴는 없어졌다(그 주소로 가면 "일반"으로 넘어간다).
+리다이렉트 URI·클라이언트 시크릿·REST API 키가 **한 화면**에 모여 있다 —
+**앱 → 플랫폼 키 → REST API 키(Default Rest API Key) 카드의 더보기 → 수정**
+(`developers.kakao.com/console/app/1579601/config/platform-key/rest/5696220`)
 
-- [x] Kakao Developers에서 앱 생성 → 카카오 로그인 활성화 (OpenID Connect도 켬 — 켜도 무방하다)
-- [ ] Redirect URI 등록 — 구글과 **같은 값** `https://alafyhejiaxukrkrmehh.supabase.co/auth/v1/callback`
-- [ ] 보안 메뉴에서 Client Secret 생성 + **사용함**으로 (Supabase가 secret을 요구한다)
-- [ ] Supabase → Authentication → Providers → Kakao 에 **REST API 키**와 Client Secret → **토글 ON → Save** ← 지금 여기서 막혀 있다
-- [ ] `src/lib/auth-providers.ts`에서 kakao의 `status`를 `"preparing"` → `"ready"` (한 단어)
+- [x] Kakao Developers 앱 생성 → 카카오 로그인 사용 설정 ON (OpenID Connect도 켬 — 무방하다)
+- [x] **카카오 로그인 리다이렉트 URI** 저장 — `https://alafyhejiaxukrkrmehh.supabase.co/auth/v1/callback`.
+      바로 아래 "비즈니스 인증 리다이렉트 URI"와 헷갈리지 말 것
+- [x] 클라이언트 시크릿 — 같은 화면에 이미 발급돼 있다. **"코드 재발급"은 누르지 말 것** (Supabase에 넣은 값이 무효가 된다)
+- [x] Supabase Providers → Kakao 에 REST API 키 + 클라이언트 시크릿 → ON → Save.
+      `authorize?provider=kakao`가 `400 provider is not enabled` → **`302 kauth.kakao.com`** 으로 바뀐 것 확인
+- [x] 동의항목 — 닉네임 **필수 동의**, 프로필 사진 **선택 동의**
+- [ ] **카카오계정(이메일) — "권한 없음"** ← 여기서 멈춤
+- [ ] `src/lib/auth-providers.ts`에서 kakao의 `status`를 `"preparing"` → `"ready"` — **이메일이 켜진 뒤에**
 
-> 걸리기 쉬운 곳: 동의항목. 닉네임은 기본으로 받지만 **이메일은 비즈 앱 전환이 필요할 수 있다.**
-> 이메일 동의를 필수로 걸어두면 심사 전에는 로그인이 막힌다. 선택으로 두거나 닉네임만으로 시작할 것.
+**이메일을 안 켜면 로그인이 안 된다.** Supabase는 카카오에 `account_email profile_image profile_nickname`을
+**항상 같이** 요청한다(authorize 리다이렉트 주소의 `scope`에서 확인). 이메일만 빼는 설정은 없다.
+동의항목에 없는 걸 요청받으면 카카오가 `KOE205`로 막는다. 그래서 코드의 `status`를 아직 안 바꿨다 —
+먼저 바꾸면 버튼을 누른 사람이 KOE205 화면을 본다.
+
+"권한 없음"은 계정 문제가 아니라 **앱이 비즈 앱이 아니라서**다. 카카오 화면에 적힌 순서대로 하면 된다.
+
+1. **앱 아이콘 등록** — 앱 → 일반 → 앱 기본 정보. 이게 없으면 전환이 막힌다
+2. **개인 개발자 비즈 앱 전환** — 같은 화면 비즈니스 정보. 사업자번호 없이 **본인인증 + 카카오비즈니스 통합 서비스 약관 동의**
+3. 동의항목에서 카카오계정(이메일)이 "설정"으로 바뀌면 **선택 동의**로 켜고 저장
+4. 코드 `status` → `"ready"` 배포, 로그인 버튼으로 카카오 화면까지 확인
+
+"추가 기능 신청 → 개인정보 동의항목" 심사는 **이메일 때문에 할 필요 없다.** 이메일은 비즈 앱 전환만으로 켜진다.
+
+켜졌는지 확인 — `302`면 Supabase 쪽은 살아 있다.
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" "https://alafyhejiaxukrkrmehh.supabase.co/auth/v1/authorize?provider=kakao"
+```
 
 ### C. 썸네일 22장 — **끝났다. 고정 그림으로 앱에 실었다**
 
@@ -108,6 +124,7 @@ Google과 같은 자리에 붙인다. 버튼·로고·색은 이미 만들어져
 **사진이 아니라 손으로 그린 벡터 그림이다.** 각 톤이 뭔지 한눈에 보이게 같은 인물을
 조명·색·질감만 바꿔 그렸다(애니·3D는 그림체 자체를 바꿨다).
 실사 이미지로 바꾸고 싶으면 **같은 이름의 파일을 갈아끼우고 `catalog.ts`의 `EXT` 한 줄**을 바꾼다.
+22장의 감성 사진 프롬프트와 넣는 순서는 **`docs/카탈로그-이미지-프롬프트.md`** 에 있다.
 `proxy`의 매처가 이미지 확장자를 빼고 있어서 로그인 없이도 그림 요청이 막히지 않는다.
 
 ### D. 마감 (S9~S10)
@@ -149,7 +166,8 @@ Google과 같은 자리에 붙인다. 버튼·로고·색은 이미 만들어져
 
 - [ ] 결제 (토스/Stripe) — S10 이후 별도
 - [ ] 파일 1GB / egress 5GB 근접하면 Supabase Pro, 그 뒤 `videos`만 R2로
-- [ ] 룩 지시문이 프리셋 **한글 이름**을 그대로 싣는다. 흔들리면 `presets`에도 `prompt` 열을 더한다
+- [x] ~~룩 지시문이 프리셋 한글 이름을 그대로 싣는다~~ → `presets.prompt` 영어 조각 16개를 더했다(2026-09-17).
+      조각은 썸네일에 그린 색·모양과 같게 적었다 — 타일에서 본 것과 결과가 어긋나지 않게. `create-look` 재배포 완료
 
 ---
 
