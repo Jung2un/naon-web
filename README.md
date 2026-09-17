@@ -14,8 +14,7 @@
 | 막는 것 | 누가 | 없으면 |
 |---|---|---|
 | **Gemini API 키 + 결제 연결** | 계정 작업 | **지금 유일하게 막는 것.** 캐릭터·룩 만들기가 503에서 멈춘다 |
-| 카카오 개발자 앱 | 계정 작업 | 로그인 화면에서 "곧 열려요"로 비활성 |
-| 프리셋 16장 + 톤 6장 | 키가 생기면 같은 API로 뽑는다 | 타일이 이름만 나온다 (깨지지는 않는다) |
+| 카카오 — **Supabase 쪽 저장** | 계정 작업 | 로그인 화면에서 "곧 열려요"로 비활성 |
 
 ### A. Gemini 키 — **코드는 다 붙었다. 키만 넣으면 돈다**
 
@@ -78,24 +77,38 @@ npx supabase secrets set GEMINI_API_KEY=... GEMINI_IMAGE_MODEL=gemini-3.1-flash-
 
 Google과 같은 자리에 붙인다. 버튼·로고·색은 이미 만들어져 있다 (`src/components/app/OAuthButton.tsx`).
 
-- [ ] Kakao Developers에서 앱 생성 → 카카오 로그인 활성화
+> **2026-09-17 진단 — 카카오 콘솔은 됐는데 Supabase 쪽이 꺼져 있다.**
+> `GET /auth/v1/authorize?provider=kakao` → `400 "Unsupported provider: provider is not enabled"`,
+> 같은 호출에 google은 `302 accounts.google.com`. `/auth/v1/settings`의 external도 google만 true다.
+> 카카오 개발자 콘솔 설정과 별개로 **Supabase 대시보드 Providers → Kakao에서 토글을 켜고 Save**해야 한다.
+> 확인은 이 한 줄이다 — 400이 302로 바뀌면 켜진 것이다.
+> ```bash
+> curl -s -o /dev/null -w "%{http_code}
+" "https://alafyhejiaxukrkrmehh.supabase.co/auth/v1/authorize?provider=kakao"
+> ```
+> 코드의 `status`는 **켜진 걸 확인한 뒤에** `"ready"`로 바꾼다. 먼저 바꾸면 버튼을 누른 사람이 JSON 400 화면을 본다.
+
+- [x] Kakao Developers에서 앱 생성 → 카카오 로그인 활성화 (OpenID Connect도 켬 — 켜도 무방하다)
 - [ ] Redirect URI 등록 — 구글과 **같은 값** `https://alafyhejiaxukrkrmehh.supabase.co/auth/v1/callback`
 - [ ] 보안 메뉴에서 Client Secret 생성 + **사용함**으로 (Supabase가 secret을 요구한다)
-- [ ] Supabase → Authentication → Providers → Kakao 에 **REST API 키**와 Client Secret
+- [ ] Supabase → Authentication → Providers → Kakao 에 **REST API 키**와 Client Secret → **토글 ON → Save** ← 지금 여기서 막혀 있다
 - [ ] `src/lib/auth-providers.ts`에서 kakao의 `status`를 `"preparing"` → `"ready"` (한 단어)
 
 > 걸리기 쉬운 곳: 동의항목. 닉네임은 기본으로 받지만 **이메일은 비즈 앱 전환이 필요할 수 있다.**
 > 이메일 동의를 필수로 걸어두면 심사 전에는 로그인이 막힌다. 선택으로 두거나 닉네임만으로 시작할 것.
 
-### C. 썸네일 22장 — 프리셋 16 + 톤 6
+### C. 썸네일 22장 — **끝났다. 고정 그림으로 앱에 실었다**
 
-경로는 DB에 이미 적혀 있다. 같은 이름으로 올리면 SQL을 안 건드려도 붙는다.
-**A의 키가 생기면 같은 API로 뽑아서 올리면 된다** (22장이면 400원쯤).
+- [x] 톤 6장 + 프리셋 16장을 SVG 일러스트로 그려 `public/catalog/`에 넣었다
+      (`tone/1~6` · `hair|top|bottom|scene/1~4`). 버킷·서명·스토리지 호출이 없다
+- [x] `src/lib/catalog.ts`가 DB의 `thumbnail_path`(`tone/1.jpg` …)를 키로 그림을 찾는다.
+      확장자는 안 본다. 카탈로그에 없는 경로만 예전처럼 `presets` 버킷에서 서명한다
+- [x] 로컬에서 확인 — `/characters/new` 톤 6장, `/looks/new` 프리셋 16장 전부 로드(깨진 것 0)
 
-- [ ] `presets` 버킷에 `hair/1.jpg` … `scene/4.jpg` (머리·상의·하의·장소 각 4장)
-- [ ] `presets` 버킷에 `tone/1.jpg` … `tone/6.jpg` (실사·시네마틱·화보·일상 스냅·애니·3D)
-- `presets` 버킷에는 INSERT 정책이 없다 — 대시보드나 service_role로 올린다
-- 파일이 없는 동안에는 signed URL이 null이라 `PresetTile`·`ToneTile`이 이름만 그린다. 깨지지 않는다
+**사진이 아니라 손으로 그린 벡터 그림이다.** 각 톤이 뭔지 한눈에 보이게 같은 인물을
+조명·색·질감만 바꿔 그렸다(애니·3D는 그림체 자체를 바꿨다).
+실사 이미지로 바꾸고 싶으면 **같은 이름의 파일을 갈아끼우고 `catalog.ts`의 `EXT` 한 줄**을 바꾼다.
+`proxy`의 매처가 이미지 확장자를 빼고 있어서 로그인 없이도 그림 요청이 막히지 않는다.
 
 ### D. 마감 (S9~S10)
 
@@ -109,7 +122,9 @@ Google과 같은 자리에 붙인다. 버튼·로고·색은 이미 만들어져
 - [ ] **스튜디오 화면은 아직 눈으로 못 봤다.** 후보 그리드·버전 스트립·3방향 진행이
       실제로 그려지는 걸 못 본 상태다 — **키가 있어야 첫 캐릭터가 생긴다 → A번 대기**
 - [ ] 프리셋 그리드도 같은 이유로 못 봤다. `/looks/new`가 "쓸 수 있는 캐릭터가 없어요"에서 멈춘다
-- [ ] 크레딧 0인 계정으로 전 화면 돌아보기
+- [x] **크레딧 0인 계정으로 전 화면 확인** (2026-09-17). 깨지는 곳 없음, `/credits`는 0 전용 문구까지 나온다.
+      스튜디오가 잔액을 몰라 다 고른 뒤에야 402를 받던 걸 고쳤다 — 이제 먼저 막고 충전 링크를 보여준다.
+      점검은 `profiles.credits`만 0→15로 되돌렸고 원장은 안 건드렸다
 - [ ] 생성을 일부러 실패시켜 에러 문구가 사람 말로 나오는지 확인 (A번 뒤에 된다)
 - [ ] 커스텀 도메인 + Google 동의 화면 프로덕션 게시
 - [ ] 결제 켜기 전에 **Vercel Pro 전환** (Hobby는 비상업용 전용)

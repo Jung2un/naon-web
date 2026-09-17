@@ -30,6 +30,8 @@ UPDATE/DELETE뿐이다. INSERT 정책이 아예 없는 것이 이 규칙의 강�
 클라이언트에 버킷 경로를 그대로 노출하지 않는다. DB에는 경로 문자열만 들고,
 URL은 서버에서 만료 1시간짜리로 만들어 붙인다.
 (영상만 R2로 옮길 때 고쳐야 하는 곳이 이 파일 하나다. — `docs/배포.md` §6)
+예외는 톤·프리셋 카탈로그 그림뿐이다. 사용자 파일이 아니라 모두가 같이 보는 고정 그림이라
+`public/catalog/`에 앱과 같이 싣는다. — `src/lib/catalog.ts`
 
 **5. `src/types/database.ts`는 손으로 고치지 않는다.** — `src/types/database.ts`
 `supabase gen types typescript`의 출력물이다. 화면에서 쓰는 타입은 전부
