@@ -119,6 +119,7 @@ export function TraitRow({
   onChange,
   disabled,
   gender,
+  description,
 }: {
   kind: OptionKind;
   options: CharacterOptionWithUrl[];
@@ -126,6 +127,8 @@ export function TraitRow({
   onChange: (id: string | undefined) => void;
   disabled?: boolean;
   gender?: string;
+  /** 라벨 아래 한 줄. 톤 섹션처럼 무엇을 고르는지 알려줄 때 쓴다 */
+  description?: string;
 }) {
   const required = REQUIRED_TRAIT_KINDS.includes(kind);
   const visible = options.filter((option) => matchesGender(option, gender));
@@ -141,8 +144,9 @@ export function TraitRow({
         {OPTION_KIND_LABEL[kind]}
         {!required && <span className="ml-1 normal-case">· 비워도 돼요</span>}
       </MicroLabel>
+      {description && <p className="mt-1 text-caption text-muted">{description}</p>}
       {asTiles ? (
-        <div className="mt-3 grid grid-cols-4 gap-3 sm:grid-cols-4 lg:grid-cols-8">
+        <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-8">
           {visible.map((option) => (
             <TraitTile
               key={option.id}

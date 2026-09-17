@@ -17,7 +17,6 @@ import {
   OUTFIT_CATEGORIES,
   SLOT_LABEL,
   type CharacterListItem,
-  type OutfitMode,
   type PresetSlot,
   type PresetWithUrl,
   type SlotSelection,
@@ -25,23 +24,15 @@ import {
 
 const COST = 1;
 
-/** 방식마다 다 골라야 하는 슬롯, 화면 순서대로 */
-const REQUIRED_SLOTS: Record<OutfitMode, readonly PresetSlot[]> = {
-  separates: ["hair", "top", "bottom", "scene"],
-  outfit: ["hair", "outfit", "scene"],
-};
-
-const MODE_LABEL: Record<OutfitMode, string> = {
-  separates: "상의·하의 따로",
-  outfit: "코디 한 벌",
-};
+/** 다 골라야 하는 슬롯, 화면 순서대로 */
+const SLOTS: readonly PresetSlot[] = ["outfit", "scene"];
 
 /**
  * 룩은 프리셋 슬롯만. 자유 프롬프트 없음. — README "이미 정해진 것"
  * 흔들면 원가와 품질이 같이 무너진다.
  *
- * 옷은 상의·하의를 따로 고르거나 전신 코디 한 벌을 고른다. 둘을 섞지 않는다 —
- * 코디 위에 따로 고른 상의를 얹으면 지시문이 서로 싸운다.
+ * 룩은 **코디 한 벌 + 장소**다. 머리는 캐릭터를 만들 때 사진으로 정했으니 여기서 안 고른다.
+ * 상의·하의를 따로 고르던 방식은 코디로 대체했다. — 마이그레이션 20260917000010·0011
  */
 export function LookBuilder({
   presets,
@@ -63,24 +54,21 @@ export function LookBuilder({
       ? defaultCharacterId
       : (usable[0]?.id ?? ""),
   );
-  const [mode, setMode] = useState<OutfitMode>("separates");
   const [category, setCategory] = useState<string>(OUTFIT_CATEGORIES[0]);
   const [selection, setSelection] = useState<SlotSelection>({});
   const [name, setName] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const slots = REQUIRED_SLOTS[mode];
-
   const selectedNames = useMemo(() => {
     const out: Partial<Record<PresetSlot, string>> = {};
-    for (const slot of slots) {
+    for (const slot of SLOTS) {
       const id = selection[slot];
       if (!id) continue;
       out[slot] = presets[slot].find((p) => p.id === id)?.name;
     }
     return out;
-  }, [selection, presets, slots]);
+  }, [selection, presets]);
 
   const outfits = presets.outfit.filter((p) => p.category === category);
 
@@ -111,16 +99,11 @@ export function LookBuilder({
           character_id: characterId,
           name:
             name.trim() ||
-            slots
-              .map((s) => selectedNames[s])
+            SLOTS.map((s) => selectedNames[s])
               .filter(Boolean)
               .join(" "),
-          hair_preset_id: selection.hair,
+          outfit_preset_id: selection.outfit,
           scene_preset_id: selection.scene,
-          // 고른 방식의 옷만 보낸다. 다른 방식에서 골라 둔 값은 남아 있어도 싣지 않는다
-          ...(mode === "outfit"
-            ? { outfit_preset_id: selection.outfit }
-            : { top_preset_id: selection.top, bottom_preset_id: selection.bottom }),
         },
       );
 
@@ -164,97 +147,41 @@ export function LookBuilder({
       </div>
 
       <section className="mt-8">
-        <MicroLabel>{SLOT_LABEL.hair}</MicroLabel>
-        <div className={grid}>
-          {presets.hair.map((preset) => (
-            <PresetTile
-              key={preset.id}
-              preset={preset}
-              selected={selection.hair === preset.id}
-              onSelect={(id) => pick("hair", id)}
-            />
-          ))}
-        </div>
-      </section>
-
-      <section className="mt-8">
-        <MicroLabel>옷</MicroLabel>
-        <div
-          role="radiogroup"
-          aria-label="옷 고르는 방식"
-          className="mt-3 grid max-w-[420px] grid-cols-2 gap-3"
-        >
-          {(Object.keys(MODE_LABEL) as OutfitMode[]).map((m) => (
+        <MicroLabel>{SLOT_LABEL.outfit}</MicroLabel>
+        <p className="mt-1 text-caption text-muted">
+          전신 코디 한 벌을 골라요. 머리는 캐릭터 그대로예요.
+        </p>
+        <div role="tablist" aria-label="코디 분류" className="mt-3 flex gap-2">
+          {OUTFIT_CATEGORIES.map((c) => (
             <button
-              key={m}
+              key={c}
               type="button"
-              role="radio"
-              aria-checked={mode === m}
-              onClick={() => setMode(m)}
+              role="tab"
+              aria-selected={category === c}
+              onClick={() => setCategory(c)}
               className={cn(
-                "h-12 rounded-[12px] border text-base",
-                "transition-[background-color,border-color,box-shadow] duration-150 ease-out",
-                mode === m
-                  ? "border-ink bg-ink text-on-dark shadow-inset"
-                  : "border-line bg-transparent text-ink hover:bg-hover",
+                "h-8 rounded-full border px-3 text-sm",
+                "transition-[background-color,border-color] duration-150 ease-out",
+                category === c
+                  ? "border-ink bg-ink text-on-dark"
+                  : "border-line text-body hover:bg-hover",
               )}
             >
-              {MODE_LABEL[m]}
+              {c}
             </button>
           ))}
         </div>
-
-        {mode === "separates" ? (
-          (["top", "bottom"] as const).map((slot) => (
-            <div key={slot} className="mt-6">
-              <MicroLabel>{SLOT_LABEL[slot]}</MicroLabel>
-              <div className={grid}>
-                {presets[slot].map((preset) => (
-                  <PresetTile
-                    key={preset.id}
-                    preset={preset}
-                    selected={selection[slot] === preset.id}
-                    onSelect={(id) => pick(slot, id)}
-                  />
-                ))}
-              </div>
-            </div>
-          ))
-        ) : (
-          <div className="mt-6">
-            <div role="tablist" aria-label="코디 분류" className="flex gap-2">
-              {OUTFIT_CATEGORIES.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  role="tab"
-                  aria-selected={category === c}
-                  onClick={() => setCategory(c)}
-                  className={cn(
-                    "h-8 rounded-full border px-3 text-sm",
-                    "transition-[background-color,border-color] duration-150 ease-out",
-                    category === c
-                      ? "border-ink bg-ink text-on-dark"
-                      : "border-line text-body hover:bg-hover",
-                  )}
-                >
-                  {c}
-                </button>
-              ))}
-            </div>
-            <div className={grid}>
-              {outfits.map((preset) => (
-                <PresetTile
-                  key={preset.id}
-                  preset={preset}
-                  portrait
-                  selected={selection.outfit === preset.id}
-                  onSelect={(id) => pick("outfit", id)}
-                />
-              ))}
-            </div>
-          </div>
-        )}
+        <div className={grid}>
+          {outfits.map((preset) => (
+            <PresetTile
+              key={preset.id}
+              preset={preset}
+              portrait
+              selected={selection.outfit === preset.id}
+              onSelect={(id) => pick("outfit", id)}
+            />
+          ))}
+        </div>
       </section>
 
       <section className="mt-8">
@@ -280,7 +207,7 @@ export function LookBuilder({
       {/* 래퍼로 감싸지 않는다 — sticky가 움직일 공간이 없어진다. ActionBar 주석 참고 */}
       <SummaryBar
         className="mt-8"
-        slots={slots}
+        slots={SLOTS}
         selectedNames={selectedNames}
         cost={COST}
         pending={pending}

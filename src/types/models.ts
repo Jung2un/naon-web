@@ -114,12 +114,6 @@ export const SLOT_LABEL: Record<PresetSlot, string> = {
   outfit: "코디",
 };
 
-/**
- * 룩의 옷은 두 방식 중 하나다 — 상의·하의를 따로 고르거나, 전신 코디 한 벌을 고르거나.
- * 머리·장소는 어느 쪽이든 고른다. — 마이그레이션 20260917000010의 looks_outfit_or_separates
- */
-export type OutfitMode = "separates" | "outfit";
-
 /** 코디 탭 순서. presets.category 값과 같다 */
 export const OUTFIT_CATEGORIES = ["데일리", "무대", "아우터"] as const;
 
@@ -177,6 +171,19 @@ export const TRAIT_KINDS: readonly OptionKind[] = [
   "vibe",
 ] as const;
 
+/**
+ * 화면에서 속성을 보여주는 순서 — 성별 → (톤) → 머리 → 나이대 → 머리색 → 체형 → 분위기.
+ * 머리는 사진이라 톤 바로 다음에 둔다. 프롬프트 문장 순서(TRAIT_KINDS)와는 별개다.
+ */
+export const TRAIT_DISPLAY_KINDS: readonly OptionKind[] = [
+  "gender",
+  "hair",
+  "age",
+  "hair_color",
+  "body",
+  "vibe",
+] as const;
+
 /** 이 둘이 없으면 사람이 안 정해진다. 나머지는 비워도 모델이 알아서 채운다 */
 export const REQUIRED_TRAIT_KINDS: readonly OptionKind[] = ["gender", "age"];
 
@@ -211,6 +218,12 @@ export const STAGE_LABEL: Record<CharacterStage, string> = {
 
 /** 캐릭터 만들기의 단계별 크레딧. 함수도 같은 값을 쓴다. — 기획서 §4 */
 export const CHARACTER_COST = { draft: 1, refine: 1, build: 2 } as const;
+
+/**
+ * 1단계에서는 이름을 안 받는다. DB의 name이 필수라 후보를 뽑을 때 이 값이 들어가고,
+ * 3단계에서 완성할 때 사용자가 적은 이름으로 바뀐다. — draft-character · build-character와 같은 값
+ */
+export const PLACEHOLDER_CHARACTER_NAME = "새 캐릭터";
 
 /** Stepper 네 단계. 1단계는 `/characters/new`, 나머지는 스튜디오다. */
 export const CHARACTER_STEPS = ["톤 고르기", "후보 고르기", "다듬기", "완성"];

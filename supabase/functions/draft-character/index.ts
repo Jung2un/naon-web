@@ -2,7 +2,8 @@
  * draft-character — 톤과 속성으로 후보 4장을 뽑는다. 캐릭터 만들기의 1단계다.
  *
  * 화면 계약 (`src/components/app/CharacterDraftForm.tsx` · `CharacterStudio.tsx`)
- *   body     { name?, tone_id, traits, character_id? }
+ *   body     { tone_id, traits, character_id? }
+ *            이름은 받지 않는다(받으면 쓴다). 이름은 3단계 뒤 build-character에서 정한다
  *   응답     { character_id }
  *   비용     1크레딧 · 원장 사유 character_draft_charge
  *
@@ -97,8 +98,9 @@ Deno.serve(async (req) => {
   }
 
   const rawName = typeof body.name === "string" ? body.name.trim() : "";
-  const name = rawName || character?.name || "";
-  if (!name || name.length > 20) return fail(req, 400, "TRAITS_INCOMPLETE");
+  // DB의 name이 필수라 임시 이름을 넣어 둔다. 화면(models.ts)의 PLACEHOLDER_CHARACTER_NAME과 같은 값
+  const name = rawName || character?.name || "새 캐릭터";
+  if (name.length > 20) return fail(req, 400, "NAME_REQUIRED");
 
   // 키가 없으면 깎기 전에 멈춘다. — README A
   const gemini = geminiConfig();

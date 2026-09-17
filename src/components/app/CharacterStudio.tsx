@@ -10,7 +10,8 @@ import { TraitRow } from "./TraitChip";
 import { ActionBar } from "./ActionBar";
 import { SectionHeader } from "./PageHeader";
 import { Button } from "@/components/ui/button";
-import { MicroLabel } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Label, MicroLabel } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/lib/supabase/client";
 import { invokeFunction } from "@/lib/supabase/functions";
@@ -22,11 +23,12 @@ import {
   ANGLE_LABEL,
   CHARACTER_COST,
   CHARACTER_STEPS,
+  PLACEHOLDER_CHARACTER_NAME,
   REFINABLE_TRAIT_KINDS,
   setGender,
   REF_ANGLES,
   STAGE_STEP,
-  TRAIT_KINDS,
+  TRAIT_DISPLAY_KINDS,
   asTraits,
   type CharacterBuild,
   type CharacterImageWithUrl,
@@ -50,6 +52,11 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [toneId, setToneId] = useState(character.tone_id ?? "");
+  // 이름은 다듬기가 끝나고 완성할 때 정한다. 그 전까지 서버에는 임시 이름이 들어 있다
+  const [name, setName] = useState(
+    character.name === PLACEHOLDER_CHARACTER_NAME ? "" : character.name,
+  );
+  const nameReady = name.trim().length > 0 && name.trim().length <= 20;
   const [traits, setTraits] = useState<Traits>(serverTraits);
   const [syncedAt, setSyncedAt] = useState(character.updated_at);
 
@@ -132,6 +139,7 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
     run("build", async (supabase) => {
       await invokeFunction(supabase, "build-character", {
         character_id: character.id,
+        name: name.trim(),
       });
     });
 
@@ -196,7 +204,7 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
             </div>
 
             <div className="mt-6 flex flex-col gap-6">
-              {TRAIT_KINDS.map((kind) => (
+              {TRAIT_DISPLAY_KINDS.map((kind) => (
                 <TraitRow
                   key={kind}
                   kind={kind}
@@ -357,17 +365,38 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
             </div>
           </section>
 
+          {/* 이름은 여기서 정한다 — 얼굴을 다 다듬고 나서야 이름 짓기가 쉽다 */}
+          <section className="mt-10 max-w-[420px]">
+            <Label htmlFor="character-name">캐릭터 이름</Label>
+            <Input
+              id="character-name"
+              className="mt-2"
+              placeholder="기본 나"
+              value={name}
+              maxLength={20}
+              disabled={working}
+              onChange={(e) => setName(e.target.value)}
+            />
+            <p className="mt-2 text-caption text-muted">
+              나중에 룩과 작업물을 고를 때 이 이름으로 찾게 돼요.
+            </p>
+          </section>
+
           <ActionBar
             className="mt-8"
             cost={CHARACTER_COST.build}
             label="캐릭터 완성하기"
             pendingLabel="시작하는 중…"
             pending={pending === "build"}
-            disabled={working || Boolean(pending) || !character.base_image_path}
+            disabled={
+              working || Boolean(pending) || !character.base_image_path || !nameReady
+            }
             onSubmit={build}
             summary={
               <span className="text-muted">
-                이 얼굴로 정면 · 좌 45° · 우 45° 세 장을 뽑아요
+                {nameReady
+                  ? "이 얼굴로 정면 · 좌 45° · 우 45° 세 장을 뽑아요"
+                  : "캐릭터 이름을 적으면 완성할 수 있어요"}
               </span>
             }
           />

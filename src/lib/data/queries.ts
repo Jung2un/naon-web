@@ -349,7 +349,8 @@ export async function getLooks(characterId?: string): Promise<LookListItem[]> {
       thumbnail_url: urls[i],
       character_name: characters?.name ?? "",
       preset_names: {
-        hair: nameById.get(look.hair_preset_id) ?? "",
+        // 코디 룩은 머리를 안 고른다 — 캐릭터의 머리를 그대로 쓴다
+        hair: look.hair_preset_id ? (nameById.get(look.hair_preset_id) ?? "") : "",
         // 코디를 고른 룩은 상의·하의가 비어 있다
         top: look.top_preset_id ? (nameById.get(look.top_preset_id) ?? "") : "",
         bottom: look.bottom_preset_id ? (nameById.get(look.bottom_preset_id) ?? "") : "",

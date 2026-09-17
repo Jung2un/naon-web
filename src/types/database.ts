@@ -334,7 +334,7 @@ export type Database = {
           character_id: string
           created_at: string
           error_code: string | null
-          hair_preset_id: string
+          hair_preset_id: string | null
           id: string
           is_adopted: boolean
           name: string
@@ -351,7 +351,7 @@ export type Database = {
           character_id: string
           created_at?: string
           error_code?: string | null
-          hair_preset_id: string
+          hair_preset_id?: string | null
           id?: string
           is_adopted?: boolean
           name: string
@@ -368,7 +368,7 @@ export type Database = {
           character_id?: string
           created_at?: string
           error_code?: string | null
-          hair_preset_id?: string
+          hair_preset_id?: string | null
           id?: string
           is_adopted?: boolean
           name?: string

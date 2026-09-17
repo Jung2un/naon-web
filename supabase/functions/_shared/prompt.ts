@@ -185,19 +185,17 @@ export function presetPhrase(preset: { name: string; prompt?: string | null }): 
 }
 
 export function lookInstruction(phrases: {
-  hair: string;
+  /** 전신 코디 한 벌 */
+  outfit: string;
   scene: string;
-  /** 전신 코디 한 벌. 있으면 top/bottom은 보지 않는다 */
-  outfit?: string;
-  top?: string;
-  bottom?: string;
+  /** 없으면 캐릭터의 머리를 그대로 둔다 — 머리는 캐릭터를 만들 때 정했다 */
+  hair?: string;
 }): string {
-  const clothing = phrases.outfit
-    ? `dress this person in this full outfit: ${phrases.outfit}`
-    : `change the top to ${phrases.top} and the bottom to ${phrases.bottom}`;
   return [
-    `change this person's hairstyle to ${phrases.hair}`,
-    clothing,
+    phrases.hair
+      ? `change this person's hairstyle to ${phrases.hair}`
+      : "keep this person's hairstyle exactly as it is",
+    `dress this person in this full outfit: ${phrases.outfit}`,
     `place them in ${phrases.scene}`,
     "full body visible from head to shoes",
     "keep the same person, the same face and identity",

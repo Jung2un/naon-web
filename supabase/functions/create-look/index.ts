@@ -2,9 +2,8 @@
  * create-look — 크레딧 차감 + looks INSERT + 이미지 생성(Gemini)
  *
  * 화면 계약 (`src/components/app/LookBuilder.tsx`)
- *   body     { character_id, name, hair_preset_id, scene_preset_id,
- *              top_preset_id + bottom_preset_id  또는  outfit_preset_id }
- *            옷은 둘 중 하나다 — 상의·하의를 따로 고르거나 전신 코디 한 벌을 고른다.
+ *   body     { character_id, name, outfit_preset_id, scene_preset_id, hair_preset_id? }
+ *            옷은 전신 코디 한 벌이다. 머리는 캐릭터의 것을 그대로 쓴다.
  *   응답     { look_id }
  *   비용     1크레딧 · 원장 사유 look_charge
  *
@@ -27,16 +26,15 @@ import { extensionOf, inBackground } from "../_shared/batch.ts";
 import { lookInstruction, presetPhrase } from "../_shared/prompt.ts";
 
 const COST = 1;
-type Slot = "hair" | "top" | "bottom" | "scene" | "outfit";
+type Slot = "outfit" | "scene" | "hair";
 
 /**
- * 코디를 보냈으면 코디 방식, 아니면 상의·하의 방식. 둘을 섞어 보내면 코디가 이긴다 —
- * looks의 looks_outfit_or_separates가 같은 규칙이고, 코디 위에 상의를 또 얹으면 지시문이 싸운다.
+ * 룩은 코디 한 벌 + 장소를 고른다. 머리는 캐릭터를 만들 때 사진으로 정했으니 그대로 둔다.
+ * 머리 프리셋을 보내면 받긴 한다(예전 화면·앱 호환). 상의·하의는 더 받지 않는다.
  */
 function requiredSlots(body: Record<string, unknown>): Slot[] {
-  return typeof body.outfit_preset_id === "string" && body.outfit_preset_id
-    ? ["hair", "outfit", "scene"]
-    : ["hair", "top", "bottom", "scene"];
+  const hair = typeof body.hair_preset_id === "string" && body.hair_preset_id;
+  return hair ? ["outfit", "scene", "hair"] : ["outfit", "scene"];
 }
 
 Deno.serve(async (req) => {
@@ -117,10 +115,10 @@ Deno.serve(async (req) => {
     user_id: userId,
     character_id: characterId,
     name,
-    hair_preset_id: presetIds.hair,
-    top_preset_id: presetIds.top ?? null,
-    bottom_preset_id: presetIds.bottom ?? null,
-    outfit_preset_id: presetIds.outfit ?? null,
+    hair_preset_id: presetIds.hair ?? null,
+    top_preset_id: null,
+    bottom_preset_id: null,
+    outfit_preset_id: presetIds.outfit,
     scene_preset_id: presetIds.scene,
     status: "queued",
   });
@@ -137,14 +135,9 @@ Deno.serve(async (req) => {
       lookId,
       sourcePath: character.base_image_path ?? character.thumbnail_path,
       prompt: lookInstruction({
-        hair: presetPhrase(bySlot.get("hair")!),
+        outfit: presetPhrase(bySlot.get("outfit")!),
         scene: presetPhrase(bySlot.get("scene")!),
-        ...(presetIds.outfit
-          ? { outfit: presetPhrase(bySlot.get("outfit")!) }
-          : {
-              top: presetPhrase(bySlot.get("top")!),
-              bottom: presetPhrase(bySlot.get("bottom")!),
-            }),
+        ...(presetIds.hair ? { hair: presetPhrase(bySlot.get("hair")!) } : {}),
       }),
     }),
   );
