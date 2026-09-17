@@ -14,6 +14,7 @@ import { invokeFunction } from "@/lib/supabase/functions";
 import { isSupabaseConfigured } from "@/lib/env";
 import { humanError } from "@/lib/errors";
 import { withObjectParticle } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import {
   CHARACTER_COST,
   CHARACTER_STEPS,
@@ -49,11 +50,13 @@ export function CharacterDraftForm({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // 화면에 나오는 순서대로 센다 — 이름 → 성별 → 톤 → 나이대
   const missing: string[] = [];
   if (!name.trim()) missing.push("이름");
+  if (!traits.gender) missing.push(OPTION_KIND_LABEL.gender);
   if (!toneId) missing.push("톤");
   for (const kind of REQUIRED_TRAIT_KINDS) {
-    if (!traits[kind]) missing.push(OPTION_KIND_LABEL[kind]);
+    if (kind !== "gender" && !traits[kind]) missing.push(OPTION_KIND_LABEL[kind]);
   }
   const complete = missing.length === 0;
   const short = balance !== null && balance < CHARACTER_COST.draft;
@@ -112,6 +115,42 @@ export function CharacterDraftForm({
         </p>
       </div>
 
+      {/*
+        성별은 맨 처음에 정한다. 톤·머리·체형을 고를 때 이미 누구를 만드는지 알고 있어야
+        나머지 선택이 자연스럽다. 아래 속성 칩 줄에는 다시 나오지 않는다.
+      */}
+      <section className="mt-8 max-w-[420px]">
+        <MicroLabel>성별</MicroLabel>
+        <div
+          role="radiogroup"
+          aria-label="성별"
+          className="mt-3 grid gap-3"
+          style={{ gridTemplateColumns: `repeat(${Math.max(options.gender.length, 1)}, minmax(0, 1fr))` }}
+        >
+          {options.gender.map((option) => {
+            const selected = traits.gender === option.id;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                onClick={() => setTraits((prev) => ({ ...prev, gender: option.id }))}
+                className={cn(
+                  "h-12 rounded-[12px] border text-base",
+                  "transition-[background-color,border-color,box-shadow] duration-150 ease-out",
+                  selected
+                    ? "border-ink bg-ink text-on-dark shadow-inset"
+                    : "border-line bg-transparent text-ink hover:bg-hover",
+                )}
+              >
+                {option.name}
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
       <section className="mt-8">
         <MicroLabel>톤</MicroLabel>
         <p className="mt-1 text-caption text-muted">
@@ -130,7 +169,7 @@ export function CharacterDraftForm({
       </section>
 
       <div className="mt-8 flex flex-col gap-6">
-        {TRAIT_KINDS.map((kind) => (
+        {TRAIT_KINDS.filter((kind) => kind !== "gender").map((kind) => (
           <TraitRow
             key={kind}
             kind={kind}
