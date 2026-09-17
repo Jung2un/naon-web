@@ -46,7 +46,9 @@ npx supabase secrets set GEMINI_API_KEY=... GEMINI_IMAGE_MODEL=gemini-3.1-flash-
 #### 키를 넣고 **첫 한 판**에서 확인할 것
 
 아직 아무도 실제 응답을 못 봤다. 아래는 한 번 돌려보면 전부 드러난다.
-실패해도 **크레딧은 환불되고** 응답 본문이 로그에 찍힌다 (`npx supabase functions logs draft-character`).
+실패해도 **크레딧은 환불되고** 응답 본문이 함수 로그에 찍힌다.
+로그는 대시보드에서 본다 — https://supabase.com/dashboard/project/alafyhejiaxukrkrmehh/functions/draft-character/logs
+(CLI 2.117에는 `supabase functions logs`가 **없다.** `UnknownSubcommand`로 떨어진다)
 
 - [ ] 응답 JSON 모양 — `_shared/gemini.ts`의 파서가 지금 두 모양을 훑는다. **실제 모양 하나로 줄일 것**
 - [ ] `aspect_ratio: "3:4"` · `image_size: "1K"`를 그 모델이 받아주는지 (거절하면 UPSTREAM_ERROR)

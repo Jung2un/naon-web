@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Stepper } from "./Stepper";
 import { ToneTile } from "./ToneTile";
@@ -12,6 +13,7 @@ import { createClient } from "@/lib/supabase/client";
 import { invokeFunction } from "@/lib/supabase/functions";
 import { isSupabaseConfigured } from "@/lib/env";
 import { humanError } from "@/lib/errors";
+import { withObjectParticle } from "@/lib/format";
 import {
   CHARACTER_COST,
   CHARACTER_STEPS,
@@ -31,8 +33,14 @@ import {
  */
 export function CharacterDraftForm({
   options,
+  balance,
 }: {
   options: Record<OptionKind, CharacterOptionWithUrl[]>;
+  /**
+   * 남은 크레딧. 모자라면 다 고르기 전에 먼저 알려준다 — 한참 고른 뒤에
+   * 402를 받는 것보다 낫다. 판정은 여전히 서버(charge_credits)가 한다. null이면 모른다.
+   */
+  balance: number | null;
 }) {
   const router = useRouter();
   const [name, setName] = useState("");
@@ -48,6 +56,7 @@ export function CharacterDraftForm({
     if (!traits[kind]) missing.push(OPTION_KIND_LABEL[kind]);
   }
   const complete = missing.length === 0;
+  const short = balance !== null && balance < CHARACTER_COST.draft;
 
   const chosen = [
     options.tone.find((o) => o.id === toneId)?.name,
@@ -149,14 +158,22 @@ export function CharacterDraftForm({
         label="후보 뽑기"
         pendingLabel="뽑는 중…"
         pending={pending}
-        disabled={!complete}
+        disabled={!complete || short}
         onSubmit={draft}
         summary={
-          complete ? (
+          short ? (
+            <span className="text-muted">
+              크레딧이 모자라요.{" "}
+              <Link href="/credits" className="text-ink underline underline-offset-2">
+                충전하면
+              </Link>{" "}
+              뽑을 수 있어요
+            </span>
+          ) : complete ? (
             chosen.join(" · ")
           ) : (
             <span className="text-muted">
-              {missing.join(" · ")}을 정하면 뽑을 수 있어요
+              {withObjectParticle(missing.join(" · "))} 정하면 뽑을 수 있어요
             </span>
           )
         }

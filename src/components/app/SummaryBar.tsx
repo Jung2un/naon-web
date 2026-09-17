@@ -1,6 +1,7 @@
 "use client";
 
 import { ActionBar } from "./ActionBar";
+import { withObjectParticle } from "@/lib/format";
 import { PRESET_SLOTS, SLOT_LABEL, type PresetSlot } from "@/types/models";
 
 /**
@@ -38,7 +39,7 @@ export function SummaryBar({
           chosen.join(" · ")
         ) : (
           <span className="text-muted">
-            {missing.map((slot) => SLOT_LABEL[slot]).join(" · ")}를 고르면 만들 수
+            {withObjectParticle(missing.map((slot) => SLOT_LABEL[slot]).join(" · "))} 고르면 만들 수
             있어요
           </span>
         )
