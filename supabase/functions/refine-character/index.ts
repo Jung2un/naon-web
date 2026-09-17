@@ -20,6 +20,7 @@ import {
   loadOptions,
   editInstruction,
   TRAIT_KINDS,
+  matchesGender,
   type Traits,
 } from "../_shared/prompt.ts";
 
@@ -74,6 +75,8 @@ Deno.serve(async (req) => {
     if (!id) continue;
     const option = options.get(id);
     if (!option || option.kind !== kind) return fail(req, 400, "NO_CHANGES");
+    // 다른 성별의 머리로는 못 바꾼다. 성별은 다듬기에서 안 바뀌므로 before의 성별로 본다
+    if (!matchesGender(option, merged.gender)) return fail(req, 400, "NO_CHANGES");
   }
 
   const instruction = editInstruction(before, merged, options);

@@ -22,6 +22,7 @@ const MESSAGES: Record<string, string> = {
   NO_CHANGES: "바꿀 항목을 골라 주세요. 지금은 고른 게 그대로예요.",
   CHARACTER_BUSY: "아직 뽑는 중이에요. 끝나면 이어서 할 수 있어요.",
   CHARACTER_NOT_FOUND: "그 캐릭터를 찾을 수 없어요. 목록에서 다시 골라 주세요.",
+  NAME_REQUIRED: "캐릭터 이름을 적어 주세요. 20자 안으로 적으면 돼요.",
   CHARACTER_NOT_READY:
     "캐릭터가 아직 준비되지 않았어요. 얼굴을 고르고 완성한 뒤에 쓸 수 있어요.",
 

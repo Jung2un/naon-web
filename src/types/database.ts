@@ -95,6 +95,7 @@ export type Database = {
       character_options: {
         Row: {
           description: string | null
+          gender_id: string | null
           id: string
           is_active: boolean
           kind: Database["public"]["Enums"]["character_option_kind"]
@@ -105,6 +106,7 @@ export type Database = {
         }
         Insert: {
           description?: string | null
+          gender_id?: string | null
           id?: string
           is_active?: boolean
           kind: Database["public"]["Enums"]["character_option_kind"]
@@ -115,6 +117,7 @@ export type Database = {
         }
         Update: {
           description?: string | null
+          gender_id?: string | null
           id?: string
           is_active?: boolean
           kind?: Database["public"]["Enums"]["character_option_kind"]
@@ -123,7 +126,15 @@ export type Database = {
           sort_order?: number
           thumbnail_path?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "character_options_gender_id_fkey"
+            columns: ["gender_id"]
+            isOneToOne: false
+            referencedRelation: "character_options"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       character_refs: {
         Row: {
@@ -319,50 +330,53 @@ export type Database = {
       }
       looks: {
         Row: {
-          bottom_preset_id: string
+          bottom_preset_id: string | null
           character_id: string
           created_at: string
           error_code: string | null
-          hair_preset_id: string
+          hair_preset_id: string | null
           id: string
           is_adopted: boolean
           name: string
+          outfit_preset_id: string | null
           scene_preset_id: string
           status: Database["public"]["Enums"]["job_status"]
           thumbnail_path: string | null
-          top_preset_id: string
+          top_preset_id: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
-          bottom_preset_id: string
+          bottom_preset_id?: string | null
           character_id: string
           created_at?: string
           error_code?: string | null
-          hair_preset_id: string
+          hair_preset_id?: string | null
           id?: string
           is_adopted?: boolean
           name: string
+          outfit_preset_id?: string | null
           scene_preset_id: string
           status?: Database["public"]["Enums"]["job_status"]
           thumbnail_path?: string | null
-          top_preset_id: string
+          top_preset_id?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
-          bottom_preset_id?: string
+          bottom_preset_id?: string | null
           character_id?: string
           created_at?: string
           error_code?: string | null
-          hair_preset_id?: string
+          hair_preset_id?: string | null
           id?: string
           is_adopted?: boolean
           name?: string
+          outfit_preset_id?: string | null
           scene_preset_id?: string
           status?: Database["public"]["Enums"]["job_status"]
           thumbnail_path?: string | null
-          top_preset_id?: string
+          top_preset_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -389,6 +403,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "looks_outfit_preset_id_fkey"
+            columns: ["outfit_preset_id"]
+            isOneToOne: false
+            referencedRelation: "presets"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "looks_scene_preset_id_fkey"
             columns: ["scene_preset_id"]
             isOneToOne: false
@@ -406,6 +427,7 @@ export type Database = {
       }
       presets: {
         Row: {
+          category: string | null
           description: string | null
           id: string
           is_active: boolean
@@ -416,6 +438,7 @@ export type Database = {
           thumbnail_path: string | null
         }
         Insert: {
+          category?: string | null
           description?: string | null
           id?: string
           is_active?: boolean
@@ -426,6 +449,7 @@ export type Database = {
           thumbnail_path?: string | null
         }
         Update: {
+          category?: string | null
           description?: string | null
           id?: string
           is_active?: boolean
@@ -528,7 +552,7 @@ export type Database = {
         | "character_draft_refund"
         | "character_edit_charge"
         | "character_edit_refund"
-      preset_slot: "hair" | "top" | "bottom" | "scene"
+      preset_slot: "hair" | "top" | "bottom" | "scene" | "outfit"
       ref_angle: "front" | "left45" | "right45" | "left90" | "right90"
     }
     CompositeTypes: {
@@ -687,7 +711,7 @@ export const Constants = {
         "character_edit_charge",
         "character_edit_refund",
       ],
-      preset_slot: ["hair", "top", "bottom", "scene"],
+      preset_slot: ["hair", "top", "bottom", "scene", "outfit"],
       ref_angle: ["front", "left45", "right45", "left90", "right90"],
     },
   },

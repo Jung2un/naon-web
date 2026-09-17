@@ -14,7 +14,7 @@ import { isSupabaseConfigured } from "@/lib/env";
 import { humanError } from "@/lib/errors";
 import { cn } from "@/lib/utils";
 import {
-  PRESET_SLOTS,
+  OUTFIT_CATEGORIES,
   SLOT_LABEL,
   type CharacterListItem,
   type PresetSlot,
@@ -24,9 +24,15 @@ import {
 
 const COST = 1;
 
+/** 다 골라야 하는 슬롯, 화면 순서대로 */
+const SLOTS: readonly PresetSlot[] = ["outfit", "scene"];
+
 /**
  * 룩은 프리셋 슬롯만. 자유 프롬프트 없음. — README "이미 정해진 것"
  * 흔들면 원가와 품질이 같이 무너진다.
+ *
+ * 룩은 **코디 한 벌 + 장소**다. 머리는 캐릭터를 만들 때 사진으로 정했으니 여기서 안 고른다.
+ * 상의·하의를 따로 고르던 방식은 코디로 대체했다. — 마이그레이션 20260917000010·0011
  */
 export function LookBuilder({
   presets,
@@ -48,6 +54,7 @@ export function LookBuilder({
       ? defaultCharacterId
       : (usable[0]?.id ?? ""),
   );
+  const [category, setCategory] = useState<string>(OUTFIT_CATEGORIES[0]);
   const [selection, setSelection] = useState<SlotSelection>({});
   const [name, setName] = useState("");
   const [pending, setPending] = useState(false);
@@ -55,13 +62,19 @@ export function LookBuilder({
 
   const selectedNames = useMemo(() => {
     const out: Partial<Record<PresetSlot, string>> = {};
-    for (const slot of PRESET_SLOTS) {
+    for (const slot of SLOTS) {
       const id = selection[slot];
       if (!id) continue;
       out[slot] = presets[slot].find((p) => p.id === id)?.name;
     }
     return out;
   }, [selection, presets]);
+
+  const outfits = presets.outfit.filter((p) => p.category === category);
+
+  function pick(slot: PresetSlot, id: string) {
+    setSelection((prev) => ({ ...prev, [slot]: prev[slot] === id ? undefined : id }));
+  }
 
   async function submit() {
     if (!characterId) {
@@ -86,12 +99,10 @@ export function LookBuilder({
           character_id: characterId,
           name:
             name.trim() ||
-            PRESET_SLOTS.map((s) => selectedNames[s])
+            SLOTS.map((s) => selectedNames[s])
               .filter(Boolean)
               .join(" "),
-          hair_preset_id: selection.hair,
-          top_preset_id: selection.top,
-          bottom_preset_id: selection.bottom,
+          outfit_preset_id: selection.outfit,
           scene_preset_id: selection.scene,
         },
       );
@@ -106,6 +117,8 @@ export function LookBuilder({
       setPending(false);
     }
   }
+
+  const grid = "mt-3 grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-6";
 
   return (
     <div className="pb-4">
@@ -133,29 +146,60 @@ export function LookBuilder({
         />
       </div>
 
-      {PRESET_SLOTS.map((slot) => (
-        <section key={slot} className="mt-8">
-          <MicroLabel>{SLOT_LABEL[slot]}</MicroLabel>
-          <div className="mt-3 grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-6">
-            {presets[slot].map((preset) => (
-              <PresetTile
-                key={preset.id}
-                preset={preset}
-                selected={selection[slot] === preset.id}
-                onSelect={(id) =>
-                  setSelection((prev) => ({
-                    ...prev,
-                    [slot]: prev[slot] === id ? undefined : id,
-                  }))
-                }
-              />
-            ))}
-          </div>
-        </section>
-      ))}
+      <section className="mt-8">
+        <MicroLabel>{SLOT_LABEL.outfit}</MicroLabel>
+        <p className="mt-1 text-caption text-muted">
+          전신 코디 한 벌을 골라요. 머리는 캐릭터 그대로예요.
+        </p>
+        <div role="tablist" aria-label="코디 분류" className="mt-3 flex gap-2">
+          {OUTFIT_CATEGORIES.map((c) => (
+            <button
+              key={c}
+              type="button"
+              role="tab"
+              aria-selected={category === c}
+              onClick={() => setCategory(c)}
+              className={cn(
+                "h-8 rounded-full border px-3 text-sm",
+                "transition-[background-color,border-color] duration-150 ease-out",
+                category === c
+                  ? "border-ink bg-ink text-on-dark"
+                  : "border-line text-body hover:bg-hover",
+              )}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+        <div className={grid}>
+          {outfits.map((preset) => (
+            <PresetTile
+              key={preset.id}
+              preset={preset}
+              portrait
+              selected={selection.outfit === preset.id}
+              onSelect={(id) => pick("outfit", id)}
+            />
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-8">
+        <MicroLabel>{SLOT_LABEL.scene}</MicroLabel>
+        <div className={grid}>
+          {presets.scene.map((preset) => (
+            <PresetTile
+              key={preset.id}
+              preset={preset}
+              selected={selection.scene === preset.id}
+              onSelect={(id) => pick("scene", id)}
+            />
+          ))}
+        </div>
+      </section>
 
       {error && (
-        <p role="alert" className={cn("mt-6 text-caption text-danger")}>
+        <p role="alert" className="mt-6 text-caption text-danger">
           {error}
         </p>
       )}
@@ -163,6 +207,7 @@ export function LookBuilder({
       {/* 래퍼로 감싸지 않는다 — sticky가 움직일 공간이 없어진다. ActionBar 주석 참고 */}
       <SummaryBar
         className="mt-8"
+        slots={SLOTS}
         selectedNames={selectedNames}
         cost={COST}
         pending={pending}

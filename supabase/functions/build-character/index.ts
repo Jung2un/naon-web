@@ -2,7 +2,8 @@
  * build-character — 확정한 얼굴로 정면·좌45·우45를 뽑는다. 캐릭터 만들기의 4단계다.
  *
  * 화면 계약 (`src/components/app/CharacterStudio.tsx`)
- *   body     { character_id }
+ *   body     { character_id, name }
+ *            이름은 여기서 정한다. 1단계에서는 임시 이름("새 캐릭터")이 들어가 있다
  *   응답     { character_id }
  *   비용     2크레딧 · 원장 사유 character_charge
  *
@@ -27,7 +28,7 @@ Deno.serve(async (req) => {
   const userId = await callerId(req);
   if (!userId) return fail(req, 401, "SESSION_EXPIRED");
 
-  let body: { character_id?: unknown };
+  let body: { character_id?: unknown; name?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -36,6 +37,10 @@ Deno.serve(async (req) => {
 
   const characterId = typeof body.character_id === "string" ? body.character_id : "";
   if (!characterId) return fail(req, 400, "CHARACTER_NOT_FOUND");
+
+  // 이름 없이는 완성하지 않는다. 깎기 전에 본다
+  const name = typeof body.name === "string" ? body.name.trim() : "";
+  if (!name || name.length > 20) return fail(req, 400, "NAME_REQUIRED");
 
   const admin = adminClient();
 
@@ -66,6 +71,15 @@ Deno.serve(async (req) => {
     .limit(1)
     .maybeSingle();
   const round = (last?.round ?? 0) + 1;
+
+  const { error: nameError } = await admin
+    .from("characters")
+    .update({ name })
+    .eq("id", characterId);
+  if (nameError) {
+    console.error("이름 저장 실패", nameError);
+    return fail(req, 500, "UPSTREAM_ERROR");
+  }
 
   const memo = `character:${characterId}`;
   const balance = await charge(admin, userId, COST, "character_charge", memo);

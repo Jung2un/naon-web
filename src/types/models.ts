@@ -111,7 +111,37 @@ export const SLOT_LABEL: Record<PresetSlot, string> = {
   top: "상의",
   bottom: "하의",
   scene: "장소",
+  outfit: "코디",
 };
+
+/** 코디 탭 순서. presets.category 값과 같다 */
+export const OUTFIT_CATEGORIES = ["데일리", "무대", "아우터"] as const;
+
+/**
+ * 성별을 바꾼다. 새 성별에 안 맞는 선택(다른 성별의 머리 등)은 같이 풀린다 —
+ * 남성으로 바꿨는데 여성 머리가 골라진 채 남아 있으면 서버가 거절한다.
+ */
+export function setGender(
+  traits: Traits,
+  genderId: string,
+  options: Record<OptionKind, { id: string; gender_id?: string | null }[]>,
+): Traits {
+  const next: Traits = { ...traits, gender: genderId };
+  for (const kind of Object.keys(next) as OptionKind[]) {
+    if (kind === "gender") continue;
+    const option = options[kind]?.find((o) => o.id === next[kind]);
+    if (option && !matchesGender(option, genderId)) delete next[kind];
+  }
+  return next;
+}
+
+/** 옵션이 이 성별에 쓸 수 있는지. gender_id가 없으면 성별 공통이다 */
+export function matchesGender(
+  option: { gender_id?: string | null },
+  genderId: string | undefined,
+): boolean {
+  return !option.gender_id || option.gender_id === genderId;
+}
 
 export const ANGLE_LABEL: Record<RefAngle, string> = {
   front: "정면",
@@ -136,6 +166,19 @@ export const TRAIT_KINDS: readonly OptionKind[] = [
   "gender",
   "age",
   "hair",
+  "hair_color",
+  "body",
+  "vibe",
+] as const;
+
+/**
+ * 화면에서 속성을 보여주는 순서 — 성별 → (톤) → 머리 → 나이대 → 머리색 → 체형 → 분위기.
+ * 머리는 사진이라 톤 바로 다음에 둔다. 프롬프트 문장 순서(TRAIT_KINDS)와는 별개다.
+ */
+export const TRAIT_DISPLAY_KINDS: readonly OptionKind[] = [
+  "gender",
+  "hair",
+  "age",
   "hair_color",
   "body",
   "vibe",
@@ -175,6 +218,12 @@ export const STAGE_LABEL: Record<CharacterStage, string> = {
 
 /** 캐릭터 만들기의 단계별 크레딧. 함수도 같은 값을 쓴다. — 기획서 §4 */
 export const CHARACTER_COST = { draft: 1, refine: 1, build: 2 } as const;
+
+/**
+ * 1단계에서는 이름을 안 받는다. DB의 name이 필수라 후보를 뽑을 때 이 값이 들어가고,
+ * 3단계에서 완성할 때 사용자가 적은 이름으로 바뀐다. — draft-character · build-character와 같은 값
+ */
+export const PLACEHOLDER_CHARACTER_NAME = "새 캐릭터";
 
 /** Stepper 네 단계. 1단계는 `/characters/new`, 나머지는 스튜디오다. */
 export const CHARACTER_STEPS = ["톤 고르기", "후보 고르기", "다듬기", "완성"];

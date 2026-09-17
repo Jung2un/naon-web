@@ -2,10 +2,13 @@ import Link from "next/link";
 import Image from "next/image";
 import { Check } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
-import { PRESET_SLOTS, type LookListItem } from "@/types/models";
+import type { LookListItem, PresetSlot } from "@/types/models";
+
+/** 카드 아래 요약 순서. 코디 룩은 상의·하의가 비어 있어 자연히 빠진다 */
+const SUMMARY_SLOTS: PresetSlot[] = ["hair", "top", "bottom", "outfit", "scene"];
 
 export function LookCard({ look }: { look: LookListItem }) {
-  const summary = PRESET_SLOTS.map((slot) => look.preset_names[slot])
+  const summary = SUMMARY_SLOTS.map((slot) => look.preset_names[slot])
     .filter(Boolean)
     .join(" · ");
 

@@ -24,6 +24,8 @@ export type Option = {
   kind: OptionKind;
   name: string;
   prompt: string;
+  /** 성별에 매인 옵션만 값이 있다(성별별 머리). null이면 성별 공통 */
+  gender_id?: string | null;
 };
 
 /** 속성은 `{ 갈래: 옵션 id }`로 오간다. */
@@ -53,6 +55,15 @@ export const REFINABLE_TRAITS: OptionKind[] = [
   "vibe",
 ];
 
+/**
+ * 성별에 매인 옵션(성별별 머리)이 이 성별에 맞는지. gender_id가 없으면 성별 공통이다.
+ * 화면은 고른 성별의 머리만 보여주지만, 남성으로 바꾸고 여성 머리를 보낼 수 있으니 서버가 다시 본다.
+ * — 마이그레이션 20260917000010, 화면 쪽은 src/types/models.ts의 matchesGender
+ */
+export function matchesGender(option: Option, genderId: string | undefined): boolean {
+  return !option.gender_id || option.gender_id === genderId;
+}
+
 /** 고른 id들을 한 번에 읽어 확인한다. 활성 옵션이 아니면 맵에 없다. */
 export async function loadOptions(
   admin: SupabaseClient,
@@ -63,7 +74,7 @@ export async function loadOptions(
 
   const { data, error } = await admin
     .from("character_options")
-    .select("id, kind, name, prompt")
+    .select("id, kind, name, prompt, gender_id")
     .in("id", unique)
     .eq("is_active", true);
   if (error) throw error;
@@ -84,6 +95,7 @@ export function validateTraits(
     if (id === undefined) continue;
     const option = options.get(id);
     if (!option || option.kind !== kind) return false;
+    if (!matchesGender(option, traits.gender)) return false;
   }
   return REQUIRED_TRAITS.every((kind) => Boolean(traits[kind]));
 }
@@ -173,15 +185,19 @@ export function presetPhrase(preset: { name: string; prompt?: string | null }): 
 }
 
 export function lookInstruction(phrases: {
-  hair: string;
-  top: string;
-  bottom: string;
+  /** 전신 코디 한 벌 */
+  outfit: string;
   scene: string;
+  /** 없으면 캐릭터의 머리를 그대로 둔다 — 머리는 캐릭터를 만들 때 정했다 */
+  hair?: string;
 }): string {
   return [
-    `change this person's hairstyle to ${phrases.hair}`,
-    `change the top to ${phrases.top} and the bottom to ${phrases.bottom}`,
+    phrases.hair
+      ? `change this person's hairstyle to ${phrases.hair}`
+      : "keep this person's hairstyle exactly as it is",
+    `dress this person in this full outfit: ${phrases.outfit}`,
     `place them in ${phrases.scene}`,
+    "full body visible from head to shoes",
     "keep the same person, the same face and identity",
     "natural lighting, one person only",
   ].join(". ");

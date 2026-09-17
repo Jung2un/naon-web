@@ -15,10 +15,13 @@ export function PresetTile({
   preset,
   selected,
   onSelect,
+  portrait = false,
 }: {
   preset: PresetWithUrl;
   selected: boolean;
   onSelect: (id: string) => void;
+  /** 전신 코디는 세로로 긴 사진이라 3:4로 그린다 */
+  portrait?: boolean;
 }) {
   return (
     <button
@@ -29,7 +32,8 @@ export function PresetTile({
     >
       <div
         className={cn(
-          "relative aspect-square overflow-hidden rounded-[12px] border bg-sunken",
+          "relative overflow-hidden rounded-[12px] border bg-sunken",
+          portrait ? "aspect-[3/4]" : "aspect-square",
           "transition-[border-color,box-shadow] duration-150 ease-out",
           selected
             ? "border-line-strong shadow-focus"

@@ -7,8 +7,7 @@ import { Stepper } from "./Stepper";
 import { ToneTile } from "./ToneTile";
 import { TraitRow } from "./TraitChip";
 import { ActionBar } from "./ActionBar";
-import { Input } from "@/components/ui/input";
-import { Label, MicroLabel } from "@/components/ui/label";
+import { MicroLabel } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 import { invokeFunction } from "@/lib/supabase/functions";
 import { isSupabaseConfigured } from "@/lib/env";
@@ -20,11 +19,15 @@ import {
   CHARACTER_STEPS,
   OPTION_KIND_LABEL,
   REQUIRED_TRAIT_KINDS,
-  TRAIT_KINDS,
+  TRAIT_DISPLAY_KINDS,
+  setGender,
   type CharacterOptionWithUrl,
   type OptionKind,
   type Traits,
 } from "@/types/models";
+
+/** 톤·머리 다음에 칩으로 고르는 갈래, 화면 순서대로 — 나이대 → 머리색 → 체형 → 분위기 */
+const LATER_KINDS = TRAIT_DISPLAY_KINDS.filter((kind) => kind !== "gender" && kind !== "hair");
 
 /**
  * 캐릭터 만들기 1단계 — 톤과 속성을 고른다. — docs/기획서.md §2
@@ -44,7 +47,6 @@ export function CharacterDraftForm({
   balance: number | null;
 }) {
   const router = useRouter();
-  const [name, setName] = useState("");
   const [toneId, setToneId] = useState<string>("");
   // 성별은 여성으로 시작한다(시드 sort_order 1). 비어 있으면 톤 사진을 고를 기준이 없다.
   const [traits, setTraits] = useState<Traits>(() =>
@@ -53,14 +55,13 @@ export function CharacterDraftForm({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 화면에 나오는 순서대로 센다 — 성별 → 톤 → 나이대 → … → 이름(맨 끝)
+  // 화면에 나오는 순서대로 센다 — 성별 → 톤 → (머리) → 나이대. 이름은 3단계 다듬기 뒤에 정한다
   const missing: string[] = [];
   if (!traits.gender) missing.push(OPTION_KIND_LABEL.gender);
   if (!toneId) missing.push("톤");
   for (const kind of REQUIRED_TRAIT_KINDS) {
     if (kind !== "gender" && !traits[kind]) missing.push(OPTION_KIND_LABEL[kind]);
   }
-  if (!name.trim()) missing.push("이름");
   const complete = missing.length === 0;
   const short = balance !== null && balance < CHARACTER_COST.draft;
 
@@ -69,7 +70,8 @@ export function CharacterDraftForm({
   const chosen = [
     nameOf("gender"),
     options.tone.find((o) => o.id === toneId)?.name,
-    ...TRAIT_KINDS.filter((kind) => kind !== "gender").map(nameOf),
+    nameOf("hair"),
+    ...LATER_KINDS.map(nameOf),
   ].filter(Boolean);
 
   async function draft() {
@@ -85,7 +87,8 @@ export function CharacterDraftForm({
       const data = await invokeFunction<{ character_id: string }>(
         supabase,
         "draft-character",
-        { name: name.trim(), tone_id: toneId, traits },
+        // 이름은 안 보낸다. 3단계에서 완성할 때 정한다 — build-character
+        { tone_id: toneId, traits },
       );
 
       router.push(`/characters/${data.character_id}/build`);
@@ -123,7 +126,7 @@ export function CharacterDraftForm({
                 type="button"
                 role="radio"
                 aria-checked={selected}
-                onClick={() => setTraits((prev) => ({ ...prev, gender: option.id }))}
+                onClick={() => setTraits((prev) => setGender(prev, option.id, options))}
                 className={cn(
                   "h-12 rounded-[12px] border text-base",
                   "transition-[background-color,border-color,box-shadow] duration-150 ease-out",
@@ -159,33 +162,30 @@ export function CharacterDraftForm({
         </div>
       </section>
 
+      {/* 머리는 톤처럼 사진을 보고 고른다. 고른 성별의 머리만 나온다 */}
+      <section className="mt-8">
+        <TraitRow
+          kind="hair"
+          options={options.hair}
+          gender={traits.gender}
+          value={traits.hair}
+          description="사진을 보고 골라요. 고른 성별에 맞는 머리만 보여요."
+          onChange={(id) => setTraits((prev) => ({ ...prev, hair: id }))}
+        />
+      </section>
+
       <div className="mt-8 flex flex-col gap-6">
-        {TRAIT_KINDS.filter((kind) => kind !== "gender").map((kind) => (
+        {LATER_KINDS.map((kind) => (
           <TraitRow
             key={kind}
             kind={kind}
             options={options[kind]}
+            gender={traits.gender}
             value={traits[kind]}
             onChange={(id) => setTraits((prev) => ({ ...prev, [kind]: id }))}
           />
         ))}
       </div>
-
-      {/* 이름은 맨 마지막에 정한다 — 무엇을 만들지 다 고른 뒤라 이름 짓기가 쉽다 */}
-      <section className="mt-10 max-w-[420px]">
-        <Label htmlFor="name">캐릭터 이름</Label>
-        <Input
-          id="name"
-          className="mt-2"
-          placeholder="기본 나"
-          value={name}
-          maxLength={20}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <p className="mt-2 text-caption text-muted">
-          나중에 룩과 작업물을 고를 때 이 이름으로 찾게 돼요.
-        </p>
-      </section>
 
       {error && (
         <p role="alert" className="mt-6 text-caption text-danger">
