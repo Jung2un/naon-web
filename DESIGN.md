@@ -302,7 +302,8 @@ StatusBadge를 썸네일 좌상단에 8px 안쪽으로 절대 배치.
 ### PresetTile
 
 1:1 정사각, 라운드 12px, `1px solid --border-subtle`.
-선택됨 = 테두리 `--border-interactive` + 우상단에 차콜로 채운 20px 원 안에 흰 체크 + `--shadow-focus`.
+선택됨 = 테두리 없음(투명) + 우상단에 차콜로 채운 20px 원 안에 흰 체크 + `--shadow-focus`.
+테두리까지 진하게 바꾸면 선이 겹쳐 보여서 뺐다 — 선택은 그림자와 체크로 읽힌다(2026-09-17).
 **선택 상태에 채도 있는 색을 쓰지 않는다.** 아래 라벨 13px, 두 줄까지 허용.
 
 ### TraitChip (캐릭터 속성)

@@ -339,7 +339,7 @@ export type Database = {
           is_adopted: boolean
           name: string
           outfit_preset_id: string | null
-          scene_preset_id: string
+          scene_preset_id: string | null
           status: Database["public"]["Enums"]["job_status"]
           thumbnail_path: string | null
           top_preset_id: string | null
@@ -356,7 +356,7 @@ export type Database = {
           is_adopted?: boolean
           name: string
           outfit_preset_id?: string | null
-          scene_preset_id: string
+          scene_preset_id?: string | null
           status?: Database["public"]["Enums"]["job_status"]
           thumbnail_path?: string | null
           top_preset_id?: string | null
@@ -373,7 +373,7 @@ export type Database = {
           is_adopted?: boolean
           name?: string
           outfit_preset_id?: string | null
-          scene_preset_id?: string
+          scene_preset_id?: string | null
           status?: Database["public"]["Enums"]["job_status"]
           thumbnail_path?: string | null
           top_preset_id?: string | null

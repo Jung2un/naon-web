@@ -21,7 +21,7 @@ export default async function LooksPage() {
           <EmptyState
             icon={Shirt}
             title="아직 룩이 없어요"
-            description="머리·상의·하의·장소 네 가지를 고르면 룩 하나가 만들어져요."
+            description="코디 한 벌을 고르면 룩 하나가 만들어져요. 배경은 찍은 장소 그대로예요."
             action={{ label: "룩 만들기", href: "/looks/new" }}
           />
         ) : (

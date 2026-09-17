@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
+import { BackButton } from "./BackButton";
 
 export function PageHeader({
   title,
@@ -14,15 +13,8 @@ export function PageHeader({
 }) {
   return (
     <div className="mb-6">
-      {back && (
-        <Link
-          href={back.href}
-          className="mb-3 inline-flex items-center gap-1 text-caption text-muted transition-colors duration-150 ease-out hover:text-ink"
-        >
-          <ChevronLeft className="size-3.5" aria-hidden />
-          {back.label}
-        </Link>
-      )}
+      {/* 글자 없이 뒤로가기 아이콘만. href는 이전 기록이 없을 때 갈 곳이다 */}
+      {back && <BackButton fallback={back.href} />}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h1 className="font-display text-title font-semibold text-ink">{title}</h1>

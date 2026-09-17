@@ -187,7 +187,8 @@ export function presetPhrase(preset: { name: string; prompt?: string | null }): 
 export function lookInstruction(phrases: {
   /** 전신 코디 한 벌 */
   outfit: string;
-  scene: string;
+  /** 없으면 배경을 바꾸지 않는다 — 기본은 찍은 장소 그대로다 */
+  scene?: string;
   /** 없으면 캐릭터의 머리를 그대로 둔다 — 머리는 캐릭터를 만들 때 정했다 */
   hair?: string;
 }): string {
@@ -196,7 +197,9 @@ export function lookInstruction(phrases: {
       ? `change this person's hairstyle to ${phrases.hair}`
       : "keep this person's hairstyle exactly as it is",
     `dress this person in this full outfit: ${phrases.outfit}`,
-    `place them in ${phrases.scene}`,
+    phrases.scene
+      ? `place them in ${phrases.scene}`
+      : "keep the original background and location exactly as it is, only change the person's outfit",
     "full body visible from head to shoes",
     "keep the same person, the same face and identity",
     "natural lighting, one person only",

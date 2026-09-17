@@ -2,8 +2,9 @@
  * create-look — 크레딧 차감 + looks INSERT + 이미지 생성(Gemini)
  *
  * 화면 계약 (`src/components/app/LookBuilder.tsx`)
- *   body     { character_id, name, outfit_preset_id, scene_preset_id, hair_preset_id? }
+ *   body     { character_id, name, outfit_preset_id, scene_preset_id?, hair_preset_id? }
  *            옷은 전신 코디 한 벌이다. 머리는 캐릭터의 것을 그대로 쓴다.
+ *            장소는 선택이다. 안 보내면 배경은 찍은 그대로 두고 인물만 바꾼다.
  *   응답     { look_id }
  *   비용     1크레딧 · 원장 사유 look_charge
  *
@@ -29,12 +30,17 @@ const COST = 1;
 type Slot = "outfit" | "scene" | "hair";
 
 /**
- * 룩은 코디 한 벌 + 장소를 고른다. 머리는 캐릭터를 만들 때 사진으로 정했으니 그대로 둔다.
- * 머리 프리셋을 보내면 받긴 한다(예전 화면·앱 호환). 상의·하의는 더 받지 않는다.
+ * 룩은 코디 한 벌이 필수다. 장소와 머리는 보냈을 때만 본다.
+ * - 장소: 기본은 찍은 배경 그대로. 자기 장소를 드러내기 싫은 사용자만 고른다
+ * - 머리: 캐릭터를 만들 때 정했다. 보내면 받긴 한다(예전 화면·앱 호환)
+ * 상의·하의는 더 받지 않는다.
  */
 function requiredSlots(body: Record<string, unknown>): Slot[] {
-  const hair = typeof body.hair_preset_id === "string" && body.hair_preset_id;
-  return hair ? ["outfit", "scene", "hair"] : ["outfit", "scene"];
+  const sent = (key: string) => typeof body[key] === "string" && Boolean(body[key]);
+  const slots: Slot[] = ["outfit"];
+  if (sent("scene_preset_id")) slots.push("scene");
+  if (sent("hair_preset_id")) slots.push("hair");
+  return slots;
 }
 
 Deno.serve(async (req) => {
@@ -119,7 +125,7 @@ Deno.serve(async (req) => {
     top_preset_id: null,
     bottom_preset_id: null,
     outfit_preset_id: presetIds.outfit,
-    scene_preset_id: presetIds.scene,
+    scene_preset_id: presetIds.scene ?? null,
     status: "queued",
   });
   if (insertError) {
@@ -136,7 +142,7 @@ Deno.serve(async (req) => {
       sourcePath: character.base_image_path ?? character.thumbnail_path,
       prompt: lookInstruction({
         outfit: presetPhrase(bySlot.get("outfit")!),
-        scene: presetPhrase(bySlot.get("scene")!),
+        ...(presetIds.scene ? { scene: presetPhrase(bySlot.get("scene")!) } : {}),
         ...(presetIds.hair ? { hair: presetPhrase(bySlot.get("hair")!) } : {}),
       }),
     }),

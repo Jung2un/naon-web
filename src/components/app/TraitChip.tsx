@@ -51,12 +51,13 @@ export function TraitChip({
 }
 
 /**
- * 비워도 되는 갈래 표시. DESIGN.md §4 배지 치수(높이 22px · 좌우 8px · 12px · 필 라운드).
- * 상태가 아니라 안내라 채움 없이 테두리만 둔다 — 눈이 먼저 가야 하는 건 고를 타일이다.
+ * 비워도 되는 갈래 표시.
+ * 바로 아래 칩이 테두리 있는 알약 모양이라 같은 모양이면 선택지처럼 보인다.
+ * 그래서 DESIGN.md "작은 배지"(라운드 4px)로, 테두리 없이 가라앉은 바탕에 작게 둔다.
  */
-function OptionalBadge() {
+export function OptionalBadge() {
   return (
-    <span className="inline-flex h-[22px] items-center rounded-full border border-line px-2 text-badge font-normal text-muted">
+    <span className="inline-flex h-[18px] items-center rounded-[4px] bg-sunken px-1.5 text-[11px] leading-none text-muted">
       선택
     </span>
   );
@@ -64,7 +65,7 @@ function OptionalBadge() {
 
 /**
  * 사진이 있는 옵션(성별별 머리)의 타일. PresetTile과 같은 규칙 — 1:1, 라운드 12px,
- * 선택됨 = 테두리 --border-interactive + 우상단 차콜 원 안에 흰 체크.
+ * 선택됨 = 테두리 없음(투명) + 우상단 차콜 원 안에 흰 체크 + --shadow-focus.
  */
 export function TraitTile({
   label,
@@ -92,7 +93,7 @@ export function TraitTile({
           "relative aspect-square overflow-hidden rounded-[12px] border bg-sunken",
           "transition-[border-color,box-shadow] duration-150 ease-out",
           selected
-            ? "border-line-strong shadow-focus"
+            ? "border-transparent shadow-focus"
             : "border-line group-hover:border-line-strong",
         )}
       >

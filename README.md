@@ -147,7 +147,10 @@ curl -s -o /dev/null -w "%{http_code}\n" "https://alafyhejiaxukrkrmehh.supabase.
       `character_options.gender_id`로 성별에 매었고, 화면은 고른 성별 머리만 보여준다.
       성별을 바꾸면 안 맞는 머리 선택은 풀린다(`setGender`). 함수도 다른 성별 머리를 거절한다
       (`draft-character`·`refine-character`의 `matchesGender`). 옛 글자 칩 6개는 껐다(캐릭터 0건일 때라 참조 없음)
-- [x] **룩 = 코디 한 벌 + 장소** — 머리는 캐릭터를 만들 때 정했으니 룩에서 안 고르고, 상의·하의 따로 고르기는 없앴다.
+- [x] **룩 = 코디 한 벌 (+ 장소는 선택)** — 머리는 캐릭터를 만들 때 정했으니 룩에서 안 고르고, 상의·하의 따로 고르기는 없앴다.
+      **장소는 기본으로 바꾸지 않는다** — 인물만 바꾸고 배경은 찍은 그대로 둔다. 자기 장소가 드러나는 게 싫은
+      사용자만 장소를 고른다. 안 고르면 지시문에 "배경 그대로"가 들어간다(`0013`, scene_preset_id NULL 허용).
+      코디 사진은 얼굴이 안 보이게 턱 아래부터 잘랐다 — 옷만 보여야 고르기 쉽다
       코디는 데일리 12 · 무대 12 · 아우터 6(`outfit/*`, 3:4 사진). `presets.slot='outfit'` + `category`,
       `looks.outfit_preset_id`. 룩의 hair·top·bottom NOT NULL을 풀었고(`0010`·`0011`),
       `looks_outfit_or_separates`가 옷을 강제한다. 지시문은 "머리는 그대로, 이 코디를 입혀"다.

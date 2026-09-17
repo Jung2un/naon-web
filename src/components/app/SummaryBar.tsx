@@ -11,6 +11,7 @@ import { PRESET_SLOTS, SLOT_LABEL, type PresetSlot } from "@/types/models";
  */
 export function SummaryBar({
   slots = PRESET_SLOTS,
+  optionalSlots = [],
   selectedNames,
   cost,
   pending,
@@ -19,6 +20,8 @@ export function SummaryBar({
 }: {
   /** 이번에 다 골라야 하는 슬롯, 화면 순서대로. 코디를 고르면 상의·하의 대신 코디가 들어간다 */
   slots?: readonly PresetSlot[];
+  /** 안 골라도 되지만, 고르면 요약에 같이 보이는 슬롯 */
+  optionalSlots?: readonly PresetSlot[];
   selectedNames: Partial<Record<PresetSlot, string>>;
   cost: number;
   pending?: boolean;
@@ -26,7 +29,9 @@ export function SummaryBar({
   className?: string;
 }) {
   const missing = slots.filter((slot) => !selectedNames[slot]);
-  const chosen = slots.map((slot) => selectedNames[slot]).filter(Boolean);
+  const chosen = [...slots, ...optionalSlots]
+    .map((slot) => selectedNames[slot])
+    .filter(Boolean);
   const complete = missing.length === 0;
 
   return (

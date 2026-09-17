@@ -39,7 +39,7 @@ export default async function NewLookPage({
     <>
       <PageHeader
         title="룩 만들기"
-        description="머리·상의·하의·장소를 하나씩 고르면 돼요."
+        description="코디 한 벌을 고르면 돼요. 장소는 원할 때만 골라요."
         back={{ href: "/looks", label: "룩" }}
       />
       <LookBuilder

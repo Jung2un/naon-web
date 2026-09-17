@@ -354,7 +354,8 @@ export async function getLooks(characterId?: string): Promise<LookListItem[]> {
         // 코디를 고른 룩은 상의·하의가 비어 있다
         top: look.top_preset_id ? (nameById.get(look.top_preset_id) ?? "") : "",
         bottom: look.bottom_preset_id ? (nameById.get(look.bottom_preset_id) ?? "") : "",
-        scene: nameById.get(look.scene_preset_id) ?? "",
+        // 장소를 안 고른 룩은 찍은 배경 그대로다
+        scene: look.scene_preset_id ? (nameById.get(look.scene_preset_id) ?? "") : "",
         outfit: look.outfit_preset_id ? (nameById.get(look.outfit_preset_id) ?? "") : "",
       },
     };

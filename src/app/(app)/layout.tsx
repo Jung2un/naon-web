@@ -7,12 +7,7 @@ import { getProfile } from "@/lib/data/queries";
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const profile = await getProfile();
 
-  const footer = (
-    <AccountMenu
-      name={profile?.display_name ?? "내 계정"}
-      credits={profile?.credits ?? 0}
-    />
-  );
+  const footer = <AccountMenu />;
 
   return (
     <div className="min-h-dvh">

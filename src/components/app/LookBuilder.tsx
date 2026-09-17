@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PresetTile } from "./PresetTile";
 import { SummaryBar } from "./SummaryBar";
+import { OptionalBadge } from "./TraitChip";
 import { MicroLabel } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -24,15 +25,19 @@ import {
 
 const COST = 1;
 
-/** 다 골라야 하는 슬롯, 화면 순서대로 */
-const SLOTS: readonly PresetSlot[] = ["outfit", "scene"];
+/** 다 골라야 하는 슬롯 */
+const SLOTS: readonly PresetSlot[] = ["outfit"];
+/** 골라도 되고 안 골라도 되는 슬롯 — 장소는 안 고르면 찍은 배경 그대로다 */
+const OPTIONAL_SLOTS: readonly PresetSlot[] = ["scene"];
+const ALL_SLOTS = [...SLOTS, ...OPTIONAL_SLOTS];
 
 /**
  * 룩은 프리셋 슬롯만. 자유 프롬프트 없음. — README "이미 정해진 것"
  * 흔들면 원가와 품질이 같이 무너진다.
  *
- * 룩은 **코디 한 벌 + 장소**다. 머리는 캐릭터를 만들 때 사진으로 정했으니 여기서 안 고른다.
- * 상의·하의를 따로 고르던 방식은 코디로 대체했다. — 마이그레이션 20260917000010·0011
+ * 룩은 **코디 한 벌**이다. 머리는 캐릭터를 만들 때 사진으로 정했으니 여기서 안 고른다.
+ * 장소는 선택이다 — 기본은 인물만 바꾸고 배경은 찍은 그대로 둔다. 자기 장소가 드러나는 게
+ * 싫은 사용자만 장소를 고른다. — 마이그레이션 20260917000010·0011·0013
  */
 export function LookBuilder({
   presets,
@@ -62,7 +67,7 @@ export function LookBuilder({
 
   const selectedNames = useMemo(() => {
     const out: Partial<Record<PresetSlot, string>> = {};
-    for (const slot of SLOTS) {
+    for (const slot of ALL_SLOTS) {
       const id = selection[slot];
       if (!id) continue;
       out[slot] = presets[slot].find((p) => p.id === id)?.name;
@@ -99,11 +104,12 @@ export function LookBuilder({
           character_id: characterId,
           name:
             name.trim() ||
-            SLOTS.map((s) => selectedNames[s])
+            ALL_SLOTS.map((s) => selectedNames[s])
               .filter(Boolean)
               .join(" "),
           outfit_preset_id: selection.outfit,
-          scene_preset_id: selection.scene,
+          // 안 고르면 보내지 않는다 — 서버가 배경을 그대로 둔다
+          ...(selection.scene ? { scene_preset_id: selection.scene } : {}),
         },
       );
 
@@ -149,7 +155,7 @@ export function LookBuilder({
       <section className="mt-8">
         <MicroLabel>{SLOT_LABEL.outfit}</MicroLabel>
         <p className="mt-1 text-caption text-muted">
-          전신 코디 한 벌을 골라요. 머리는 캐릭터 그대로예요.
+          전신 코디 한 벌을 골라요. 인물의 옷만 바뀌어요.
         </p>
         <div role="tablist" aria-label="코디 분류" className="mt-3 flex gap-2">
           {OUTFIT_CATEGORIES.map((c) => (
@@ -185,7 +191,15 @@ export function LookBuilder({
       </section>
 
       <section className="mt-8">
-        <MicroLabel>{SLOT_LABEL.scene}</MicroLabel>
+        <div className="flex items-center gap-2">
+          <MicroLabel>{SLOT_LABEL.scene}</MicroLabel>
+          <OptionalBadge />
+        </div>
+        <p className="mt-1 text-caption text-muted">
+          고르지 않으면 찍은 장소가 그대로 나와요.
+          <br />
+          장소를 드러내고 싶지 않을 때만 골라요.
+        </p>
         <div className={grid}>
           {presets.scene.map((preset) => (
             <PresetTile
@@ -208,6 +222,7 @@ export function LookBuilder({
       <SummaryBar
         className="mt-8"
         slots={SLOTS}
+        optionalSlots={OPTIONAL_SLOTS}
         selectedNames={selectedNames}
         cost={COST}
         pending={pending}

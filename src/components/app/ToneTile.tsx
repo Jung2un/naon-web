@@ -38,7 +38,7 @@ export function ToneTile({
           "relative aspect-square overflow-hidden rounded-[12px] border bg-sunken",
           "transition-[border-color,box-shadow] duration-150 ease-out",
           selected
-            ? "border-line-strong shadow-focus"
+            ? "border-transparent shadow-focus"
             : "border-line group-hover:border-line-strong",
         )}
       >
