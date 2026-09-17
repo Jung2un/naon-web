@@ -3,7 +3,7 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/env";
 import { signedUrl, signedUrls } from "@/lib/storage";
-import { catalogUrl } from "@/lib/catalog";
+import { catalogUrl, toneVariantUrl } from "@/lib/catalog";
 import type {
   CharacterBuild,
   CharacterDetail,
@@ -190,7 +190,20 @@ export async function getCharacterOptions(): Promise<
     }));
   })();
 
-  return rows.reduce((acc, option) => {
+  // 톤마다 성별별 사진을 붙인다. 화면이 성별을 바꿀 때 서버를 다시 부르지 않게 한 번에 내려준다.
+  const genderIds = rows.filter((o) => o.kind === "gender").map((o) => o.id);
+  const withVariants = rows.map((o) =>
+    o.kind === "tone"
+      ? {
+          ...o,
+          thumbnail_variants: Object.fromEntries(
+            genderIds.map((id) => [id, toneVariantUrl(o.thumbnail_path, id)]),
+          ),
+        }
+      : o,
+  );
+
+  return withVariants.reduce((acc, option) => {
     acc[option.kind].push(option);
     return acc;
   }, empty);

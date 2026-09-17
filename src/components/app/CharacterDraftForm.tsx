@@ -46,26 +46,30 @@ export function CharacterDraftForm({
   const router = useRouter();
   const [name, setName] = useState("");
   const [toneId, setToneId] = useState<string>("");
-  const [traits, setTraits] = useState<Traits>({});
+  // 성별은 여성으로 시작한다(시드 sort_order 1). 비어 있으면 톤 사진을 고를 기준이 없다.
+  const [traits, setTraits] = useState<Traits>(() =>
+    options.gender[0] ? { gender: options.gender[0].id } : {},
+  );
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 화면에 나오는 순서대로 센다 — 이름 → 성별 → 톤 → 나이대
+  // 화면에 나오는 순서대로 센다 — 성별 → 톤 → 나이대 → … → 이름(맨 끝)
   const missing: string[] = [];
-  if (!name.trim()) missing.push("이름");
   if (!traits.gender) missing.push(OPTION_KIND_LABEL.gender);
   if (!toneId) missing.push("톤");
   for (const kind of REQUIRED_TRAIT_KINDS) {
     if (kind !== "gender" && !traits[kind]) missing.push(OPTION_KIND_LABEL[kind]);
   }
+  if (!name.trim()) missing.push("이름");
   const complete = missing.length === 0;
   const short = balance !== null && balance < CHARACTER_COST.draft;
 
+  const nameOf = (kind: OptionKind) =>
+    options[kind].find((o) => o.id === traits[kind])?.name;
   const chosen = [
+    nameOf("gender"),
     options.tone.find((o) => o.id === toneId)?.name,
-    ...TRAIT_KINDS.map(
-      (kind) => options[kind].find((o) => o.id === traits[kind])?.name,
-    ),
+    ...TRAIT_KINDS.filter((kind) => kind !== "gender").map(nameOf),
   ].filter(Boolean);
 
   async function draft() {
@@ -99,25 +103,9 @@ export function CharacterDraftForm({
     <div className="pb-4">
       <Stepper steps={CHARACTER_STEPS} current={0} />
 
-      <div className="mt-8 max-w-[420px]">
-        <Label htmlFor="name">캐릭터 이름</Label>
-        <Input
-          id="name"
-          className="mt-2"
-          placeholder="기본 나"
-          value={name}
-          maxLength={20}
-          autoFocus
-          onChange={(e) => setName(e.target.value)}
-        />
-        <p className="mt-2 text-caption text-muted">
-          나중에 룩과 작업물을 고를 때 이 이름으로 찾게 돼요.
-        </p>
-      </div>
-
       {/*
-        성별은 맨 처음에 정한다. 톤·머리·체형을 고를 때 이미 누구를 만드는지 알고 있어야
-        나머지 선택이 자연스럽다. 아래 속성 칩 줄에는 다시 나오지 않는다.
+        성별은 맨 처음에 정한다. 누구를 만드는지가 정해져야 톤 사진부터 그 성별로 보여줄 수 있다.
+        아래 속성 칩 줄에는 다시 나오지 않는다.
       */}
       <section className="mt-8 max-w-[420px]">
         <MicroLabel>성별</MicroLabel>
@@ -161,6 +149,9 @@ export function CharacterDraftForm({
             <ToneTile
               key={option.id}
               option={option}
+              imageUrl={
+                traits.gender ? option.thumbnail_variants?.[traits.gender] : undefined
+              }
               selected={toneId === option.id}
               onSelect={setToneId}
             />
@@ -179,6 +170,22 @@ export function CharacterDraftForm({
           />
         ))}
       </div>
+
+      {/* 이름은 맨 마지막에 정한다 — 무엇을 만들지 다 고른 뒤라 이름 짓기가 쉽다 */}
+      <section className="mt-10 max-w-[420px]">
+        <Label htmlFor="name">캐릭터 이름</Label>
+        <Input
+          id="name"
+          className="mt-2"
+          placeholder="기본 나"
+          value={name}
+          maxLength={20}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <p className="mt-2 text-caption text-muted">
+          나중에 룩과 작업물을 고를 때 이 이름으로 찾게 돼요.
+        </p>
+      </section>
 
       {error && (
         <p role="alert" className="mt-6 text-caption text-danger">

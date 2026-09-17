@@ -42,6 +42,11 @@ export type CharacterDetail = Character & {
 
 export type CharacterOptionWithUrl = CharacterOption & {
   thumbnail_url: string | null;
+  /**
+   * 톤만 쓴다. 성별 옵션 id → 그 성별로 찍은 톤 사진. 없거나 null이면 thumbnail_url을 쓴다.
+   * 캐릭터 만들기에서 성별을 바꾸면 톤 타일이 이 사진으로 갈아끼워진다. — src/lib/catalog.ts
+   */
+  thumbnail_variants?: Record<string, string | null>;
 };
 
 export type CharacterImageWithUrl = CharacterImage & {

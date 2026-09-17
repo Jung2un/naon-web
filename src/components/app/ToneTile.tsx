@@ -12,15 +12,19 @@ import type { CharacterOptionWithUrl } from "@/types/models";
  */
 export function ToneTile({
   option,
+  imageUrl,
   selected,
   disabled,
   onSelect,
 }: {
   option: CharacterOptionWithUrl;
+  /** 그릴 사진. 안 주면 option.thumbnail_url — 성별에 따라 부르는 쪽이 골라 넘긴다 */
+  imageUrl?: string | null;
   selected: boolean;
   disabled?: boolean;
   onSelect: (id: string) => void;
 }) {
+  const src = imageUrl ?? option.thumbnail_url;
   return (
     <button
       type="button"
@@ -38,9 +42,9 @@ export function ToneTile({
             : "border-line group-hover:border-line-strong",
         )}
       >
-        {option.thumbnail_url ? (
+        {src ? (
           <Image
-            src={option.thumbnail_url}
+            src={src}
             alt=""
             fill
             sizes="(max-width: 640px) 50vw, 180px"

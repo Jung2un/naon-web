@@ -23,3 +23,32 @@ export function catalogUrl(thumbnailPath: string | null): string | null {
   const key = thumbnailPath.replace(/\.[a-z0-9]+$/i, "");
   return CATALOG.has(key) ? `/catalog/${key}.${EXT}` : null;
 }
+
+/**
+ * 톤 사진의 성별 변형.
+ *
+ * 기본 사진(`tone/<n>`)은 여성이다. 남성·중성적은 `tone/male/<n>`·`tone/neutral/<n>`에 둔다.
+ * 키는 character_options(gender)의 고정 id다 — 시드 20260916000007과 fixtures.ts가 같은 id를 쓴다.
+ */
+const TONE_GENDER_FOLDER: Record<string, string | null> = {
+  "a2222222-0000-4000-8000-000000000001": null, // 여성 — 기본 사진
+  "a2222222-0000-4000-8000-000000000002": "male", // 남성
+  "a2222222-0000-4000-8000-000000000003": "neutral", // 중성적
+};
+
+/**
+ * 사진 6장이 **다 들어간** 변형만 여기 넣는다. 파일을 넣기 전에 켜면 타일이 깨진다.
+ * 켜지 않은 변형은 null이 돼서 화면이 기본(여성) 사진을 그대로 보여준다.
+ * 사진을 넣으면 "male" / "neutral"을 추가한다. 프롬프트는 docs/카탈로그-이미지-프롬프트.md
+ */
+const READY_TONE_VARIANTS = new Set<string>([]);
+
+export function toneVariantUrl(
+  thumbnailPath: string | null,
+  genderOptionId: string,
+): string | null {
+  const folder = TONE_GENDER_FOLDER[genderOptionId];
+  if (!folder || !READY_TONE_VARIANTS.has(folder) || !thumbnailPath) return null;
+  const n = thumbnailPath.replace(/\.[a-z0-9]+$/i, "").match(/^tone\/(\d+)$/)?.[1];
+  return n ? `/catalog/tone/${folder}/${n}.${EXT}` : null;
+}
