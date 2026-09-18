@@ -4,6 +4,10 @@
  */
 
 const MESSAGES: Record<string, string> = {
+  AI_NOT_CONFIGURED: "AI 서비스를 준비하고 있어요. 연결이 완료된 뒤 다시 시도해 주세요.",
+  VIDEO_INVALID: "영상을 확인할 수 없어요. 3~10초 MP4 파일을 다시 선택해 주세요.",
+  VIDEO_BUSY: "이미 변환 중인 영상이 있어요. 작업이 끝난 뒤 다시 시작해 주세요.",
+  VIDEO_UPLOAD_FAILED: "영상을 올리지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요.",
   // 변환 파이프라인
   FAL_422: "얼굴이 프레임을 벗어난 구간이 있어요. 다시 찍어 주세요.",
   FACE_NOT_FOUND: "영상에서 얼굴을 찾지 못했어요. 밝은 곳에서 다시 찍어 주세요.",
@@ -12,7 +16,7 @@ const MESSAGES: Record<string, string> = {
   VIDEO_TOO_SHORT: "영상이 너무 짧아요. 3초 이상 찍어 주세요.",
   LOW_RESOLUTION: "화질이 낮아 변환할 수 없어요. 720p 이상으로 찍어 주세요.",
   TIMEOUT: "변환이 예상보다 오래 걸려 중단됐어요. 크레딧은 돌려드렸어요.",
-  UPSTREAM_ERROR: "변환 서버에 문제가 있었어요. 크레딧은 돌려드렸어요.",
+  UPSTREAM_ERROR: "요청을 완료하지 못했어요. 작업물 상태를 확인한 뒤 다시 시도해 주세요.",
   RATE_LIMITED: "지금은 만들 수 있는 양을 넘었어요. 잠시 뒤 다시 시도해 주세요.",
   CONTENT_BLOCKED:
     "이 조합은 만들 수 없었어요. 톤이나 속성을 바꿔서 다시 시도해 주세요.",
@@ -27,7 +31,7 @@ const MESSAGES: Record<string, string> = {
     "캐릭터가 아직 준비되지 않았어요. 얼굴을 고르고 완성한 뒤에 쓸 수 있어요.",
 
   // 룩
-  LOOK_INCOMPLETE: "머리·상의·하의·장소를 다 골라 주세요.",
+  LOOK_INCOMPLETE: "캐릭터와 입힐 코디를 골라 주세요.",
 
   // 크레딧
   INSUFFICIENT_CREDITS: "크레딧이 모자라요. 충전하고 다시 시도해 주세요.",

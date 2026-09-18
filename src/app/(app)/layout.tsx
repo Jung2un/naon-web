@@ -36,7 +36,8 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
             페이지 좌우 여백 24px (모바일 16px), 컨텐츠 최대 폭 1200px.
             모바일 아래 여백은 하단 탭(--bottom-nav-h) + 홈 인디케이터를 비켜간다.
           */}
-          <main className="mx-auto w-full max-w-[1200px] px-4 pb-[calc(var(--bottom-nav-h)+1.5rem)] pt-6 sm:px-6 sm:pt-8 lg:pb-8">
+          <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-xl focus:bg-surface focus:p-4">본문으로 건너뛰기</a>
+          <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-[1200px] px-4 pb-[calc(var(--bottom-nav-h)+1.5rem)] pt-6 sm:px-8 sm:pt-10 lg:px-10 lg:pb-12">
             {children}
           </main>
         </div>

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { KitchenSinkDemo } from "@/components/app/KitchenSinkDemo";
 import { Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,13 +40,13 @@ export default function KitchenSinkPage() {
       <Section title="색">
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           {[
-            ["크림 배경", "#f7f4ed"],
-            ["가라앉은 표면", "#f0eee7"],
-            ["차콜", "#1c1c1c"],
+            ["페이지 배경", "#f7f4ed"],
+            ["기본 표면", "#fcfbf8"],
+            ["주요 행동", "#3d3934"],
             ["보조 글자", "#5f5f5d"],
-            ["테두리", "#eceae4"],
+            ["테두리", "#e5e3de"],
             ["상호작용 테두리", "rgba(28,28,28,0.4)"],
-            ["호버", "rgba(28,28,28,0.04)"],
+            ["선택 배경", "#ebe7df"],
             ["실패", "#b3261e"],
           ].map(([name, hex]) => (
             <div key={name}>
@@ -68,7 +69,7 @@ export default function KitchenSinkPage() {
           <p className="font-display text-section font-semibold">
             섹션 제목 20px / 600 / -0.3px
           </p>
-          <p className="text-card">카드 제목 16px / 400</p>
+          <p className="text-card">카드 제목 16px / 600</p>
           <p className="text-base">본문 15px / 400 — 읽는 글은 65자쯤에서 끊어요.</p>
           <p className="text-sm">본문 작게 14px / 400</p>
           <p className="text-caption text-muted">캡션 13px / 400</p>
@@ -119,7 +120,7 @@ export default function KitchenSinkPage() {
               <CardTitle>기본 카드</CardTitle>
             </CardHeader>
             <CardContent className="text-caption text-muted">
-              그림자 없이 1px 테두리로만 담아요.
+              흰 표면과 20px 라운드로 내용을 묶어요.
             </CardContent>
           </Card>
           <Card interactive>
@@ -169,12 +170,13 @@ export default function KitchenSinkPage() {
             <Textarea id="ks-memo" placeholder="여기에 적어 주세요" />
           </div>
           <p className="text-caption text-muted">
-            클릭하거나 Tab으로 들어가면 테두리가 차콜로 진해지고 같은 톤의 링이 붙어요.
-            드래그 선택과 같은 계열이에요.
+            클릭하거나 Tab으로 들어가면 차콜 테두리와 포커스 링이 붙어요.
+            입력과 선택에 같은 포커스 규칙을 적용해요.
           </p>
         </div>
       </Section>
 
+      <Section title="머리색 컬러 견본"><KitchenSinkDemo /></Section>
       <Section title="Stepper">
         <div className="max-w-[560px]">
           <Stepper steps={["이름 짓기", "사진 5장", "확인"]} current={1} />

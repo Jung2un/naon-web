@@ -272,6 +272,8 @@ export type Database = {
           error_code: string | null
           id: string
           look_id: string | null
+          provider_model: string | null
+          provider_request_id: string | null
           result_video_path: string | null
           source_video_path: string | null
           started_at: string | null
@@ -288,6 +290,8 @@ export type Database = {
           error_code?: string | null
           id?: string
           look_id?: string | null
+          provider_model?: string | null
+          provider_request_id?: string | null
           result_video_path?: string | null
           source_video_path?: string | null
           started_at?: string | null
@@ -304,6 +308,8 @@ export type Database = {
           error_code?: string | null
           id?: string
           look_id?: string | null
+          provider_model?: string | null
+          provider_request_id?: string | null
           result_video_path?: string | null
           source_video_path?: string | null
           started_at?: string | null
@@ -493,6 +499,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      begin_video_job: {
+        Args: {
+          p_character_id: string
+          p_duration: number
+          p_id: string
+          p_look_id: string
+          p_model: string
+          p_source_path: string
+          p_user_id: string
+        }
+        Returns: boolean
+      }
       charge_credits: {
         Args: {
           p_amount: number
@@ -510,6 +528,10 @@ export type Database = {
           p_round: number
         }
         Returns: string
+      }
+      finish_video_job: {
+        Args: { p_error?: string; p_id: string; p_result_path?: string }
+        Returns: boolean
       }
       refund_credits: {
         Args: {

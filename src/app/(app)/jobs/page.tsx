@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import type { Metadata } from "next";
 import { Film } from "lucide-react";
 import { PageHeader } from "@/components/app/PageHeader";
@@ -17,8 +19,8 @@ export default async function JobsPage() {
         <EmptyState
           icon={Film}
           title="아직 작업물이 없어요"
-          description="앱에서 10초짜리 영상을 찍으면 여기로 들어와요. 변환은 1~3분 걸려요."
-          action={{ label: "캐릭터 보기", href: "/characters" }}
+          description="영상을 올리고 캐릭터를 고르면, 완성된 영상을 여기서 볼 수 있어요."
+          action={{ label: "영상 변환하기", href: "/jobs/new" }}
         />
       </>
     );
@@ -28,7 +30,8 @@ export default async function JobsPage() {
     <>
       <PageHeader
         title="작업물"
-        description="앱에서 찍은 영상이 캐릭터 얼굴로 바뀐 결과예요."
+        description="캐릭터로 바꾼 영상과 진행 중인 작업을 확인해요."
+        action={<Button variant="primary" asChild><Link href="/jobs/new">영상 변환하기</Link></Button>}
       />
       <JobGrid>
         {jobs.map((job) => (

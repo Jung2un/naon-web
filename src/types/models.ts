@@ -178,8 +178,8 @@ export const TRAIT_KINDS: readonly OptionKind[] = [
 export const TRAIT_DISPLAY_KINDS: readonly OptionKind[] = [
   "gender",
   "hair",
-  "age",
   "hair_color",
+  "age",
   "body",
   "vibe",
 ] as const;

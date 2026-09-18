@@ -7,8 +7,13 @@
 
 @theme {
   /* 바탕 */
+  --color-surface: #fcfbf8;
+  --color-primary: #3d3934;
+  --color-primary-soft: #ebe7df;
+  --color-success: #454b45;
+  --color-success-soft: #e8eae5;
   --color-cream: #f7f4ed;
-  --color-sunken: #f0eee7;
+  --color-sunken: #efeeeb;
 
   /* 글자 */
   --color-ink: #1c1c1c;
@@ -17,14 +22,14 @@
   --color-on-dark: #fcfbf8;
 
   /* 선 */
-  --color-line: #eceae4;
+  --color-line: #e5e3de;
   --color-line-strong: rgba(28, 28, 28, 0.4);
 
   /* 표면 상호작용 */
   --color-hover: rgba(28, 28, 28, 0.04);
   --color-faint: rgba(28, 28, 28, 0.03);
   /* 입력 포커스 링. 드래그 선택(0.12)과 같은 차콜 계열로 톤을 맞춘다. */
-  --color-ring-subtle: rgba(28, 28, 28, 0.1);
+  --color-ring-subtle: rgba(61, 57, 52, 0.14);
 
   /* 상태 — DESIGN.md §4 */
   --color-danger: #b3261e;
@@ -46,8 +51,8 @@
   --radius-micro: 4px;
   --radius-standard: 6px;
   --radius-compact: 8px;
-  --radius-card: 12px;
-  --radius-container: 16px;
+  --radius-card: 20px;
+  --radius-container: 24px;
 
   /* 폰트 */
   --font-sans:
@@ -162,7 +167,7 @@
 
   /* 날카로운 기본 아웃라인 대신 소프트 섀도 — DESIGN.md §9 */
   :focus-visible {
-    outline: 2px solid rgba(59, 130, 246, 0.5);
+    outline: 2px solid rgba(61, 57, 52, 0.65);
     outline-offset: 2px;
     box-shadow: var(--shadow-focus);
   }
@@ -227,4 +232,15 @@
     animation: aisp-pulse 1.6s ease-in-out infinite !important;
     transform: none !important;
   }
+}
+
+/* 공통 사진 질감 위에 색을 입혀 얼굴 없이 머리색만 비교한다. */
+.hair-swatch { background-color: var(--hair-color); isolation: isolate; }
+.hair-swatch::before {
+ content: "";
+ position: absolute;
+ inset: 0;
+ background: url('/catalog/hair-texture.webp') center / cover;
+ filter: grayscale(1) contrast(1.2);
+ mix-blend-mode: soft-light;
 }

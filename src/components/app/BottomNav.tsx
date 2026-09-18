@@ -8,16 +8,7 @@ import { MoreHorizontal, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PRIMARY_NAV_ITEMS, SECONDARY_NAV_ITEMS } from "./nav-items";
 
-/**
- * 모바일 하단 탭 — 1024px 미만에서만 선다.
- *
- * 햄버거 시트를 대신한다. 시트는 어디를 가든 "우상단까지 손을 뻗어 열고 → 고르고 → 닫기"
- * 세 동작이 들고, 그동안 지금 어디에 있는지도 안 보인다.
- * 탭은 엄지 자리에서 한 번에 끝나고 현재 위치가 늘 보인다.
- *
- * 활성 표시는 사이드바와 같은 규칙이다 — 채도 있는 색이나 강조 바를 쓰지 않고
- * 차콜/뮤티드 대비와 웨이트로만 구분한다. — DESIGN.md §6
- */
+
 export function BottomNav({ footer }: { footer?: React.ReactNode }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -29,7 +20,7 @@ export function BottomNav({ footer }: { footer?: React.ReactNode }) {
   return (
     <nav
       aria-label="주 메뉴"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-cream pb-[env(safe-area-inset-bottom)] lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden"
     >
       <ul className="flex items-stretch">
         {PRIMARY_NAV_ITEMS.map(({ href, label, icon: Icon }) => {
@@ -41,7 +32,7 @@ export function BottomNav({ footer }: { footer?: React.ReactNode }) {
                 aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex h-14 flex-col items-center justify-center gap-1 transition-colors duration-150 ease-out",
-                  active ? "text-ink" : "text-muted",
+                  active ? "text-primary" : "text-muted",
                 )}
               >
                 <Icon
@@ -62,7 +53,7 @@ export function BottomNav({ footer }: { footer?: React.ReactNode }) {
             <DialogPrimitive.Trigger
               className={cn(
                 "flex h-14 w-full cursor-pointer flex-col items-center justify-center gap-1 transition-colors duration-150 ease-out",
-                moreActive ? "text-ink" : "text-muted",
+                moreActive ? "text-primary" : "text-muted",
               )}
             >
               <MoreHorizontal
@@ -78,7 +69,7 @@ export function BottomNav({ footer }: { footer?: React.ReactNode }) {
             <DialogPrimitive.Portal>
               <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-scrim" />
               {/* 하단에서 올라오는 시트. 손이 닿는 쪽에서 열리고 닫힌다. */}
-              <DialogPrimitive.Content className="fixed inset-x-0 bottom-0 z-50 rounded-t-[16px] border-t border-line bg-cream px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-5 shadow-overlay duration-200 ease-out">
+              <DialogPrimitive.Content className="fixed inset-x-0 bottom-0 z-50 rounded-t-[16px] border-t border-line bg-surface px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-5 shadow-overlay duration-200 ease-out">
                 <DialogPrimitive.Title className="px-3 font-display text-section font-semibold text-ink">
                   더보기
                 </DialogPrimitive.Title>
@@ -105,7 +96,7 @@ export function BottomNav({ footer }: { footer?: React.ReactNode }) {
                         className={cn(
                           "flex min-h-11 items-center gap-2.5 rounded-[6px] px-3 py-2.5 text-base transition-colors duration-150 ease-out",
                           active
-                            ? "bg-hover text-ink"
+                            ? "bg-primary-soft text-primary"
                             : "text-muted hover:bg-hover hover:text-ink",
                         )}
                       >

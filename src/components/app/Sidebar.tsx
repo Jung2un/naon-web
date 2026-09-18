@@ -6,17 +6,12 @@ import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "./nav-items";
 
 import { BrandMark } from "./BrandMark";
-/**
- * DESIGN.md §6 — 사이드바
- * 폭 240px, 크림 배경, 오른쪽 1px solid --border-subtle.
- * 활성 = --hover-subtle 배경 + --text-primary. 비활성 = --text-muted.
- * 활성 표시에 채도 있는 색이나 왼쪽 강조 바를 쓰지 않는다.
- */
+
 export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
 
   return (
-    <nav className="flex flex-col gap-0.5" aria-label="주 메뉴">
+    <nav className="flex flex-col gap-2" aria-label="주 메뉴">
       {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
         const active = pathname === href || pathname.startsWith(`${href}/`);
         return (
@@ -27,9 +22,9 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
             aria-current={active ? "page" : undefined}
             className={cn(
               // 터치 대상 최소 44px — DESIGN.md §6
-              "flex min-h-11 items-center gap-2.5 rounded-[6px] px-3 py-2 text-sm transition-colors duration-150 ease-out",
+              "flex min-h-11 items-center gap-2.5 rounded-[12px] px-4 py-3 text-sm transition-colors duration-150 ease-out",
               active
-                ? "bg-hover text-ink"
+                ? "bg-primary-soft font-semibold text-primary"
                 : "text-muted hover:bg-hover hover:text-ink",
             )}
           >
@@ -44,15 +39,21 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 
 export function Sidebar({ footer }: { footer?: React.ReactNode }) {
   return (
-    <aside className="fixed inset-y-0 left-0 hidden w-60 flex-col border-r border-line bg-cream px-3 py-5 lg:flex">
+    <aside className="fixed inset-y-0 left-0 hidden w-60 flex-col border-r border-line bg-surface px-4 py-8 lg:flex">
       <Link
         href="/dashboard"
         aria-label="대시보드로 가기"
-        className="mb-6 flex h-8 items-center px-3"
+        className="mb-10 flex h-8 items-center px-3"
       >
         <BrandMark size="sm" />
       </Link>
+      <p className="mb-3 px-4 text-caption text-muted">나의 스튜디오</p>
       <SidebarNav />
+      <div className="mt-8 rounded-[16px] bg-primary-soft p-4">
+        <p className="font-semibold text-ink">새로운 나를 만들어 볼까요?</p>
+        <p className="mt-2 text-caption text-muted">원하는 분위기를 고르고 나만의 캐릭터를 완성해요.</p>
+        <Link href="/characters/new" className="mt-3 inline-flex min-h-11 items-center font-semibold text-primary">캐릭터 만들기 →</Link>
+      </div>
       <div className="mt-auto">{footer}</div>
     </aside>
   );

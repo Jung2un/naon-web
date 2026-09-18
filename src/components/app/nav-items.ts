@@ -37,7 +37,7 @@ export const SECONDARY_NAV_ITEMS: NavItem[] = [
 
 /** 데스크톱 사이드바용 — 순서는 기존 그대로다. */
 export const NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard", label: "대시보드", icon: LayoutDashboard },
+  { href: "/dashboard", label: "홈", icon: LayoutDashboard },
   ...PRIMARY_NAV_ITEMS.slice(1),
   ...SECONDARY_NAV_ITEMS,
 ];

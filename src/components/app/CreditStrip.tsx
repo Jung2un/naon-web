@@ -3,17 +3,12 @@ import { Button } from "@/components/ui/button";
 import { credits } from "@/lib/format";
 import { LOW_CREDIT_BALANCE } from "@/types/models";
 
-/**
- * DESIGN.md §6 — CreditStrip
- * 카드(크림 + 테두리 + 12px), 패딩 20px.
- * 잔량은 36px/600 tabular-nums. 라벨은 13px --text-muted.
- * 잔량이 3 미만이면 충전 버튼을 Primary로 승격한다.
- */
+
 export function CreditStrip({ balance }: { balance: number }) {
   const isLow = balance < LOW_CREDIT_BALANCE;
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 rounded-[12px] border border-line bg-cream p-5">
+    <div className="flex flex-wrap items-center justify-between gap-4 rounded-[20px] border border-line bg-surface p-5">
       <div>
         <p className="text-caption text-muted">남은 크레딧</p>
         <p className="mt-1 font-display text-metric font-semibold tabular text-ink">

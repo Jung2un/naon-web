@@ -21,8 +21,8 @@ export function EmptyState({
 }) {
   return (
     <div className="mx-auto flex max-w-[420px] flex-col items-center py-14 text-center">
-      <div className="flex size-[72px] items-center justify-center rounded-full border border-line bg-cream">
-        <Icon className="size-10 text-muted" strokeWidth={1.25} aria-hidden />
+      <div className="flex size-[72px] items-center justify-center rounded-full bg-primary-soft">
+        <Icon className="size-9 text-primary" strokeWidth={1.25} aria-hidden />
       </div>
       <h2 className="mt-5 font-display text-section font-semibold text-ink">
         {title}

@@ -8,6 +8,11 @@
 
 /** `src/lib/errors.ts`에 문구가 있는 코드만 쓴다. 새 코드를 만들려면 거기부터 추가한다. */
 export type ErrorCode =
+  | "AI_NOT_CONFIGURED"
+  | "VIDEO_INVALID"
+  | "VIDEO_TOO_LONG"
+  | "VIDEO_TOO_SHORT"
+  | "VIDEO_BUSY"
   | "INSUFFICIENT_CREDITS"
   | "TRAITS_INCOMPLETE"
   | "NAME_REQUIRED"
@@ -38,7 +43,8 @@ export function corsHeaders(req: Request): Record<string, string> {
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     Vary: "Origin",
   };
-  if (ALLOWED_ORIGIN.test(origin)) headers["Access-Control-Allow-Origin"] = origin;
+  const extraOrigins = (Deno.env.get("ALLOWED_APP_ORIGINS") ?? "").split(",").map(s => s.trim()).filter(Boolean);
+  if (ALLOWED_ORIGIN.test(origin) || extraOrigins.includes(origin)) headers["Access-Control-Allow-Origin"] = origin;
   return headers;
 }
 

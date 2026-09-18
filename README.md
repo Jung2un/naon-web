@@ -1,3 +1,7 @@
+# AI 연동 업데이트 (2026-09-18)
+
+이미지 기본 모델은 Gemini 3.1 Flash Image, 영상은 fal Wan Animate Replace입니다. `/jobs/new` 영상 업로드·변환과 키 설정 확인, 원자적 차감·환불을 추가했습니다. Google·fal 계정을 준비하고 Supabase에 GEMINI_API_KEY·FAL_KEY를 등록했습니다. 웹과 Edge Function 7개는 운영 배포 완료했으며, 결제 연결 확인과 실제 유료 생성 검증은 남아 있습니다. 최신 설정·배포·운영 절차는 [AI 연동 문서](docs/AI-연동.md)를 따릅니다. 아래 과거 작업 기록의 모델·준비 상태보다 이 문서를 우선합니다.
+
 # 웹 관리 화면
 
 내 대신 연기하는 AI 캐릭터 앱의 **웹 관리 화면**.
@@ -5,74 +9,40 @@
 
 ---
 
-## TODO — 남은 것
+## TODO — 현재 상태 (2026-09-18)
 
-2026-09-16에 계정 세팅(Supabase · Google OAuth · Vercel)과 Edge Function을 끝냈고,
-2026-09-17에 **캐릭터 스튜디오**와 **이미지 모델 전환(fal → Gemini)**을 올렸다.
-**끝난 내용은 이 문서 아래 "끝난 것"에 있다.** 여기는 아직 안 된 것만 둔다.
+### 완료한 작업
 
-| 막는 것 | 누가 | 없으면 |
-|---|---|---|
-| **Gemini API 키 + 결제 연결** | 계정 작업 | **지금 유일하게 막는 것.** 캐릭터·룩 만들기가 503에서 멈춘다 |
-| 카카오 — **비즈 앱 전환** (앱 아이콘 + 본인인증) | 계정 작업 · **나중에 하기로 함** | 로그인 화면에서 "곧 열려요"로 비활성 |
+- [x] 베이지·연회색 디자인 토큰 유지, 공통 버튼·입력·카드·상태 표시와 `/kitchen-sink` 정리
+- [x] 홈 제작 안내, 캐릭터 검색·필터·초기화, 내비게이션과 모바일 터치 영역 개선
+- [x] 머릿결 질감 기반 머리색 7종 선택, 코토리 베이지·핑크 브라운 추가, 머리색 다음에 나이대 배치
+- [x] 이미지 생성·수정·3방향·룩에 Gemini 3.1 Flash Image 연동 (`gemini-3.1-flash-image` 기본값)
+- [x] `/jobs/new` 영상 업로드·변환 화면 및 fal Wan Animate Replace 큐 연동 (720p)
+- [x] 영상 MP4 50MB·3~10초 검증, 소유권 확인, 원자적 차감·완료·1회 환불, 같은 작업 중복 요청 방지
+- [x] 웹훅 HMAC 확인, 결과 URL 제한, private 스토리지 저장, 키 설정 상태 조회 추가
+- [x] 머리색·영상 파이프라인 마이그레이션 2건 원격 적용, 실제 DB에서 타입 재생성
+- [x] Google AI Studio·fal 계정 준비, Supabase Edge Function Secrets에 `GEMINI_API_KEY`·`FAL_KEY` 저장 확인
+- [x] 기존 `WEBHOOK_SECRET` 유지. 실제 키는 저장소와 Vercel에 넣지 않음
+- [x] Edge Function 7개와 [운영 웹](https://ai-daeyeok.vercel.app) 배포 완료
+- [x] mock 테스트 7개, Edge Function 7개 타입 검사, ESLint, Next.js 프로덕션 빌드 통과
+- [x] 운영 `/kitchen-sink` HTTP 200 및 비로그인 `ai-status` HTTP 401 확인
 
-### A. Gemini 키 — **코드는 다 붙었다. 키만 넣으면 돈다**
+### A. 남은 AI 운영 확인
 
-캐릭터 후보·수정·3방향·룩은 전부 **Gemini 이미지 모델 하나**가 만든다.
-얼굴을 유지한 채 고치는 게 이 모델의 대표 기능이고, 그게 3·4단계의 전부다.
-어디에 뭐가 들어가는지는 `docs/기획서.md` §7.
+키 저장과 실제 모델 사용 가능 여부는 별개다. 유료 생성·변환은 아직 실행하지 않았다.
 
-**무료 티어는 없다.** 공식 가격표에서 이미지 모델 넷 다 Free tier가 "Not available"이다.
-"하루 500장 무료"는 블로그발 오정보였으니 믿지 말 것. **결제가 붙은 키가 있어야 한 장이라도 나온다.**
+- [ ] Google 키가 속한 프로젝트의 결제 연결·모델 사용 권한·할당량 확인
+- [ ] fal 결제 수단 등록 및 크레딧 충전 확인 (마지막 확인 시 잔액 $0)
+- [ ] 캐릭터 후보 4장 → 다듬기 → 되돌리기 → 다시 뽑기 → 3방향 완성 → 룩 생성 실사용 검증
+- [ ] 실제 응답 파싱, 3:4·1K 옵션, 얼굴 일관성·좌우 각도·안전 필터와 실행 시간 확인
+- [ ] 완성한 캐릭터로 3~10초 MP4 변환 → 웹훅 → 결과 재생까지 검증
+- [ ] 실패·중복 요청·웹훅 재전송 시 크레딧이 한 번만 차감·환불되는지 실제 환경에서 확인
+- [ ] 로그인 후 데스크톱·모바일의 생성부터 결과까지 전체 흐름 확인
 
-- [ ] [aistudio.google.com](https://aistudio.google.com/app/apikey)에서 API 키 만들기
-- [ ] 그 키가 속한 Google Cloud 프로젝트에 **결제 계정 연결** (안 하면 전부 실패한다)
-- [ ] 시크릿 등록 — 싼 모델로 시작한다
-
-```bash
-npx supabase secrets set GEMINI_API_KEY=... GEMINI_IMAGE_MODEL=gemini-3.1-flash-lite-image
-```
-
-**품질을 올리는 손잡이는 `GEMINI_IMAGE_MODEL` 한 줄이다.** 시크릿만 바꾸고 재배포하면 끝이고,
-코드는 하나도 안 바뀐다. 싼 걸로 돌려보고 아쉬우면 올린다.
-
-| 모델 | 장당 | 캐릭터 하나(8장) |
-|---|---|---|
-| `gemini-3.1-flash-lite-image` | $0.0168 | 약 200원 |
-| `gemini-3.1-flash-image` | $0.034 | 약 400원 |
-| `gemini-3-pro-image` | $0.067 | 약 800원 |
-
-#### 키를 넣고 **첫 한 판**에서 확인할 것
-
-아직 아무도 실제 응답을 못 봤다. 아래는 한 번 돌려보면 전부 드러난다.
-실패해도 **크레딧은 환불되고** 응답 본문이 함수 로그에 찍힌다.
-로그는 대시보드에서 본다 — https://supabase.com/dashboard/project/alafyhejiaxukrkrmehh/functions/draft-character/logs
-(CLI 2.117에는 `supabase functions logs`가 **없다.** `UnknownSubcommand`로 떨어진다)
-
-- [ ] 응답 JSON 모양 — `_shared/gemini.ts`의 파서가 지금 두 모양을 훑는다. **실제 모양 하나로 줄일 것**
-- [ ] `aspect_ratio: "3:4"` · `image_size: "1K"`를 그 모델이 받아주는지 (거절하면 UPSTREAM_ERROR)
-- [ ] 좌45·우45가 화면에서 보는 방향과 맞는지. 뒤집혔으면 `_shared/prompt.ts` 문구로 잡는다
-- [ ] 안전 필터에 걸리는 톤·속성 조합이 있는지 (`CONTENT_BLOCKED` 문구가 나오는지)
-- [ ] 배경 작업이 후보 4장을 끝까지 채우는지 (Edge Function 실행 시간 안에 들어오는지)
-- [ ] 다듬기 → 되돌리기 → 다시 뽑기 → 완성까지 한 바퀴
-
-**fal은 영상에만 남는다.** 영상에서 사람을 캐릭터로 갈아끼우는 **Wan-Animate Replace**는
-무료로도 Gemini로도 대체할 게 없다. 앱이 큐에 넣고 `fal-webhook`이 결과를 받는다.
-웹에서 영상을 만들 일이 생기기 전에는 `FAL_KEY`가 없어도 캐릭터·룩은 다 돈다.
-
-- [ ] fal.ai 계정 + 결제 수단 (영상 변환을 켤 때. 종량제라 첫 변환부터 돈이 나간다)
-
-**Vercel에 넣지 말 것.** 시크릿이 없는 동안에는 함수가 **크레딧을 깎기 전에** 503으로 막는다
-(`geminiConfig()`가 null이면 차감 앞에서 돌아선다). 키를 넣기 전에 버튼을 눌러도 크레딧이 안 날아간다.
-
-**결과가 마음에 안 들 때 고칠 곳은 네 군데뿐이다.**
-
-| 자리 | 무엇 |
-|---|---|
-| `character_options.prompt` (DB) | 톤·속성의 영어 조각. **배포 없이 고친다** |
-| `presets.prompt` (DB) | 룩 프리셋의 영어 조각. **배포 없이 고친다**. 비어 있으면 한글 이름으로 되돌아간다 |
-| `_shared/prompt.ts` | 조각을 잇는 규칙 — 수정 지시문, 각도 문구, 룩 문구 |
-| `GEMINI_IMAGE_MODEL` (시크릿) | 모델 자체를 올린다 |
+영상 큐 접수 여부가 불확실하면 유료 요청을 자동 재전송하지 않는다. 작업은 웹훅 또는 운영 확인을 기다린다.
+콜백 저장 실패는 재전송을 위해 500을 반환한다. 공급자 응답 본문이나 키를 로그에 기록하지 않는다.
+`GEMINI_IMAGE_MODEL`은 선택 설정이며, 미등록 시 `gemini-3.1-flash-image`를 사용한다.
+자세한 설정·복구 절차는 [AI 연동 문서](docs/AI-연동.md)를 따른다.
 
 ### B. 카카오 로그인 — **이메일 동의항목에서 멈춤. 나중에 하기로 함**
 
@@ -159,7 +129,7 @@ curl -s -o /dev/null -w "%{http_code}\n" "https://alafyhejiaxukrkrmehh.supabase.
 - 시트는 칸이 3:4가 아니라서 — 데일리는 양옆을 배경 띠로 채웠고, 무대·아우터는 양옆을 잘랐다(무대 3번 리본 끝이 살짝 잘림)
 `proxy`의 매처가 이미지 확장자를 빼고 있어서 로그인 없이도 요청이 막히지 않는다.
 
-### 로고 · 파비콘 — **들어갔다 (2026-09-17, 아직 커밋 전)**
+### 로고 · 파비콘 — **들어갔다 (2026-09-17)**
 
 - [x] 파비콘(`src/app/favicon.ico` · `icon.png` · `apple-icon.png`) — Next 기본 아이콘을 교체. `<link>` 3개가 자동으로 붙는 것 확인.
       셋 다 크림(`#f7f4ed`) 배경 + 차콜 심볼이다 — 처음 넣은 코발트 파비콘은 크림으로 바꿨다
@@ -219,9 +189,9 @@ curl -s -o /dev/null -w "%{http_code}\n" "https://alafyhejiaxukrkrmehh.supabase.
 
 ---
 
-## 끝난 것 — 2026-09-16 · 09-17
+## 이전 작업 기록 — 2026-09-16 · 09-17
 
-다시 안 해도 되는 것들. 값이 필요하면 여기서 찾는다.
+당시 완료한 작업 기록이다. 현재 준비 상태는 위 TODO와 AI 연동 문서를 우선한다.
 
 **Supabase** — 프로젝트 `ai-web` · ref `alafyhejiaxukrkrmehh` · 리전 `ap-northeast-2`(서울) · 조직 `Jung2un`
 
@@ -241,7 +211,7 @@ curl -s -o /dev/null -w "%{http_code}\n" "https://alafyhejiaxukrkrmehh.supabase.
 - **큐도 웹훅도 없다.** 함수는 행만 만들고 `EdgeRuntime.waitUntil`로 배경에서 채운다 —
   `_shared/gemini.ts`(호출·파싱) · `_shared/batch.ts`(배치 한 판)
 - `_shared/fal.ts`는 웹훅 확인과 결과 URL 꺼내기만 남았다. 영상 전용이다
-- 필요한 시크릿은 `GEMINI_API_KEY` · `GEMINI_IMAGE_MODEL` 둘 (**아직 안 넣었다 — TODO A번**)
+- `GEMINI_API_KEY` 등록 완료(2026-09-18). `GEMINI_IMAGE_MODEL`은 선택 설정이며 기본값은 `gemini-3.1-flash-image`.
 
 **인증** — Google만 켜져 있다 (`/auth/v1/settings`에서 external.google만 true, email은 false)
 
@@ -258,7 +228,7 @@ curl -s -o /dev/null -w "%{http_code}\n" "https://alafyhejiaxukrkrmehh.supabase.
 - 함수 리전 `icn1` (`vercel.json`)
 - 운영 URL이 `ai-daeyeok.vercel.app`으로 잡혀서 `site-url.ts`의 `PRODUCTION_URL`을 고칠 일이 없었다
 
-**Edge Function** — 다섯 다 배포됨
+**Edge Function** — 7개 운영 배포 완료(2026-09-18)
 
 | 함수 | 하는 일 | JWT |
 |---|---|---|
@@ -266,6 +236,8 @@ curl -s -o /dev/null -w "%{http_code}\n" "https://alafyhejiaxukrkrmehh.supabase.
 | `refine-character` | 1크레딧 · **바뀐 속성만** 지시문으로 · 수정본 1행 · 배경에서 1장 | 검증함 |
 | `build-character` | 2크레딧 · 3방향 3행 · 배경에서 3장 | 검증함 |
 | `create-look` | 1크레딧 · 프리셋 슬롯 검증 · `looks` INSERT · 배경에서 1장 | 검증함 |
+| `create-video` | 영상 검증 · 원자적 차감 · fal 큐 제출 | 검증함 |
+| `ai-status` | 로그인 사용자에게 키 설정 여부만 반환 | 검증함 |
 | `fal-webhook` | **영상 전용.** 조건부 상태 전이 · 결과를 우리 버킷으로 · 실패 시 환불 | **끔** (HMAC로 대신) |
 
 - 실패 순서를 맞춰 뒀다. 입력 검증 → 키 확인 → 차감 → INSERT → 배경 작업이고,
@@ -390,8 +362,8 @@ Supabase 환경변수가 비어 있으면 데이터 레이어가 **타입만 같
 | S2 | Supabase 스키마 + RLS | 마이그레이션이 돌고 타입이 생성된다 | 완료 — push·타입 생성까지 |
 | S3 | 인증 (Google OAuth) | 구글 계정으로 로그인된다 | 완료 · 카카오만 남음 |
 | S4 | 앱 셸 + 빈 대시보드 | 사이드바와 온보딩 화면 | 완료 |
-| S5 | 캐릭터 | 목록·생성·상세 | 2026-09-17 스튜디오로 재작성 · **생성은 Gemini 키 대기** |
-| S6 | 룩 | 프리셋 4슬롯 선택과 채택 | 완료 · **생성은 Gemini 키 대기** |
+| S5 | 캐릭터 | 목록·생성·상세 | 2026-09-17 스튜디오로 재작성 · **키 등록 완료 · 실사용 검증 대기** |
+| S6 | 룩 | 프리셋 4슬롯 선택과 채택 | 완료 · **키 등록 완료 · 실사용 검증 대기** |
 | S7 | 작업물 | 목록·상세·Realtime 상태 갱신 | 완료 |
 | S8 | 크레딧 + Edge Function | 실제 차감이 일어난다 | 완료 — 함수 배포까지 |
 | S9 | 마감 | 빈 상태·에러·모바일·접근성 | **로그인 후 화면 확인이 남음** |

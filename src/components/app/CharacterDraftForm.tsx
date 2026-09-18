@@ -26,7 +26,7 @@ import {
   type Traits,
 } from "@/types/models";
 
-/** 톤·머리 다음에 칩으로 고르는 갈래, 화면 순서대로 — 나이대 → 머리색 → 체형 → 분위기 */
+/** 톤·머리 다음에 칩으로 고르는 갈래, 화면 순서대로 — 머리색 → 나이대 → 체형 → 분위기 */
 const LATER_KINDS = TRAIT_DISPLAY_KINDS.filter((kind) => kind !== "gender" && kind !== "hair");
 
 /**
@@ -137,7 +137,7 @@ export function CharacterDraftForm({
                   "h-12 rounded-[12px] border text-base",
                   "transition-[background-color,border-color,box-shadow] duration-150 ease-out",
                   selected
-                    ? "border-ink bg-ink text-on-dark shadow-inset"
+                    ? "border-primary bg-primary-soft text-primary"
                     : "border-line bg-transparent text-ink hover:bg-hover",
                 )}
               >

@@ -2,12 +2,7 @@ import { Check, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { STATUS_LABEL, type JobStatus } from "@/types/models";
 
-/**
- * DESIGN.md §4 — 상태 표현
- * 색만으로 구분하지 않는다. 형태를 같이 쓴다.
- * 크림 배경 위에서 유일하게 튀는 색이 실패여야 눈이 거기로 간다.
- * 치수: 높이 22px, 좌우 패딩 8px, 아이콘-글자 5px, 글자 12px/400, 라운드 9999px.
- */
+
 export function StatusBadge({
   status,
   className,
@@ -19,9 +14,9 @@ export function StatusBadge({
     <span
       className={cn(
         "inline-flex h-[22px] items-center gap-[5px] rounded-full px-2 text-badge font-normal",
-        status === "queued" && "border border-line-strong text-body",
-        status === "processing" && "border border-line-strong text-body",
-        status === "done" && "bg-ink text-on-dark shadow-inset",
+        status === "queued" && "bg-sunken text-muted",
+        status === "processing" && "bg-primary-soft text-primary",
+        status === "done" && "bg-success-soft text-success",
         status === "failed" && "border border-danger-line bg-danger-bg text-danger",
         className,
       )}

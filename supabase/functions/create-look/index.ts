@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
   const gemini = geminiConfig();
   if (!gemini) {
     console.error("GEMINI_API_KEY 또는 GEMINI_IMAGE_MODEL이 없습니다");
-    return fail(req, 503, "UPSTREAM_ERROR");
+    return fail(req, 503, "AI_NOT_CONFIGURED");
   }
 
   const lookId = crypto.randomUUID();

@@ -33,7 +33,7 @@ export function MobileNav({
     <header
       className={cn(
         // 노치 기기에서 상태바 밑으로 파고들지 않게 안전영역만큼 위를 띄운다
-        "sticky top-0 z-40 bg-cream pt-[env(safe-area-inset-top)] lg:hidden",
+        "sticky top-0 z-40 bg-surface pt-[env(safe-area-inset-top)] lg:hidden",
         "border-b transition-colors duration-150 ease-out",
         collapsed ? "border-line" : "border-transparent",
       )}

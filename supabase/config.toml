@@ -440,3 +440,9 @@ verify_jwt = true
 # 대신 쿼리의 HMAC 토큰을 함수 안에서 직접 확인한다. — supabase/functions/fal-webhook/index.ts
 [functions.fal-webhook]
 verify_jwt = false
+
+[functions.create-video]
+verify_jwt = true
+
+[functions.ai-status]
+verify_jwt = true

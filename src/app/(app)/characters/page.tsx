@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Users } from "lucide-react";
 import { PageHeader } from "@/components/app/PageHeader";
-import { CharacterCard } from "@/components/app/CharacterCard";
+import { CharacterLibrary } from "@/components/app/CharacterLibrary";
 import { EmptyState } from "@/components/app/EmptyState";
 import { Button } from "@/components/ui/button";
 import { getCharacters } from "@/lib/data/queries";
@@ -30,7 +30,7 @@ export default async function CharactersPage() {
     <>
       <PageHeader
         title="캐릭터"
-        description="톤을 골라 뽑고 다듬은 내 캐릭터예요. 룩과 작업물이 캐릭터에 붙어요."
+        description="나만의 캐릭터를 모아 보고, 만들던 캐릭터를 이어서 완성해요."
         action={
           <Button variant="primary" asChild>
             <Link href="/characters/new">캐릭터 만들기</Link>
@@ -38,11 +38,7 @@ export default async function CharactersPage() {
         }
       />
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-        {characters.map((character) => (
-          <CharacterCard key={character.id} character={character} />
-        ))}
-      </div>
+      <CharacterLibrary characters={characters} />
     </>
   );
 }

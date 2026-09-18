@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "룩" };
 
 export default async function LooksPage() {
   const [looks, characters] = await Promise.all([getLooks(), getCharacters()]);
-  const hasCharacter = characters.some((c) => c.status === "done");
+  const hasCharacter = characters.some((c) => c.stage === "ready" && c.status === "done");
 
   if (looks.length === 0) {
     return (
@@ -40,7 +40,7 @@ export default async function LooksPage() {
     <>
       <PageHeader
         title="룩"
-        description="캐릭터에 입히는 머리·옷·장소 조합이에요. 채택한 룩이 앱의 기본값이 돼요."
+        description="캐릭터에 입힐 코디를 모아뒀어요. 기본 룩으로 선택하면 앱에 적용돼요."
         action={
           <Button variant="primary" asChild>
             <Link href="/looks/new">룩 만들기</Link>

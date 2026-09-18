@@ -13,16 +13,17 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const errorCode = typeof params.error === "string" ? params.error : null;
 
   return (
-    <main className="flex min-h-dvh items-center justify-center px-4 py-14">
-      <div className="w-full max-w-[380px]">
+    <main className="flex min-h-dvh items-center justify-center px-4 py-10 sm:py-16">
+      <div className="w-full max-w-[460px] rounded-[28px] border border-line bg-surface p-6 sm:p-10">
         <BrandMark size="lg" />
         <h1 className="mt-6 font-display text-title font-semibold text-ink">
-          로그인하고 시작해요
+          나만의 캐릭터, 여기서 시작해요
         </h1>
         <p className="mt-2 text-base text-body">
-          내 대신 연기하는 캐릭터를 만들고, 찍은 영상을 바꿔 둘 곳이에요.
+          내 취향을 담은 캐릭터를 만들고, 영상 속 새로운 나를 만나 보세요.
         </p>
 
+        <ol className="mt-6 space-y-3 rounded-[16px] bg-cream p-4 text-sm text-body">{["원하는 분위기의 캐릭터 만들기", "나에게 어울리는 스타일 고르기", "앱에서 찍은 영상을 캐릭터로 변환하기"].map((text,i)=><li key={text} className="flex gap-3"><span className="font-semibold text-primary">0{i+1}</span>{text}</li>)}</ol>
         <div className="mt-8">
           <OAuthButtons next={next} />
         </div>
