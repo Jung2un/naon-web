@@ -404,6 +404,28 @@ export async function getJobs(
   });
 }
 
+/**
+ * 지금 돌고 있는 변환 개수(대기 + 처리 중). 모바일 상단 앱바가 쓴다.
+ *
+ * 목록(`getJobs`)을 부르지 않는다 — 썸네일 signed URL까지 따라와서 화면마다 그 값을 다시 만든다.
+ * 앱바가 알아야 하는 건 "돌고 있는 게 몇 개인가" 하나뿐이라 개수만 센다.
+ */
+export const getActiveJobCount = cache(async (): Promise<number> => {
+  if (!isSupabaseConfigured) {
+    return fixtures.fixtureJobs.filter(
+      (j) => j.status === "queued" || j.status === "processing",
+    ).length;
+  }
+
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from("jobs")
+    .select("id", { count: "exact", head: true })
+    .in("status", ["queued", "processing"]);
+
+  return count ?? 0;
+});
+
 export async function getJob(id: string): Promise<JobDetail | null> {
   if (!isSupabaseConfigured) {
     const job = fixtures.fixtureJobs.find((j) => j.id === id);

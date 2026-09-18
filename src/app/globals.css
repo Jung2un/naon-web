@@ -62,6 +62,14 @@
   --text-title--line-height: 1.15;
   --text-title--letter-spacing: -0.6px;
 
+  /*
+    모바일 화면 제목. 30px은 375px에서 두 줄로 넘어가고, 그 아래 설명까지 더하면
+    목록이 첫 화면에서 밀려난다. 1024px 이상에서는 --text-title 그대로다. — DESIGN.md §3
+  */
+  --text-title-mobile: 24px;
+  --text-title-mobile--line-height: 1.2;
+  --text-title-mobile--letter-spacing: -0.4px;
+
   --text-section: 20px;
   --text-section--line-height: 1.25;
   --text-section--letter-spacing: -0.3px;

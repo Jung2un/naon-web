@@ -235,6 +235,12 @@ export const STAGE_STEP: Record<CharacterStage, number> = {
   ready: 3,
 };
 
+/**
+ * 이 아래로 떨어지면 "곧 막힌다"고 본다. 크레딧 카드의 충전 버튼이 Primary로 승격되고,
+ * 모바일 상단 앱바에도 충전 칩이 뜬다. 두 자리가 같은 숫자를 봐야 해서 여기 둔다.
+ */
+export const LOW_CREDIT_BALANCE = 3;
+
 export const STATUS_LABEL: Record<JobStatus, string> = {
   queued: "대기",
   processing: "처리 중",

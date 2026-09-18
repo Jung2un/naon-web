@@ -34,8 +34,10 @@ export default async function DashboardPage() {
 
   return (
     <>
+      {/* 앱바에는 인사말 대신 화면 이름을 띄운다 — 하단 탭의 "홈"과 같은 말로 맞춘다 */}
       <PageHeader
         title={`안녕하세요, ${profile?.display_name ?? "반가워요"}`}
+        shortTitle="홈"
         description="앱에서 찍은 영상이 여기로 들어와요."
       />
 
