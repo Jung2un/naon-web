@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { PresetTile } from "./PresetTile";
+import { PresetTile } from "@/components/app/PresetTile";
 import { SummaryBar } from "./SummaryBar";
-import { OptionalBadge } from "./TraitChip";
+import { OptionalBadge } from "@/components/app/TraitChip";
 import { MicroLabel } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";

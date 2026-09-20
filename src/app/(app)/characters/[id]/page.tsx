@@ -1,3 +1,4 @@
+import { LOOKS_ENABLED } from "@/features/looks/config";
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
@@ -6,7 +7,7 @@ import { Shirt, Film } from "lucide-react";
 import { PageHeader, SectionHeader } from "@/components/app/PageHeader";
 import { StatusBadge } from "@/components/app/StatusBadge";
 import { JobCard, JobGrid } from "@/components/app/JobCard";
-import { LookCard } from "@/components/app/LookCard";
+import { LookCard } from "@/features/looks/LookCard";
 import { EmptyState } from "@/components/app/EmptyState";
 import { Button } from "@/components/ui/button";
 import { MicroLabel } from "@/components/ui/label";
@@ -46,7 +47,7 @@ export default async function CharacterDetailPage({
         action={
           character.status === "done" ? (
             <Button variant="primary" asChild>
-              <Link href={`/looks/new?character=${character.id}`}>룩 만들기</Link>
+              <Link href={LOOKS_ENABLED ? `/looks/new?character=${character.id}` : "/jobs/new"}>{LOOKS_ENABLED ? "룩 만들기" : "영상 변환하기"}</Link>
             </Button>
           ) : undefined
         }

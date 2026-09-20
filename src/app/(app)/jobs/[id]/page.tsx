@@ -1,3 +1,4 @@
+import { LOOKS_ENABLED } from "@/features/looks/config";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -91,7 +92,7 @@ export default async function JobDetailPage({ params }: PageProps<"/jobs/[id]">)
                 {job.character_name}
               </Link>
             </Row>
-            <Row label="룩">{job.look_name ?? "—"}</Row>
+            {LOOKS_ENABLED && <Row label="룩">{job.look_name ?? "—"}</Row>}
             <Row label="길이" numeric>
               {duration(job.duration_seconds)}
             </Row>

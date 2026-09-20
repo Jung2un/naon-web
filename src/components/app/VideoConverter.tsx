@@ -1,4 +1,6 @@
 "use client";
+import { LOOKS_ENABLED } from "@/features/looks/config";
+
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -74,7 +76,7 @@ export function VideoConverter(
           job_id: upload.current.id,
           source_path: upload.current.path,
           character_id: character,
-          look_id: look === "default" ? null : look,
+          look_id: LOOKS_ENABLED && look !== "default" ? look : null,
         },
       );
       router.push(`/jobs/${result.job_id}`);

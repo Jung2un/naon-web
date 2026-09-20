@@ -1,3 +1,4 @@
+import { LOOKS_ENABLED } from "@/features/looks/config";
 import {
   LayoutDashboard,
   Users,
@@ -26,7 +27,7 @@ export type NavItem = {
 export const PRIMARY_NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "홈", icon: LayoutDashboard },
   { href: "/characters", label: "캐릭터", icon: Users },
-  { href: "/looks", label: "룩", icon: Shirt },
+  ...(LOOKS_ENABLED ? [{ href: "/looks", label: "룩", icon: Shirt }] : []),
   { href: "/jobs", label: "작업물", icon: Film },
 ];
 

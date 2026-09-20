@@ -1,3 +1,4 @@
+import { LOOKS_ENABLED } from "@/features/looks/config";
 import type { Metadata } from "next";
 import { Users } from "lucide-react";
 import { PageHeader } from "@/components/app/PageHeader";
@@ -11,7 +12,7 @@ export const metadata: Metadata = { title: "영상 변환" };
 export default async function NewVideoPage() {
   const [allCharacters, looks, profile] = await Promise.all([
     getCharacters(),
-    getLooks(),
+    LOOKS_ENABLED ? getLooks() : Promise.resolve([]),
     getProfile(),
   ]);
   const characters = allCharacters.filter((c) =>

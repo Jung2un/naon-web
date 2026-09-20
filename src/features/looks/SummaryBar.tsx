@@ -1,6 +1,6 @@
 "use client";
 
-import { ActionBar } from "./ActionBar";
+import { ActionBar } from "@/components/app/ActionBar";
 import { withObjectParticle } from "@/lib/format";
 import { PRESET_SLOTS, SLOT_LABEL, type PresetSlot } from "@/types/models";
 

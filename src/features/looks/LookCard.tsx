@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Check } from "lucide-react";
-import { StatusBadge } from "./StatusBadge";
+import { StatusBadge } from "@/components/app/StatusBadge";
 import type { LookListItem, PresetSlot } from "@/types/models";
 
 /** 카드 아래 요약 순서. 코디 룩은 상의·하의가 비어 있어 자연히 빠진다 */

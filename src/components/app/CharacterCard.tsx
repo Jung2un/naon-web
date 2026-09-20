@@ -1,3 +1,4 @@
+import { LOOKS_ENABLED } from "@/features/looks/config";
 import Link from "next/link";
 import Image from "next/image";
 import { UserRound, ArrowUpRight } from "lucide-react";
@@ -33,7 +34,7 @@ export function CharacterCard({ character }: { character: CharacterListItem }) {
       <p className="px-2 pb-3 pt-1 text-caption tabular text-muted">
         {building
           ? STAGE_LABEL[character.stage]
-          : `룩 ${character.look_count} · 작업물 ${character.job_count}`}
+          : `${LOOKS_ENABLED ? `룩 ${character.look_count} · ` : ""}작업물 ${character.job_count}`}
       </p>
     </Link>
   );

@@ -386,7 +386,7 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
               onChange={(e) => setName(e.target.value)}
             />
             <p className="mt-2 text-caption text-muted">
-              나중에 룩과 작업물을 고를 때 이 이름으로 찾게 돼요.
+              나중에 캐릭터와 작업물을 찾을 때 사용할 이름이에요.
             </p>
           </section>
 
