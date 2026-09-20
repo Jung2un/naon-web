@@ -103,7 +103,7 @@ export default async function CharacterDetailPage({
         </div>
       </section>
 
-      <section className="mt-10">
+      {LOOKS_ENABLED && <section className="mt-10">
         <SectionHeader
           title="룩"
           action={
@@ -131,7 +131,7 @@ export default async function CharacterDetailPage({
             ))}
           </div>
         )}
-      </section>
+      </section>}
 
       <section className="mt-10">
         <SectionHeader

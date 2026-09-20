@@ -112,7 +112,7 @@ export function VideoConverter(
             items={characters.map((c) => ({ value: c.id, label: c.name }))}
           />
         </div>
-        <div className="grid gap-2">
+        {LOOKS_ENABLED && <div className="grid gap-2">
           <Label htmlFor="video-look">입힐 스타일</Label>
           <Select
             id="video-look"
@@ -129,7 +129,7 @@ export function VideoConverter(
               ).map((l) => ({ value: l.id, label: l.name })),
             ]}
           />
-        </div>
+        </div>}
         <div>
           <Label htmlFor="source-video">변환할 영상</Label>
           <p id="video-help" className="mt-2 text-sm text-muted">
