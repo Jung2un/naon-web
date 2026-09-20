@@ -27,7 +27,7 @@ export default async function CharacterBuildPage({
     <>
       <PageHeader
         title={character.name}
-        description="만드는 중이에요. 이 화면을 닫아도 계속 만들어지고, 캐릭터 목록에서 다시 들어올 수 있어요."
+        description={character.status === "processing" ? "이미지를 생성하고 있어요. 아래에서 진행 상태를 확인할 수 있어요." : character.status === "failed" ? "생성을 완료하지 못했어요. 원인을 확인하고 다시 시도해 주세요." : "마음에 드는 얼굴을 고르고 캐릭터를 완성해 주세요."}
         back={{ href: "/characters", label: "캐릭터" }}
       />
       <CharacterRealtime characterId={id} />

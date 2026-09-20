@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { GenerationProgress } from "./GenerationProgress";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Stepper, scrollToStep, stepAnchor } from "./Stepper";
@@ -52,6 +53,8 @@ export function CharacterDraftForm({
   const [traits, setTraits] = useState<Traits>(() =>
     options.gender[0] ? { gender: options.gender[0].id } : {},
   );
+  const requestLock = useRef(false);
+  const [startedAt, setStartedAt] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,6 +82,9 @@ export function CharacterDraftForm({
       setError("아직 서버가 연결되지 않았어요.");
       return;
     }
+    if (requestLock.current) return;
+    requestLock.current = true;
+    setStartedAt(new Date().toISOString());
     setPending(true);
     setError(null);
 
@@ -98,6 +104,7 @@ export function CharacterDraftForm({
         typeof e === "object" && e && "message" in e ? String(e.message) : null;
       setError(humanError(code));
     } finally {
+      requestLock.current = false;
       setPending(false);
     }
   }
@@ -192,6 +199,7 @@ export function CharacterDraftForm({
         ))}
       </div>
 
+      {pending && <GenerationProgress title="후보 생성 요청 접수 중" startedAt={startedAt} expectedSeconds={30} background={false} />}
       {error && (
         <p role="alert" className="mt-6 text-caption text-danger">
           {error}

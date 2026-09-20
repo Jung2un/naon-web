@@ -2,6 +2,7 @@
 import { LOOKS_ENABLED } from "@/features/looks/config";
 
 
+import { GenerationProgress } from "./GenerationProgress";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Film, LoaderCircle, Upload } from "lucide-react";
@@ -30,6 +31,7 @@ export function VideoConverter(
   const [phase, setPhase] = useState<"idle" | "uploading" | "submitting">(
     "idle",
   );
+  const [startedAt, setStartedAt] = useState("");
   const [error, setError] = useState<string | null>(null);
   const upload = useRef<{ id: string; path: string } | null>(null);
   const pending = phase !== "idle";
@@ -54,6 +56,7 @@ export function VideoConverter(
   };
   async function submit() {
     if (!file || !validDuration || pending || !available) return;
+    setStartedAt(new Date().toISOString());
     setPhase("uploading");
     setError(null);
     try {
@@ -180,6 +183,7 @@ export function VideoConverter(
             </p>
           </div>
         )}
+        {pending && <GenerationProgress title={phase === "uploading" ? "영상 업로드 중" : "변환 요청 접수 중"} startedAt={startedAt} expectedSeconds={60} background={false} />}
         {error && <p role="alert" className="text-sm text-danger">{error}</p>}
       </div>
       <aside className="h-fit rounded-[20px] border border-line bg-surface p-6 lg:sticky lg:top-8">

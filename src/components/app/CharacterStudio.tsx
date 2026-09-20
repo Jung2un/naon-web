@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { GenerationProgress } from "./GenerationProgress";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Check } from "lucide-react";
@@ -47,6 +48,7 @@ import {
  */
 export function CharacterStudio({ character }: { character: CharacterBuild }) {
   const router = useRouter();
+  const requestLock = useRef(false);
   const serverTraits = asTraits(character.traits);
 
   const [pending, setPending] = useState<string | null>(null);
@@ -68,6 +70,9 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
   }
 
   const working = character.status === "processing";
+  const newestImage = [...character.images].sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))[0];
+  const currentBatch = newestImage ? character.images.filter(image => image.kind === newestImage.kind && image.round === newestImage.round) : [];
+  const retryKind = character.stage === "draft" ? "candidate" : newestImage?.kind ?? "view";
   const candidates = latestRound(character.images, "candidate");
   const views = latestRound(character.images, "view");
   const versions = character.images.filter(
@@ -89,6 +94,8 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
       setError("아직 서버가 연결되지 않았어요.");
       return;
     }
+    if (requestLock.current) return;
+    requestLock.current = true;
     setPending(action);
     setError(null);
     try {
@@ -99,6 +106,7 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
         typeof e === "object" && e && "message" in e ? String(e.message) : null;
       setError(humanError(code));
     } finally {
+      requestLock.current = false;
       setPending(null);
     }
   }
@@ -143,6 +151,16 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
       });
     });
 
+  const retryFailed = () => {
+    if (retryKind === "candidate") return redraft();
+    if (retryKind === "view") return build();
+    return run("refine", async (supabase) => {
+      await invokeFunction(supabase, "refine-character", {
+        character_id: character.id, traits: asTraits(newestImage?.traits),
+      });
+    });
+  };
+
   return (
     <div className="pb-4">
       <Stepper
@@ -152,6 +170,17 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
         isStepEnabled={(i) => STEPS_ON_SCREEN[character.stage].includes(i)}
       />
 
+      {working && <GenerationProgress
+        title={character.stage === "building" ? "3방향 이미지 생성 중" : character.stage === "draft" ? "캐릭터 후보 생성 중" : "캐릭터 다듬는 중"}
+        startedAt={newestImage?.created_at ?? character.updated_at}
+        expectedSeconds={character.stage === "building" ? 180 : 120}
+        completed={currentBatch.filter(image => image.status === "done").length}
+        total={currentBatch.length || (character.stage === "building" ? 3 : character.stage === "draft" ? 4 : 1)}
+      />}
+      {character.status === "failed" && <div className="mt-4">
+        <Button onClick={retryFailed} disabled={Boolean(pending) || (retryKind === "view" && !nameReady)}>다시 시도하기</Button>
+        <p className="mt-2 text-caption text-muted">실패한 생성을 다시 요청해요 · {retryKind === "view" ? 2 : 1}크레딧{retryKind === "view" && !nameReady ? " · 아래에서 이름을 입력해 주세요" : ""}</p>
+      </div>}
       {character.status === "failed" && (
         <p
           role="alert"

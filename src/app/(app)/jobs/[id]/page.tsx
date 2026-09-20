@@ -1,3 +1,5 @@
+import { GenerationProgress } from "@/components/app/GenerationProgress";
+import { RetryVideoJob } from "@/components/app/RetryVideoJob";
 import { LOOKS_ENABLED } from "@/features/looks/config";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -77,11 +79,11 @@ export default async function JobDetailPage({ params }: PageProps<"/jobs/[id]">)
             </div>
           )}
 
-          {job.status === "processing" && (
-            <p className="mt-4 text-base text-body">
-              바꾸는 중이에요. 보통 1~3분 걸려요. 창을 닫아도 계속 진행돼요.
-            </p>
-          )}
+          {job.status === "failed" && <RetryVideoJob sourceUrl={job.source_video_url} characterId={job.character_id} />}
+          {(job.status === "queued" || job.status === "processing") && <GenerationProgress
+            title={job.status === "queued" ? "변환 접수 확인·대기 중" : "AI 영상 변환 중"}
+            startedAt={job.created_at} expectedSeconds={180}
+          />}
 
           <dl className="mt-6 rounded-[12px] border border-line bg-cream p-5">
             <Row label="캐릭터">
