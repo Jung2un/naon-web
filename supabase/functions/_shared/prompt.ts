@@ -1,9 +1,8 @@
 /**
  * 톤·속성을 모델에 넘길 문장으로 조립한다. — docs/기획서.md §3
  *
- * **문장 조각은 코드에 없다.** `character_options.prompt`에 있다.
- * 결과가 마음에 안 들면 DB만 고치면 되고 배포가 필요 없다.
- * 여기 있는 건 조각을 잇는 규칙뿐이다.
+ * 톤별 조명·배경과 선택 속성의 문장은 `character_options.prompt`에 있다.
+ * 톤 표현은 DB에서 조정한다. 공통 캐스팅·구도·선택 우선순위는 여기서 조립한다.
  *
  * 세 함수(draft · refine · build)가 전부 이 파일을 쓴다. 문장이 서로 다른 모양이 되면
  * 1단계에서 뽑은 얼굴과 3단계에서 고친 얼굴이 다른 사람이 된다.
@@ -100,23 +99,45 @@ export function validateTraits(
   return REQUIRED_TRAITS.every((kind) => Boolean(traits[kind]));
 }
 
-/** 1단계 — 없는 사람 하나를 만든다. */
+/** 1단계 — 카탈로그 톤의 미감과 사용자 속성을 함께 지키는 새 성인 인물. */
 export function draftPrompt(
   tone: Option,
   traits: Traits,
   options: Map<string, Option>,
+  candidateIndex = 0,
 ): string {
   const parts = TRAIT_KINDS.map((kind) => {
     const id = traits[kind];
     return id ? options.get(id)?.prompt : undefined;
   }).filter(Boolean);
 
+  const age = options.get(traits.age ?? "")?.prompt;
+  const twenties = [
+    "a3333333-0000-4000-8000-000000000001",
+    "a3333333-0000-4000-8000-000000000002",
+  ].includes(traits.age ?? "");
+  const variations = [
+    "gently oval facial proportions and softly defined features",
+    "a softly tapered face and subtly defined cheekbones",
+    "a softly rounded face and balanced facial proportions",
+    "a softly angular face and an elegant jawline",
+  ];
+  const variation = variations[
+    ((Math.trunc(candidateIndex) || 0) % variations.length + variations.length) % variations.length
+  ];
+
   return [
-    tone.prompt,
-    parts.join(", "),
-    "upper body, facing the camera, plain neutral background",
-    "one person only, no text, no watermark",
-  ].join(". ");
+    "PURPOSE: Create one original fictional Korean adult character for a premium character casting catalog. Aim for the appealing, polished presence of a Korean actor profile or a carefully art-directed lifestyle portrait, while retaining an individual face rather than a generic beauty-filter template.",
+    `SUBJECT — required user choices: ${parts.join(", ")}. These choices take priority over styling defaults; preserve the selected gender presentation, age, hairstyle, hair color, body type and mood.`,
+    `AGE: The person must visibly read as ${age ?? "an adult"}. ${twenties
+      ? "Show a fresh, healthy adult in their twenties, with rested eyes and soft facial volume; do not add older-looking facial creases, hollow cheeks or heavy under-eye shadows."
+      : "Represent the selected adult age honestly, with flattering grooming and lighting. Keep natural age-appropriate features; do not turn an older adult into a person in their twenties."} Never depict a child or teenager.`,
+    `VISUAL MEDIUM, LIGHTING AND SETTING: ${tone.prompt}. Follow this selected medium throughout; do not mix photographic skin rendering into an illustration or stylized 3D character.`,
+    `CASTING VARIATION: Give this candidate ${variation}, while keeping all selected traits unchanged. Create a distinct fictional identity, not a celebrity likeness.`,
+    "COMPOSITION: A vertical 3:4 upper-body portrait at eye level. Show the complete head, hair and both shoulders with comfortable headroom. Face nearly forward so both eyes and the face contour are clear, with a relaxed natural pose rather than a rigid passport pose. Keep the face unobstructed and sharply readable, and the selected setting simple and secondary to the person.",
+    "FINISH: Refined grooming, harmonious facial proportions, clear expressive eyes and a composed expression consistent with the selected mood. Keep natural asymmetry and character; flattering presentation must not change the selected age, gender or body type. Use simple contemporary clothing appropriate to the selected tone.",
+    "OUTPUT: One person and one complete portrait, edge to edge. No collage, comparison grid, caption, typography, logo, border or watermark. Keep anatomy and facial proportions coherent with the selected visual medium; avoid accidental distortions and oversharpened facial detail. Return the image.",
+  ].join("\n\n");
 }
 
 /** 갈래마다 지시문이 다르다. "머리를 단발로"와 "체형을 마른으로"는 같은 문장이 아니다. */

@@ -1,0 +1,16 @@
+-- Match the art direction of public/catalog/tone/1..4.jpg.
+-- Keep tone prose in the catalog; do not hard-code age, gender or hair here.
+-- Only these four photographic tones change. Anime / 3D remain independent.
+update public.character_options as option
+set prompt = revised.prompt
+from (values
+  ('a1111111-0000-4000-8000-000000000001'::uuid,
+   'A polished photorealistic Korean lifestyle portrait with the gentle beauty of an actor profile. Soft diffused window daylight wraps around the face, with gentle fill in the eye sockets and small natural catchlights. An understated warm beige interior falls softly out of focus. Use a 50mm portrait perspective, muted warm neutrals and delicate tonal transitions. Skin looks clear, luminous and well cared for, with fine believable texture and restrained beauty retouching, not waxy smoothing or exaggerated pores. Natural lip color and subtle age-appropriate grooming; relaxed, refined presence. No harsh overhead shadows, gritty HDR or forensic skin detail.'),
+  ('a1111111-0000-4000-8000-000000000002'::uuid,
+   'A cinematic Korean drama portrait at blue hour beside a window, with softly blurred city lights in the background. A warm amber edge light complements restrained cool blue ambient tones. Keep a broad soft fill on the face so the eyes, skin and identity remain clearly visible despite the atmospheric setting. Use gentle contrast, a portrait-lens perspective, subtle film grain and smooth highlight rolloff. Refined actor-like styling, natural luminous skin and delicate real texture. The mood is intimate and elegant rather than gritty or weathered. Avoid crushed facial shadows, excessive grain and black letterbox bars.'),
+  ('a1111111-0000-4000-8000-000000000003'::uuid,
+   'A high-end Korean fashion and beauty editorial portrait in a minimal studio, with a seamless light grey backdrop and understated contemporary styling. A large diffused softbox from the front-left and gentle fill produce soft sculpting, bright eyes and clean catchlights without deep eye-socket shadows. Use an 85mm portrait-lens perspective, precise focus on the eyes and subtle background separation. Magazine-quality color and restrained professional beauty retouching preserve fine skin texture and individual facial features. The skin is clear and softly luminous, not plastic, over-sharpened or heavily contoured.'),
+  ('a1111111-0000-4000-8000-000000000004'::uuid,
+   'An appealing Korean lifestyle snapshot outside a quiet cafe on a sunny afternoon, with the effortless styling of a carefully chosen social portrait. Warm backlight glows through the hair, while open shade and soft reflected daylight illuminate the face evenly. A softly blurred cafe and green foliage provide gentle golden bokeh without distracting objects. Casual contemporary clothing, a relaxed spontaneous pose, natural complexion and a fresh well-rested expression consistent with the selected mood. Use a natural smartphone perspective without close-range wide-angle facial distortion; preserve delicate skin detail with subtle flattering processing. Keep the face clearly exposed, without blown highlights, heavy shadows or gritty texture.')
+) as revised(id, prompt)
+where option.id = revised.id and option.kind = 'tone';

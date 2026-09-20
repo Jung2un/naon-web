@@ -173,14 +173,16 @@ Deno.serve(async (req) => {
   }
 
   // 그림은 배경에서 채운다. 사람을 30초~2분 기다리게 하지 않는다 — 화면은 Realtime으로 본다.
-  const prompt = draftPrompt(tone, traits, options);
   inBackground(
     runImageBatch(admin, gemini, {
       userId,
       characterId,
       kind: "candidate",
       round,
-      rows: rows.map((row) => ({ id: row.id, prompt })),
+      rows: rows.map((row, index) => ({
+        id: row.id,
+        prompt: draftPrompt(tone, traits, options, index),
+      })),
     }),
   );
 
