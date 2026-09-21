@@ -99,45 +99,189 @@ export function validateTraits(
   return REQUIRED_TRAITS.every((kind) => Boolean(traits[kind]));
 }
 
-/** 1단계 — 카탈로그 톤의 미감과 사용자 속성을 함께 지키는 새 성인 인물. */
+/**
+ * 사진 계열 톤. 이 톤에만 카메라·피부 질감·색 보정 같은 사진 지시를 붙인다.
+ * 애니·3D나 나중에 추가하는 그림 톤은 여기 없어야 사진 어휘가 섞이지 않는다.
+ * id는 마이그레이션 20260916000007 시드에 고정돼 있다.
+ */
+const PHOTOGRAPHIC_TONE_IDS = new Set([
+  "a1111111-0000-4000-8000-000000000001", // 실사
+  "a1111111-0000-4000-8000-000000000002", // 시네마틱
+  "a1111111-0000-4000-8000-000000000003", // 화보
+  "a1111111-0000-4000-8000-000000000004", // 일상 스냅
+]);
+
+export function isPhotographicTone(tone: Pick<Option, "id">): boolean {
+  return PHOTOGRAPHIC_TONE_IDS.has(tone.id);
+}
+
+const AGE_TWENTIES_IDS = new Set([
+  "a3333333-0000-4000-8000-000000000001",
+  "a3333333-0000-4000-8000-000000000002",
+]);
+
+/**
+ * 성별별 연출. 같은 "사진처럼"이라도 여성·남성·중성은 피부·메이크업·스타일링 지시가 달라야 한다.
+ * `features`는 매체를 가리지 않고, `skin`은 사진 계열 톤에만 붙는다.
+ * "예쁜·완벽한" 같은 형용사는 쓰지 않는다 — 그 말이 AI 티 나는 '너무 완벽한 얼굴'을 만든다.
+ * id는 마이그레이션 20260916000007 시드의 gender 행이다.
+ */
+type Presentation = { features: string; skin: string };
+const GENDER_PRESENTATION: Record<string, Presentation> = {
+  // 여성
+  "a2222222-0000-4000-8000-000000000001": {
+    features:
+      "Natural Korean facial features with individual character; soft, subtle makeup and natural lip color; understated, elegant styling. Not an idealized beauty-filter face: no enlarged eyes, no exaggerated lips, no heavy contouring.",
+    skin:
+      "Clear skin with realistic texture, fine pores and natural tonal variation; no plastic or waxy smoothing.",
+  },
+  // 남성
+  "a2222222-0000-4000-8000-000000000002": {
+    features:
+      "Natural Korean masculine features with individual character; neat natural brows and grooming, clean-shaven or lightly groomed as fits the age; understated menswear editorial styling. No feminizing beauty-filter smoothing, no exaggerated jawline or bodybuilder physique.",
+    skin:
+      "Realistic skin texture with visible pores, natural shadow along the jaw and slight unevenness; no plastic or waxy smoothing.",
+  },
+  // 중성적
+  "a2222222-0000-4000-8000-000000000003": {
+    features:
+      "Deliberately androgynous presentation: balanced features that do not read as clearly feminine or masculine, minimal or no visible makeup, unisex contemporary styling. Do not fall back to a conventional feminine or masculine template.",
+    skin:
+      "Realistic skin texture with fine pores and natural tonal variation; no plastic or waxy smoothing.",
+  },
+};
+const DEFAULT_PRESENTATION: Presentation = {
+  features:
+    "Natural Korean facial features with individual character and understated contemporary styling; not an idealized template face.",
+  skin:
+    "Realistic skin texture with fine pores and natural tonal variation; no plastic or waxy smoothing.",
+};
+
+/** 후보마다 얼굴 윤곽만 달리 준다. 나머지 선택은 그대로다. */
+const FACE_VARIATIONS = [
+  "gently oval facial proportions and softly defined features",
+  "a softly tapered face and subtly defined cheekbones",
+  "a softly rounded face and balanced facial proportions",
+  "a softly angular face and a clearly defined jawline",
+];
+
+/**
+ * 1단계 — 카탈로그 톤의 미감과 사용자 속성을 함께 지키는 새 성인 인물.
+ *
+ * 구조화된 JSON 텍스트로 보낸다. 고정되는 것(identity)과 바뀌는 것(scene·styling)을 나눠 두면
+ * 모델이 "사람"과 "그날의 연출"을 섞지 않는다. — docs/캐릭터-생성-프롬프트.md
+ *
+ * 사진 계열 톤에는 natural skin texture · muted neutral palette · editorial/lifestyle photography ·
+ * shallow depth of field 같은 실사 어휘를 붙이고, 애니·3D에는 붙이지 않는다.
+ */
 export function draftPrompt(
   tone: Option,
   traits: Traits,
   options: Map<string, Option>,
   candidateIndex = 0,
 ): string {
-  const parts = TRAIT_KINDS.map((kind) => {
+  const pick = (kind: OptionKind) => {
     const id = traits[kind];
     return id ? options.get(id)?.prompt : undefined;
-  }).filter(Boolean);
+  };
+  const gender = pick("gender");
+  const age = pick("age");
+  const hair = pick("hair");
+  const hairColor = pick("hair_color");
+  const body = pick("body");
+  const vibe = pick("vibe");
 
-  const age = options.get(traits.age ?? "")?.prompt;
-  const twenties = [
-    "a3333333-0000-4000-8000-000000000001",
-    "a3333333-0000-4000-8000-000000000002",
-  ].includes(traits.age ?? "");
-  const variations = [
-    "gently oval facial proportions and softly defined features",
-    "a softly tapered face and subtly defined cheekbones",
-    "a softly rounded face and balanced facial proportions",
-    "a softly angular face and an elegant jawline",
-  ];
-  const variation = variations[
-    ((Math.trunc(candidateIndex) || 0) % variations.length + variations.length) % variations.length
+  const photographic = isPhotographicTone(tone);
+  const twenties = AGE_TWENTIES_IDS.has(traits.age ?? "");
+  const presentation = GENDER_PRESENTATION[traits.gender ?? ""] ??
+    DEFAULT_PRESENTATION;
+  const variation = FACE_VARIATIONS[
+    ((Math.trunc(candidateIndex) || 0) % FACE_VARIATIONS.length +
+      FACE_VARIATIONS.length) % FACE_VARIATIONS.length
   ];
 
-  return [
-    "PURPOSE: Create one original fictional Korean adult character for a premium character casting catalog. Aim for the appealing, polished presence of a Korean actor profile or a carefully art-directed lifestyle portrait, while retaining an individual face rather than a generic beauty-filter template.",
-    `SUBJECT — required user choices: ${parts.join(", ")}. These choices take priority over styling defaults; preserve the selected gender presentation, age, hairstyle, hair color, body type and mood.`,
-    `AGE: The person must visibly read as ${age ?? "an adult"}. ${twenties
-      ? "Show a fresh, healthy adult in their twenties, with rested eyes and soft facial volume; do not add older-looking facial creases, hollow cheeks or heavy under-eye shadows."
-      : "Represent the selected adult age honestly, with flattering grooming and lighting. Keep natural age-appropriate features; do not turn an older adult into a person in their twenties."} Never depict a child or teenager.`,
-    `VISUAL MEDIUM, LIGHTING AND SETTING: ${tone.prompt}. Follow this selected medium throughout; do not mix photographic skin rendering into an illustration or stylized 3D character.`,
-    `CASTING VARIATION: Give this candidate ${variation}, while keeping all selected traits unchanged. Create a distinct fictional identity, not a celebrity likeness.`,
-    "COMPOSITION: A vertical 3:4 upper-body portrait at eye level. Show the complete head, hair and both shoulders with comfortable headroom. Face nearly forward so both eyes and the face contour are clear, with a relaxed natural pose rather than a rigid passport pose. Keep the face unobstructed and sharply readable, and the selected setting simple and secondary to the person.",
-    "FINISH: Refined grooming, harmonious facial proportions, clear expressive eyes and a composed expression consistent with the selected mood. Keep natural asymmetry and character; flattering presentation must not change the selected age, gender or body type. Use simple contemporary clothing appropriate to the selected tone.",
-    "OUTPUT: One person and one complete portrait, edge to edge. No collage, comparison grid, caption, typography, logo, border or watermark. Keep anatomy and facial proportions coherent with the selected visual medium; avoid accidental distortions and oversharpened facial detail. Return the image.",
-  ].join("\n\n");
+  const ageDirection = twenties
+    ? "Visibly a fresh, healthy adult in their twenties with rested eyes and soft facial volume; no older-looking creases, hollow cheeks or heavy under-eye shadows."
+    : "Represent the selected adult age honestly with age-appropriate features and grooming; do not make an older adult look like someone in their twenties.";
+
+  const request: Record<string, unknown> = {
+    task:
+      "Create one original fictional Korean adult character for a character casting catalog. A new, individual person with their own face, not a celebrity likeness and not a generic idealized template. Never depict a child or teenager. Return a single image.",
+    scene: {
+      description: tone.prompt,
+      mood: vibe
+        ? `${vibe}; understated and natural rather than posed or performed.`
+        : "Understated, natural and composed rather than posed or performed.",
+    },
+    subject: {
+      identity_fixed: {
+        ethnicity: "East Asian (Korean)",
+        gender: gender ?? "an adult",
+        age: age ?? "an adult",
+        age_direction: ageDirection,
+        face: variation,
+        ...(body ? { build: body } : {}),
+        ...(hair || hairColor
+          ? { hair: [hair, hairColor].filter(Boolean).join(", ") }
+          : {}),
+        priority:
+          "These selected traits override any styling default. Preserve the selected gender presentation, age, hairstyle, hair color and body type exactly.",
+      },
+      presentation: photographic
+        ? `${presentation.features} ${presentation.skin}`
+        : presentation.features,
+      styling: {
+        wardrobe:
+          "Simple contemporary clothing that fits the scene, in muted neutral tones; nothing that competes with the face.",
+        expression: vibe
+          ? `A natural, believable expression consistent with ${vibe}; small asymmetries and individual character kept.`
+          : "A calm, natural expression; small asymmetries and individual character kept.",
+      },
+    },
+  };
+
+  const composition =
+    "Vertical 3:4 upper-body portrait at eye level. Complete head, hair and both shoulders with comfortable headroom. Face nearly forward so both eyes and the face contour are clear; relaxed natural pose, not a rigid ID-photo pose. Face unobstructed; the setting stays simple and secondary to the person.";
+
+  if (photographic) {
+    request.camera_technical = {
+      capture:
+        "Photorealistic still photograph. Realistic lens rendering consistent with the described scene, shallow depth of field, natural exposure with realistic specular highlights and soft natural shadows.",
+      composition,
+      color:
+        "Muted neutral color palette with soft, natural color grading; no oversaturation, no heavy vignette.",
+      retouching:
+        "Clean minor blemishes only. Preserve natural skin texture, pores and fine facial details; preserve fabric and hair micro-detail. No haloing, no cartoon smoothing, no oversharpening.",
+      style:
+        "Korean editorial and lifestyle photography: candid, understated, authentic; reads as a real photograph, not a render.",
+    };
+    request.avoid = [
+      "beauty-filter or CGI look, plastic, waxy or overly smooth skin",
+      "idealized, overly symmetrical template features",
+      "dramatic or harsh lighting, heavy vignette, oversaturated color",
+      "illustration or 3D rendering mixed into the photograph",
+      "warped background geometry, oversharpening, halos",
+      "text, caption, watermark, logo, border, collage or comparison grid",
+      "more than one person, hands or objects covering the face",
+    ];
+  } else {
+    request.rendering = {
+      medium:
+        "Follow the selected illustrated or 3D medium throughout, with consistent line, shading and color treatment. Do not mix photographic skin rendering into it.",
+      composition,
+    };
+    request.avoid = [
+      "photographic skin pores or lens artifacts inside the illustration",
+      "exaggerated doll-like or idealized template proportions",
+      "text, caption, watermark, logo, border, collage or comparison grid",
+      "more than one person, hands or objects covering the face",
+    ];
+  }
+
+  request.output =
+    "One person, one complete portrait filling the frame edge to edge. Coherent anatomy and facial proportions for the selected medium.";
+
+  return JSON.stringify(request, null, 2);
 }
 
 /** 갈래마다 지시문이 다르다. "머리를 단발로"와 "체형을 마른으로"는 같은 문장이 아니다. */

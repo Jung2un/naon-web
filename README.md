@@ -1,3 +1,7 @@
+# 캐릭터 프롬프트 개편 (2026-09-21)
+
+캐릭터 후보 요청(`draftPrompt`)을 키워드 나열에서 **구조화된 JSON 요청**으로 바꿨습니다. `task · scene · subject · camera_technical · avoid · output`으로 나누고, 사람(성별·나이·얼굴·체형·머리)은 `identity_fixed`에, 장면·옷·표정은 `scene`·`styling`에 담아 고정되는 것과 바뀌는 것을 분리했습니다. 실사 어휘(natural skin texture · muted neutral palette · shallow depth of field · Korean editorial/lifestyle photography · candid · understated)는 사진 톤 4개에만 붙고 애니·3D에는 붙지 않습니다. `beautiful · flawless · perfect` 같은 형용사는 쓰지 않습니다 — 그 말이 AI 티 나는 얼굴을 만듭니다. **성별별 연출**을 따로 썼습니다(여성: 은은한 메이크업·뷰티 필터 금지 / 남성: 그루밍·모공·턱 음영, 여성화 보정 금지 / 중성: 어느 쪽으로도 뚜렷히 읽히지 않는 균형). DB 톤 문장은 그대로라 마이그레이션은 없고 `draft-character` 함수만 다시 올리면 됩니다. 구조·성별별 표·검증은 [캐릭터 생성 프롬프트 문서](docs/캐릭터-생성-프롬프트.md)에 있습니다. 실제 품질 비교는 아직 안 했습니다.
+
 # 재시도·진행 안내 (2026-09-20)
 
 실패한 영상·캐릭터에 다시 시도하기를 추가했습니다. 생성/변환 중 단계·경과 시간·예상 대기 시간과 이미지 저장 완료 장수를 표시합니다. 자동 유료 재시도는 하지 않습니다. 룩/배경 숨김은 main에 포함되어 있으나 이전 Vercel 배포가 차단된 상태라 운영 반영에는 Vercel 인증·재배포 확인이 필요합니다. [상세 동작과 검증](docs/생성-재시도-진행안내.md)을 참고하세요.
@@ -8,9 +12,14 @@
 
 기존 DB·이미지·서버 API는 유지합니다. 복원할 때는 공통 설정을 `true`로 바꾸고 웹을 재배포하면 됩니다. 이동 목록과 범위는 [보관 안내](src/features/looks/README.md)를 참고하세요. 아래 과거 기록의 룩 화면 설명보다 이 상태를 우선합니다.
 
+<details>
+<summary><strong>AI 연동 업데이트 (2026-09-18) — 완료, 최신은 docs/AI-연동.md</strong></summary>
+
 # AI 연동 업데이트 (2026-09-18)
 
 이미지 기본 모델은 Gemini 3.1 Flash Image, 영상은 fal Wan Animate Replace입니다. `/jobs/new` 영상 업로드·변환과 키 설정 확인, 원자적 차감·환불을 추가했습니다. Google·fal 계정을 준비하고 Supabase에 GEMINI_API_KEY·FAL_KEY를 등록했습니다. 웹과 Edge Function 7개는 운영 배포 완료했으며, 결제 연결 확인과 실제 유료 생성 검증은 남아 있습니다. 최신 설정·배포·운영 절차는 [AI 연동 문서](docs/AI-연동.md)를 따릅니다. 아래 과거 작업 기록의 모델·준비 상태보다 이 문서를 우선합니다.
+
+</details>
 
 # 웹 관리 화면
 
@@ -19,7 +28,10 @@
 
 ---
 
-## TODO — 현재 상태 (2026-09-18)
+## TODO — 현재 상태 (2026-09-21)
+
+<details>
+<summary><strong>완료한 작업 (2026-09-18까지)</strong></summary>
 
 ### 완료한 작업
 
@@ -37,12 +49,15 @@
 - [x] mock 테스트 7개, Edge Function 7개 타입 검사, ESLint, Next.js 프로덕션 빌드 통과
 - [x] 운영 `/kitchen-sink` HTTP 200 및 비로그인 `ai-status` HTTP 401 확인
 
+</details>
+
 ### A. 남은 AI 운영 확인
 
 키 저장과 실제 모델 사용 가능 여부는 별개다. 유료 생성·변환은 아직 실행하지 않았다.
 
 - [ ] Google 키가 속한 프로젝트의 결제 연결·모델 사용 권한·할당량 확인
 - [ ] fal 결제 수단 등록 및 크레딧 충전 확인 (마지막 확인 시 잔액 $0)
+- [ ] 새 JSON 프롬프트로 여성·남성·중성 후보를 같은 옵션으로 뽑아 이전 결과와 품질 비교. 어색한 성별은 `GENDER_PRESENTATION` 문구를 고친다
 - [ ] 캐릭터 후보 4장 → 다듬기 → 되돌리기 → 다시 뽑기 → 3방향 완성 → 룩 생성 실사용 검증
 - [ ] 실제 응답 파싱, 3:4·1K 옵션, 얼굴 일관성·좌우 각도·안전 필터와 실행 시간 확인
 - [ ] 완성한 캐릭터로 3~10초 MP4 변환 → 웹훅 → 결과 재생까지 검증
@@ -53,6 +68,9 @@
 콜백 저장 실패는 재전송을 위해 500을 반환한다. 공급자 응답 본문이나 키를 로그에 기록하지 않는다.
 `GEMINI_IMAGE_MODEL`은 선택 설정이며, 미등록 시 `gemini-3.1-flash-image`를 사용한다.
 자세한 설정·복구 절차는 [AI 연동 문서](docs/AI-연동.md)를 따른다.
+
+<details>
+<summary><strong>B. 카카오 로그인 — 이메일 동의항목에서 멈춤, 나중에</strong></summary>
 
 ### B. 카카오 로그인 — **이메일 동의항목에서 멈춤. 나중에 하기로 함**
 
@@ -92,6 +110,11 @@ Google과 같은 자리에 붙인다. 버튼·로고·색은 이미 만들어져
 ```bash
 curl -s -o /dev/null -w "%{http_code}\n" "https://alafyhejiaxukrkrmehh.supabase.co/auth/v1/authorize?provider=kakao"
 ```
+
+</details>
+
+<details>
+<summary><strong>C. 썸네일 22장 — 끝났다</strong></summary>
 
 ### C. 썸네일 22장 — **끝났다. 사진으로 앱에 실었다**
 
@@ -139,6 +162,11 @@ curl -s -o /dev/null -w "%{http_code}\n" "https://alafyhejiaxukrkrmehh.supabase.
 - 시트는 칸이 3:4가 아니라서 — 데일리는 양옆을 배경 띠로 채웠고, 무대·아우터는 양옆을 잘랐다(무대 3번 리본 끝이 살짝 잘림)
 `proxy`의 매처가 이미지 확장자를 빼고 있어서 로그인 없이도 요청이 막히지 않는다.
 
+</details>
+
+<details>
+<summary><strong>로고 · 파비콘 — 들어갔다 (2026-09-17)</strong></summary>
+
 ### 로고 · 파비콘 — **들어갔다 (2026-09-17)**
 
 - [x] 파비콘(`src/app/favicon.ico` · `icon.png` · `apple-icon.png`) — Next 기본 아이콘을 교체. `<link>` 3개가 자동으로 붙는 것 확인.
@@ -149,6 +177,8 @@ curl -s -o /dev/null -w "%{http_code}\n" "https://alafyhejiaxukrkrmehh.supabase.
 - [x] 캐릭터 만들기에서 비워도 되는 갈래는 "선택" 뱃지로 표시한다(`TraitRow`의 `OptionalBadge`)
 - [x] 톤 노출 순서 — 실사 · 일상 스냅 · 화보 · 시네마틱 · 3D 캐릭터 · 애니 (여성·남성·중성 공통, `0012`)
 - 사용 규칙(여백 · 늘이기·돌리기 금지 · 파비콘도 크림 배경)은 `docs/로고-가이드.md`
+
+</details>
 
 ### D. 마감 (S9~S10)
 
@@ -174,6 +204,9 @@ curl -s -o /dev/null -w "%{http_code}\n" "https://alafyhejiaxukrkrmehh.supabase.
 - [ ] 커스텀 도메인 + Google 동의 화면 프로덕션 게시
 - [ ] 결제 켜기 전에 **Vercel Pro 전환** (Hobby는 비상업용 전용)
 
+<details>
+<summary><strong>E. 캐릭터 스튜디오 — 올라갔다</strong></summary>
+
 ### E. 캐릭터 스튜디오 — **올라갔다**
 
 `docs/기획서.md`대로 캐릭터 만들기를 다시 지었다(톤 → 후보 4장 → 다듬기 → 3방향).
@@ -190,6 +223,8 @@ curl -s -o /dev/null -w "%{http_code}\n" "https://alafyhejiaxukrkrmehh.supabase.
 > `VALUES lists must all be the same length`로 떨어졌다. 0005·0006은 이미 적용된 뒤였고
 > 0007만 고쳐 다시 올렸다. **여러 열을 한 INSERT로 시드할 때 열 수를 세어볼 것.**
 
+</details>
+
 ### 나중에
 
 - [ ] 결제 (토스/Stripe) — S10 이후 별도
@@ -198,6 +233,9 @@ curl -s -o /dev/null -w "%{http_code}\n" "https://alafyhejiaxukrkrmehh.supabase.
       조각은 썸네일에 그린 색·모양과 같게 적었다 — 타일에서 본 것과 결과가 어긋나지 않게. `create-look` 재배포 완료
 
 ---
+
+<details>
+<summary><strong>이전 작업 기록 — 2026-09-16 · 09-17</strong></summary>
 
 ## 이전 작업 기록 — 2026-09-16 · 09-17
 
@@ -282,6 +320,10 @@ curl -s -o /dev/null -w "%{http_code}\n" "https://alafyhejiaxukrkrmehh.supabase.
 | 룩 만들기 | 1 | `look_charge` / `look_refund` |
 | 영상 변환 | 1 | `job_charge` / `job_refund` |
 
+</details>
+
+<details>
+<summary><strong>없는 문서 · CLAUDE.md 복원 메모</strong></summary>
 
 ## 없는 문서
 
@@ -293,7 +335,12 @@ curl -s -o /dev/null -w "%{http_code}\n" "https://alafyhejiaxukrkrmehh.supabase.
 `CLAUDE.md`의 9규칙은 **복원했다.** 코드 주석 열 곳이 가리키던 자리에서 되살린 것이라
 번호를 바꾸면 주석이 어긋난다.
 
+</details>
+
 ---
+
+<details>
+<summary><strong>파일 구조</strong></summary>
 
 ## 파일
 
@@ -321,6 +368,8 @@ curl -s -o /dev/null -w "%{http_code}\n" "https://alafyhejiaxukrkrmehh.supabase.
 | `docs/배포.md` | 나 | 계정 세팅할 때, 비용이 궁금할 때 |
 
 `DESIGN.md`는 Lovable 원본이 아니라 이 프로젝트용으로 이미 번역된 버전이니 원본을 따로 받지 마라.
+
+</details>
 
 ---
 
@@ -363,6 +412,9 @@ Supabase 환경변수가 비어 있으면 데이터 레이어가 **타입만 같
 
 ---
 
+<details>
+<summary><strong>만들 순서 S0~S10 — 대부분 완료</strong></summary>
+
 ## 만들 순서
 
 | # | 세션 | 끝나면 보이는 것 | 상태 |
@@ -382,6 +434,8 @@ Supabase 환경변수가 비어 있으면 데이터 레이어가 **타입만 같
 **S1이 끝나기 전에는 화면을 만들지 않는다.** 토큰이 자리잡기 전에 화면이 생기면 나중에 전부 다시 칠하게 된다.
 
 남은 건 위 TODO에 있다. 결제(토스/Stripe)는 S10 이후 별도.
+
+</details>
 
 ---
 
