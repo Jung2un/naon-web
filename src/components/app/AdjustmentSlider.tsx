@@ -104,7 +104,7 @@ export function AdjustmentSlider({
 /** 묶음마다 아이콘. 글자만 있으면 묶음 경계가 안 보인다. 제목은 models.ts의 ADJUSTMENT_GROUPS다 */
 const GROUP_ICON: Record<string, LucideIcon> = {
   "머리색": Palette,
-  "화장": Sparkles,
+  "메이크업": Sparkles,
   "눈": Eye,
   "코": Triangle,
   "눈썹": Spline,
@@ -241,19 +241,37 @@ export function AdjustmentDock({
                     <MicroLabel>{group.title}</MicroLabel>
                   </div>
                   <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                    {group.items.map((item) => (
-                      <AdjustmentSlider
-                        key={item.key}
-                        id={`adjust-${item.key}`}
-                        label={item.label}
-                        low={item.low}
-                        high={item.high}
-                        value={value[item.key] ?? 0}
-                        max={item.max}
-                        disabled={disabled}
-                        onChange={(next) => onChange(item.key, next)}
-                      />
-                    ))}
+                    {group.items.map((item) =>
+                      item.toggle ? (
+                        <label
+                          key={item.key}
+                          htmlFor={`adjust-${item.key}`}
+                          className="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-body sm:col-span-2"
+                        >
+                          <input
+                            id={`adjust-${item.key}`}
+                            type="checkbox"
+                            checked={(value[item.key] ?? 0) >= ADJUSTMENT_RANGE / 2}
+                            disabled={disabled}
+                            onChange={(e) => onChange(item.key, e.target.checked ? ADJUSTMENT_RANGE : 0)}
+                            className="size-4 accent-primary"
+                          />
+                          {item.label}
+                        </label>
+                      ) : (
+                        <AdjustmentSlider
+                          key={item.key}
+                          id={`adjust-${item.key}`}
+                          label={item.label}
+                          low={item.low}
+                          high={item.high}
+                          value={value[item.key] ?? 0}
+                          max={item.max}
+                          disabled={disabled}
+                          onChange={(next) => onChange(item.key, next)}
+                        />
+                      ),
+                    )}
                   </div>
                 </section>
                 );

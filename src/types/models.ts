@@ -214,9 +214,16 @@ export const REFINABLE_TRAIT_KINDS: readonly OptionKind[] = [
  */
 export const ADJUSTMENT_KEYS = [
   "hair_color_depth",
-  "makeup",
+  "brow_depth",
+  "brow_match_hair",
+  "makeup_liner",
+  "makeup_mascara",
+  "makeup_lip",
+  "makeup_blush",
   "eye_tilt",
   "eye_height",
+  "eye_scale_x",
+  "eye_scale_y",
   "nose_height",
   "nose_tilt",
   "nose_width",
@@ -232,19 +239,44 @@ export const ADJUSTMENT_RANGE = 100;
 
 /**
  * 화면에 나오는 순서와 문구. `low`·`high`는 슬라이더 양 끝 라벨이다.
- * `max`가 있으면 그 위로는 못 간다 — 화장은 지금 것이 기준이고 연하게만 간다(더 진하게는 안 만든다).
+ * `max`가 있으면 그 위로는 못 간다 — 메이크업은 지금 것이 기준이고 연하게만 간다(더 진하게는 안 만든다).
+ * `toggle`이면 체크박스다. 값은 0(끔) 또는 100(켬)이다.
  */
-export const ADJUSTMENT_GROUPS: ReadonlyArray<{
-  title: string;
-  items: ReadonlyArray<{ key: AdjustmentKey; label: string; low: string; high: string; max?: number }>;
-}> = [
+export type AdjustmentItem = {
+  key: AdjustmentKey;
+  label: string;
+  low: string;
+  high: string;
+  max?: number;
+  toggle?: boolean;
+};
+export const ADJUSTMENT_GROUPS: ReadonlyArray<{ title: string; items: ReadonlyArray<AdjustmentItem> }> = [
   { title: "머리색", items: [{ key: "hair_color_depth", label: "강도", low: "연하게", high: "진하게" }] },
-  { title: "화장", items: [{ key: "makeup", label: "강도", low: "연하게", high: "지금처럼", max: 0 }] },
+  {
+    title: "눈썹",
+    items: [
+      { key: "brow_tilt", label: "각도", low: "처지게", high: "올라가게" },
+      { key: "brow_height", label: "높낮이", low: "낮게", high: "높게" },
+      { key: "brow_depth", label: "색 진하기", low: "연하게", high: "진하게" },
+      { key: "brow_match_hair", label: "머리색과 맞추기", low: "", high: "", toggle: true },
+    ],
+  },
+  {
+    title: "메이크업",
+    items: [
+      { key: "makeup_liner", label: "아이라인 · 섀도", low: "연하게", high: "지금처럼", max: 0 },
+      { key: "makeup_mascara", label: "속눈썹 (마스카라)", low: "연하게", high: "지금처럼", max: 0 },
+      { key: "makeup_lip", label: "입술", low: "연하게", high: "지금처럼", max: 0 },
+      { key: "makeup_blush", label: "블러셔", low: "연하게", high: "지금처럼", max: 0 },
+    ],
+  },
   {
     title: "눈",
     items: [
       { key: "eye_tilt", label: "눈꼬리 각도", low: "내려가게", high: "올라가게" },
       { key: "eye_height", label: "높낮이", low: "낮게", high: "높게" },
+      { key: "eye_scale_x", label: "가로 크기", low: "좁게", high: "넓게" },
+      { key: "eye_scale_y", label: "세로 크기", low: "작게", high: "크게" },
     ],
   },
   {
@@ -258,13 +290,6 @@ export const ADJUSTMENT_GROUPS: ReadonlyArray<{
   {
     title: "중안부",
     items: [{ key: "midface", label: "길이 (눈~입)", low: "짧게", high: "길게" }],
-  },
-  {
-    title: "눈썹",
-    items: [
-      { key: "brow_tilt", label: "각도", low: "처지게", high: "올라가게" },
-      { key: "brow_height", label: "높낮이", low: "낮게", high: "높게" },
-    ],
   },
   {
     title: "턱 라인",
@@ -283,8 +308,10 @@ export function asAdjustments(value: unknown): Adjustments {
     const raw = (value as Record<string, unknown>)[key];
     if (typeof raw !== "number" || !Number.isInteger(raw) || raw === 0) continue;
     if (Math.abs(raw) > ADJUSTMENT_RANGE) continue;
-    // 화장은 연하게만. 지금 것보다 진하게는 안 만든다 — IDENTITY_LOCK과 같은 방향
-    if (key === "makeup" && raw > 0) continue;
+    // 메이크업은 연하게만. 지금 것보다 진하게는 안 만든다 — IDENTITY_LOCK과 같은 방향
+    if (key.startsWith("makeup_") && raw > 0) continue;
+    // 켬/끔 스위치. 0이면 이미 위에서 버려졌으니 켜진 것만 100으로 맞춘다
+    if (key === "brow_match_hair") { out[key] = ADJUSTMENT_RANGE; continue; }
     out[key] = raw;
   }
   return out;

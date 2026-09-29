@@ -474,9 +474,16 @@ const CHANGE_PHRASE: Record<string, (p: string) => string> = {
  */
 export const ADJUSTMENT_KEYS = [
   "hair_color_depth",
-  "makeup",
+  "brow_depth",
+  "brow_match_hair",
+  "makeup_liner",
+  "makeup_mascara",
+  "makeup_lip",
+  "makeup_blush",
   "eye_tilt",
   "eye_height",
+  "eye_scale_x",
+  "eye_scale_y",
   "nose_height",
   "nose_tilt",
   "nose_width",
@@ -500,8 +507,10 @@ export function asAdjustments(value: unknown): Adjustments {
     const raw = (value as Record<string, unknown>)[key];
     if (typeof raw !== "number" || !Number.isInteger(raw) || raw === 0) continue;
     if (Math.abs(raw) > ADJUSTMENT_RANGE) continue;
-    // 화장은 연하게만. 지금 것보다 진하게는 안 만든다 — IDENTITY_LOCK이 "더 진하게 하지 마라"를 지킨다
-    if (key === "makeup" && raw > 0) continue;
+    // 메이크업은 연하게만. 지금 것보다 진하게는 안 만든다 — IDENTITY_LOCK이 "더 진하게 하지 마라"를 지킨다
+    if (key.startsWith("makeup_") && raw > 0) continue;
+    // 켬/끔 스위치. 켜진 것만 100으로 맞춘다
+    if (key === "brow_match_hair") { out[key] = ADJUSTMENT_RANGE; continue; }
     out[key] = raw;
   }
   return out;
@@ -523,11 +532,39 @@ const ADJUST_PHRASE: Record<AdjustmentKey, { up: (d: string) => string; down: (d
     up: (d) => `make the hair color ${d} deeper and more saturated, keeping the same hue`,
     down: (d) => `make the hair color ${d} lighter and softer, keeping the same hue`,
   },
-  // 화면은 0 이하만 보낸다. up은 되돌릴 때(−60 → 0)의 문장이라 "원래 강도로"다
-  makeup: {
-    up: (d) => `bring the makeup ${d} back toward its previous strength`,
-    down: (d) =>
-      `make the makeup ${d} lighter and more sheer: softer and less visible eyeshadow, a thinner and lighter eyeliner and lash definition, less blush on the cheeks, and a more natural sheer lip — reduce it evenly rather than removing it entirely, keeping natural lip colour and the eyes' own colour`,
+  // 메이크업 넷. 화면은 0 이하만 보낸다 — up은 되돌릴 때(−60 → 0)의 문장이라 "원래 강도로"다
+  makeup_liner: {
+    up: (d) => `bring the eyeliner and eyeshadow ${d} back toward their previous strength`,
+    down: (d) => `make the eyeliner ${d} thinner and lighter and the eyeshadow ${d} softer and less visible, without removing them entirely and keeping the eyes' own colour`,
+  },
+  makeup_mascara: {
+    up: (d) => `bring the lash definition ${d} back toward its previous strength`,
+    down: (d) => `make the lashes ${d} lighter and more natural, less mascara, keeping the lashes themselves`,
+  },
+  makeup_lip: {
+    up: (d) => `bring the lip colour ${d} back toward its previous strength`,
+    down: (d) => `make the lip colour ${d} sheerer and more natural, keeping a natural lip colour rather than removing it`,
+  },
+  makeup_blush: {
+    up: (d) => `bring the blush ${d} back toward its previous strength`,
+    down: (d) => `reduce the blush on the cheeks ${d}, toward the natural skin tone, without making the skin pale`,
+  },
+  brow_depth: {
+    up: (d) => `make the eyebrows ${d} darker and fuller in colour`,
+    down: (d) => `make the eyebrows ${d} lighter and softer in colour, keeping their shape and density`,
+  },
+  // 스위치. 켤 때(0 → 100)만 up이 나온다. 끄면 이전 눈썹색으로
+  brow_match_hair: {
+    up: () => `match the eyebrow colour to the hair colour, a shade darker than the hair`,
+    down: () => `return the eyebrows to their previous natural colour`,
+  },
+  eye_scale_x: {
+    up: (d) => `make the eyes ${d} wider horizontally`,
+    down: (d) => `make the eyes ${d} narrower horizontally`,
+  },
+  eye_scale_y: {
+    up: (d) => `make the eyes ${d} taller and more open vertically`,
+    down: (d) => `make the eyes ${d} shorter vertically`,
   },
   eye_tilt: {
     up: (d) => `tilt the outer corners of the eyes ${d} upward`,

@@ -369,8 +369,12 @@ test("slider adjustments become relative instructions and nothing else is touche
   assert.doesNotMatch(text, /change the hairstyle/);
   assert.deepEqual(asAdjustments({ eye_tilt: 2, nose_height: 0, brow_tilt: 500, eye_height: 1.5, junk: 1 }), { eye_tilt: 2 });
   // Makeup only goes lighter. The current look is the ceiling, in line with the identity lock.
-  assert.deepEqual(asAdjustments({ makeup: 40 }), {});
-  assert.match(editInstruction(traits, traits, options, {}, { makeup: -70 }), /make the makeup strongly lighter and more sheer/);
+  assert.deepEqual(asAdjustments({ makeup_lip: 40, makeup_blush: 10 }), {});
+  assert.match(editInstruction(traits, traits, options, {}, { makeup_blush: -70, makeup_lip: -20 }), /lip colour slightly sheerer[^.]*, reduce the blush on the cheeks strongly/);
+  // The brow toggle is a switch: any truthy value is stored as 100 and phrased without a degree.
+  assert.deepEqual(asAdjustments({ brow_match_hair: 1 }), { brow_match_hair: 100 });
+  assert.match(editInstruction(traits, traits, options, {}, { brow_match_hair: 100, brow_depth: -50 }), /eyebrows clearly lighter and softer[^.]*, match the eyebrow colour to the hair colour/);
+  assert.match(editInstruction(traits, traits, options, {}, { eye_scale_x: 60, eye_scale_y: -30 }), /eyes clearly wider horizontally, make the eyes slightly shorter vertically/);
   assert.match(editInstruction(traits, traits, options, {}, { jaw_vline: 50, chin_length: -30 }), /jawline clearly slimmer[^.]*V-line, make the chin slightly shorter/);
   assert.match(editInstruction(traits, traits, options, {}, { nose_width: 80, midface: -40 }), /nose wings strongly narrower, make the midface clearly shorter[^.]*keeping the eyes and mouth themselves unchanged/);
   // Chips and sliders share one instruction, so one apply is one credit.
