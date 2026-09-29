@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { Maximize2, Minimize2, RotateCcw, SlidersHorizontal, X } from "lucide-react";
+import { RotateCcw, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MicroLabel } from "@/components/ui/label";
 import { credits } from "@/lib/format";
@@ -93,13 +92,16 @@ export function AdjustmentSlider({
 /**
  * 세부 조정 독 — 화면 오른쪽 아래에 떠 있는 버튼과 패널.
  *
- * 본문에 슬라이더 일곱 개를 그대로 펼치면 다듬기 화면이 설정 페이지가 된다. 그래서 오른쪽 아래
- * 둥근 버튼 하나로 접어 두고, 열면 패널이 그 자리에 뜬다. 패널 위에는 작은 미리보기가 있어서
- * 스크롤 위치와 상관없이 슬라이더와 얼굴을 같이 본다.
+ * 본문에 슬라이더를 그대로 펼치면 다듬기 화면이 설정 페이지가 된다. 그래서 오른쪽 아래
+ * 둥근 버튼 하나로 접어 두고, 열면 패널이 그 자리에 뜬다. 패널 위의 작은 미리보기는 스크롤로
+ * 본문 얼굴이 안 보일 때를 위한 것이고, **열려 있는 동안 본문의 "지금 얼굴"이 커진다**(CharacterStudio).
+ * 열림 상태는 부모가 갖는다 — 그래야 본문이 그 상태를 보고 얼굴을 키운다.
  * 모바일에서는 하단 탭(--bottom-nav-h) 위에 붙고, 패널은 화면 폭을 다 쓴다.
  * z-index는 하단 탭(40)과 같은 층, 액션바(30)보다 위. 시트(50)보다는 아래.
  */
 export function AdjustmentDock({
+  open,
+  onOpenChange,
   src,
   hairColor,
   value,
@@ -111,6 +113,8 @@ export function AdjustmentDock({
   onReset,
   onApply,
 }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   /** 지금 얼굴. 없으면 미리보기 없이 슬라이더만 */
   src: string | null;
   /** 고른 머리색 견본. 저장된 것과 같으면 null */
@@ -125,9 +129,7 @@ export function AdjustmentDock({
   onReset: () => void;
   onApply: () => void;
 }) {
-  const [open, setOpen] = useState(false);
-  // 미리보기 크기. 작게(옆에 글이 있는 헤더) ↔ 크게(패널 폭 전체). 너비가 바뀌면 3:4 비율이 높이를 따라 움직인다
-  const [large, setLarge] = useState(false);
+  const setOpen = onOpenChange;
   const touched = Object.values(value).some((v) => v);
 
   return (
@@ -164,27 +166,14 @@ export function AdjustmentDock({
             "sm:inset-x-auto sm:bottom-6 sm:right-6 sm:w-[380px] sm:max-h-[min(80dvh,720px)] sm:rounded-[20px]",
           )}
         >
-          <header className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3">
+          <header className="flex items-center gap-3 border-b border-line px-4 py-3">
             {src && (
-              <button
-                type="button"
-                onClick={() => setLarge((v) => !v)}
-                aria-pressed={large}
-                aria-label={large ? "미리보기 작게" : "미리보기 크게"}
-                className={cn(
-                  "group relative shrink-0 overflow-hidden rounded-[12px] border border-line bg-sunken text-left",
-                  "transition-[width] duration-300 ease-out motion-reduce:transition-none",
-                  large ? "order-last w-full" : "w-36",
-                )}
-              >
-                <FacePreview src={src} adjustments={value} hairColor={hairColor} className="aspect-[3/4] w-full" />
-                <span
-                  aria-hidden
-                  className="absolute bottom-2 right-2 flex size-7 items-center justify-center rounded-full bg-scrim text-on-dark opacity-80 transition-opacity group-hover:opacity-100"
-                >
-                  {large ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
-                </span>
-              </button>
+              <FacePreview
+                src={src}
+                adjustments={value}
+                hairColor={hairColor}
+                className="aspect-[3/4] w-16 shrink-0 overflow-hidden rounded-[8px] border border-line bg-sunken"
+              />
             )}
             <div className="min-w-0 flex-1">
               <p className="text-base font-semibold text-ink">세부 조정</p>

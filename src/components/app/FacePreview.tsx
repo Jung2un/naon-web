@@ -14,7 +14,9 @@ import { ADJUSTMENT_KEYS, ADJUSTMENT_RANGE, type Adjustments } from "@/types/mod
  * 작은 변위장을 얹어 캔버스에서 픽셀을 다시 샘플링한다(리퀴파이).
  * 머리색 강도와 염색(고른 머리색 칩)은 **머리카락 마스크 안에서만** 색을 바꾼다(MediaPipe Image Segmenter, hair 클래스).
  * 전체 필터로 하면 사진 전체의 대비가 같이 움직여서 "머리색"이 아니라 "사진 보정"이 된다.
- * 화장 강도(연하게)는 얼굴 피부 마스크(face-skin 클래스) 안에서 채도를 낮춘다 — 립·블러셔 색이 빠지는 인상만 낸다.
+ * 화장 강도(연하게)는 얼굴 피부 마스크(face-skin 클래스) 안에서 **피부 기준색에서 벗어난 색만** 기준색 쪽으로 되돌린다 —
+ * 립 틴트·블러셔처럼 "얹힌 색"이 빠지고, 밝기는 그대로라 피부가 창백해지지 않는다.
+ * (처음엔 얼굴 전체의 채도를 낮췄더니 창백한 얼굴이 됐다. 화장은 색이지 채도가 아니다.)
  * 머리 모양은 여기서 못 보여준다. 모양을 바꾸는 건 생성이라 적용해야 나온다.
  * 모델 두 개(랜드마크·세그멘테이션)와 wasm은 CDN에서 처음 한 번 받는다. 못 받으면 원본만 보여준다 —
  * 어느 경우에도 화면이 비지 않는다.
@@ -129,6 +131,37 @@ function fieldsFor(face: Face, a: Adjustments): Field[] {
 }
 
 type Rgb = [number, number, number];
+
+/**
+ * 얼굴 피부의 기준 색차(Cb·Cr). 마스크가 확실한(0.8+) 중간 밝기 픽셀의 평균이다.
+ * 립·블러셔는 소수라 평균을 크게 흔들지 않고, 그래서 "기준에서 벗어난 색"으로 잡힌다.
+ */
+/** 머리카락의 평균 밝기. 염색할 때 "지금 머리가 얼마나 밝은가"의 기준이다. */
+function meanLuma(base: ImageData, mask: Float32Array): number {
+  const s = base.data;
+  let sum = 0, n = 0;
+  for (let i = 0, p = 0; i < mask.length; i++, p += 4) {
+    if (mask[i] < 0.8) continue;
+    sum += 0.299 * s[p] + 0.587 * s[p + 1] + 0.114 * s[p + 2];
+    n++;
+  }
+  return n ? sum / n : 0;
+}
+
+function skinReference(base: ImageData, mask: Float32Array): [number, number] {
+  const s = base.data;
+  let cb = 0, cr = 0, n = 0;
+  for (let i = 0, p = 0; i < mask.length; i++, p += 4) {
+    if (mask[i] < 0.8) continue;
+    const r = s[p], g = s[p + 1], b = s[p + 2];
+    const Y = 0.299 * r + 0.587 * g + 0.114 * b;
+    if (Y < 60 || Y > 235) continue;
+    cb += -0.1687 * r - 0.3313 * g + 0.5 * b;
+    cr += 0.5 * r - 0.4187 * g - 0.0813 * b;
+    n++;
+  }
+  return n ? [cb / n, cr / n] : [0, 0];
+}
 function hexToRgb(hex: string): Rgb | null {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
   if (!m) return null;
@@ -145,8 +178,8 @@ function render(
   src: ImageData,
   dst: ImageData,
   fields: Field[],
-  hair: { mask: Float32Array; depth: number; tint: Rgb | null } | null,
-  skin: { mask: Float32Array; makeup: number } | null,
+  hair: { mask: Float32Array; depth: number; tint: Rgb | null; meanLuma: number } | null,
+  skin: { mask: Float32Array; makeup: number; ref: [number, number] } | null,
 ) {
   const { width: w, height: h, data: s } = src;
   const d = dst.data;
@@ -154,13 +187,16 @@ function render(
   const t = hair ? hair.depth / ADJUSTMENT_RANGE : 0;
   const satK = 1 + t * 0.45;
   const lumK = 1 - t * 0.22;
-  // 염색 — 고른 색으로 밝기를 유지한 채 색만 옮긴다. 밝은 가닥은 밝게, 어두운 가닥은 어둡게 남는다.
+  // 염색 — 머리의 평균 밝기를 고른 색의 밝기로 옮기고, 가닥마다의 명암은 그 비율대로 남긴다.
+  // (색상만 바꾸고 밝기를 두면 갈색 머리에 검정을 골라도 회색이 된다 — 검정은 색이 아니라 밝기다.)
   const tint = hair?.tint ?? null;
-  const tintLuma = tint ? Math.max(luma(tint[0], tint[1], tint[2]), 8) : 1;
-  // 화장 연하게 — 0 ~ 1. 얼굴 피부의 채도를 낮추고 아주 살짝 밝힌다.
+  const hairMean = Math.max(hair?.meanLuma ?? 0, 8);
+  // 화장 연하게 — 0 ~ 1. 피부 기준 색차(Cb·Cr)에서 멀리 떨어진 픽셀(립·블러셔)만 기준 쪽으로 당긴다. 밝기(Y)는 손대지 않는다.
   const m = skin ? Math.min(Math.max(-skin.makeup, 0), ADJUSTMENT_RANGE) / ADJUSTMENT_RANGE : 0;
-  const skinSatK = 1 - m * 0.4;
-  const skinLumK = 1 + m * 0.04;
+  const cbRef = skin?.ref[0] ?? 0;
+  const crRef = skin?.ref[1] ?? 0;
+  // 색차 거리(0~255 스케일)가 이 아래면 피부 그 자체라 건드리지 않고, 위쪽부터 부드럽게 당긴다
+  const DEV_LO = 5, DEV_HI = 18;
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       let ox = 0;
@@ -197,7 +233,7 @@ function render(
           let lum = luma(r, g, b);
           let hr = r, hg = g, hb = b;
           if (tint) {
-            const k = lum / tintLuma;
+            const k = lum / hairMean;
             hr = Math.min(tint[0] * k, 255); hg = Math.min(tint[1] * k, 255); hb = Math.min(tint[2] * k, 255);
             lum = luma(hr, hg, hb);
           }
@@ -210,11 +246,19 @@ function render(
       if (skin && m > 0) {
         const a = skin.mask[y * w + x];
         if (a > 0.02) {
-          const lum = luma(r, g, b);
-          const nr = (lum + (r - lum) * skinSatK) * skinLumK;
-          const ng = (lum + (g - lum) * skinSatK) * skinLumK;
-          const nb = (lum + (b - lum) * skinSatK) * skinLumK;
-          r = r + (nr - r) * a; g = g + (ng - g) * a; b = b + (nb - b) * a;
+          const Y = luma(r, g, b);
+          const cb = -0.1687 * r - 0.3313 * g + 0.5 * b;
+          const cr = 0.5 * r - 0.4187 * g - 0.0813 * b;
+          const dev = Math.hypot(cb - cbRef, cr - crRef);
+          if (dev > DEV_LO) {
+            const wgt = Math.min((dev - DEV_LO) / (DEV_HI - DEV_LO), 1);
+            const pull = m * wgt * a;
+            const ncb = cb + (cbRef - cb) * pull;
+            const ncr = cr + (crRef - cr) * pull;
+            r = Y + 1.402 * ncr;
+            g = Y - 0.344 * ncb - 0.714 * ncr;
+            b = Y + 1.772 * ncb;
+          }
         }
       }
       d[o] = r; d[o + 1] = g; d[o + 2] = b;
@@ -267,6 +311,8 @@ export function FacePreview({
   const faceRef = useRef<Face | null>(null);
   const hairRef = useRef<Float32Array | null>(null);
   const skinRef = useRef<Float32Array | null>(null);
+  const skinChromaRef = useRef<[number, number]>([0, 0]);
+  const hairLumaRef = useRef(0);
   const frameRef = useRef(0);
   // 상태는 src에 매인다. src가 바뀌면 그 자체로 "loading"이라 effect 안에서 setState를 부를 일이 없다.
   const [state, setState] = useState<{ src: string; status: Status }>({ src, status: "loading" });
@@ -328,6 +374,12 @@ export function FacePreview({
         };
         hairRef.current = toCanvas(HAIR_CLASS);
         skinRef.current = toCanvas(FACE_SKIN_CLASS);
+        if (skinRef.current && baseRef.current) {
+          skinChromaRef.current = skinReference(baseRef.current, skinRef.current);
+        }
+        if (hairRef.current && baseRef.current) {
+          hairLumaRef.current = meanLuma(baseRef.current, hairRef.current);
+        }
         seg.close();
         segmenter.close();
         const lm = result.faceLandmarks[0];
@@ -375,8 +427,8 @@ export function FacePreview({
         base,
         out,
         face && needsFace(adjustments) ? fieldsFor(face, adjustments) : [],
-        hair && (depth || tint) ? { mask: hair, depth, tint } : null,
-        skin && makeup < 0 ? { mask: skin, makeup } : null,
+        hair && (depth || tint) ? { mask: hair, depth, tint, meanLuma: hairLumaRef.current } : null,
+        skin && makeup < 0 ? { mask: skin, makeup, ref: skinChromaRef.current } : null,
       );
       ctx.putImageData(out, 0, 0);
     });

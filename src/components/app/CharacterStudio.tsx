@@ -71,6 +71,8 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
   const nameReady = name.trim().length > 0 && name.trim().length <= 20;
   const [traits, setTraits] = useState<Traits>(serverTraits);
   const [adjust, setAdjust] = useState<Adjustments>(serverAdjust);
+  // 세부 조정 독이 열려 있으면 본문의 "지금 얼굴"이 커진다 — 슬라이더를 만지며 볼 얼굴은 그것이다
+  const [dockOpen, setDockOpen] = useState(false);
   const [syncedAt, setSyncedAt] = useState(character.updated_at);
 
   // 서버에서 캐릭터가 바뀌면(수정이 끝났다든가) 칩과 슬라이더도 그 값으로 돌아온다.
@@ -99,11 +101,6 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
   const previewHairColor =
     traits.hair_color && traits.hair_color !== serverTraits.hair_color && hairColorName
       ? HAIR_COLORS[hairColorName] ?? null
-      : null;
-  // 고른 머리 모양이 저장된 것과 다르면 그 사진을 옆에 보여준다 — 모양은 생성이라 얼굴 위에 미리 못 그린다
-  const previewHair =
-    traits.hair && traits.hair !== serverTraits.hair
-      ? character.options.hair.find((o) => o.id === traits.hair) ?? null
       : null;
   const faceTypeName = character.options.face.find((o) => o.id === serverTraits.face)?.name;
 
@@ -316,7 +313,13 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
       {character.stage === "refining" && (
         <>
           <section id={stepAnchor(1)} className="mt-8 flex scroll-mt-20 flex-col gap-6 sm:flex-row">
-            <div className="w-full sm:max-w-[260px]">
+            {/* 독이 열리면 260 → 520px로 커진다. 너비만 애니메이션하면 3:4 비율이 높이를 따라온다 */}
+            <div
+              className={cn(
+                "w-full transition-[max-width] duration-300 ease-out motion-reduce:transition-none",
+                dockOpen ? "sm:max-w-[520px]" : "sm:max-w-[260px]",
+              )}
+            >
               <MicroLabel>지금 얼굴</MicroLabel>
               <div className="relative mt-2 aspect-[3/4] overflow-hidden rounded-[12px] border border-line bg-sunken">
                 {working ? (
@@ -330,21 +333,10 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
                     className="size-full"
                   />
                 ) : null}
-                {/* 고른 머리 모양. 얼굴 위에 못 그리니 사진을 겹쳐 보여준다 */}
-                {!working && previewHair?.thumbnail_url && (
-                  <span className="absolute bottom-2 right-2 block w-[38%] overflow-hidden rounded-[8px] border border-surface shadow-overlay">
-                    <Image src={previewHair.thumbnail_url} alt="" width={120} height={120} className="block aspect-square w-full object-cover" />
-                    <span className="block bg-surface px-1.5 py-1 text-center text-[11px] leading-tight text-ink">{previewHair.name}</span>
-                  </span>
-                )}
               </div>
               {working ? (
                 <p className="mt-2 text-caption text-muted">
                   수정을 반영하는 중이에요. 30초~2분 걸려요.
-                </p>
-              ) : previewHair ? (
-                <p className="mt-2 text-caption text-muted">
-                  적용하면 이 머리 모양으로 바뀌어요. 모양은 만들어 봐야 나와요.
                 </p>
               ) : !sameAdjustments(adjust, serverAdjust) || previewHairColor ? (
                 <p className="mt-2 text-caption text-muted">
@@ -414,6 +406,7 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
 
             <p className="mt-6 text-caption text-muted">
               눈·코·눈썹의 각도와 높낮이, 머리색·화장 강도는 오른쪽 아래 &quot;세부 조정&quot;에서 슬라이더로 고쳐요.
+              머리 모양은 만들어 봐야 나오는 거라 여기 없어요 — 바꾸려면 후보부터 다시 뽑아요.
             </p>
 
             <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -442,7 +435,7 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
                 {pending === "redraft" ? "뽑는 중…" : "후보부터 다시 뽑기"}
               </Button>
               <span className="text-caption text-muted">
-                {faceTypeName ? `얼굴상(${faceTypeName})·` : "얼굴상·"}톤·성별·나이대를 바꾸려면 다시 뽑아야 해요 · 크레딧{" "}
+                {faceTypeName ? `얼굴상(${faceTypeName})·` : "얼굴상·"}머리 모양·톤·성별·나이대를 바꾸려면 다시 뽑아야 해요 · 크레딧{" "}
                 <span className="tabular text-ink">
                   {credits(CHARACTER_COST.draft)}
                 </span>
@@ -491,6 +484,8 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
       {/* 세부 조정 독 — 오른쪽 아래에 떠 있다. 다듬기 단계에서만 */}
       {character.stage === "refining" && (
         <AdjustmentDock
+          open={dockOpen}
+          onOpenChange={setDockOpen}
           src={working ? null : character.base_image_url}
           hairColor={previewHairColor}
           value={adjust}

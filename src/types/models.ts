@@ -193,9 +193,12 @@ export const REQUIRED_TRAIT_KINDS: readonly OptionKind[] = ["gender", "age"];
 /**
  * 다듬기에서 바꿀 수 있는 것. 성별·나이대·얼굴상·톤은 편집으로 못 바꾼다 —
  * 그건 다른 사람을 만드는 일이라 다시 뽑아야 한다. — 기획서 §2
+ *
+ * 머리 **모양**도 여기 없다(09-29). 머리색은 마스크 안에서 바로 물들여 볼 수 있지만 모양은 생성이라
+ * 미리 못 보여준다. 미리 안 보이는 칩을 이 자리에 두면 "왜 이건 바로 안 바뀌지"가 된다.
+ * 모양은 1단계와 "후보부터 다시 뽑기"에서 사진을 보고 고른다. 서버(refine-character)는 여전히 받는다.
  */
 export const REFINABLE_TRAIT_KINDS: readonly OptionKind[] = [
-  "hair",
   "hair_color",
   "body",
   "vibe",
