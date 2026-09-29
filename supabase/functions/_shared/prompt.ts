@@ -481,6 +481,8 @@ export const ADJUSTMENT_KEYS = [
   "nose_tilt",
   "brow_tilt",
   "brow_height",
+  "jaw_vline",
+  "chin_length",
 ] as const;
 export type AdjustmentKey = (typeof ADJUSTMENT_KEYS)[number];
 export type Adjustments = Partial<Record<AdjustmentKey, number>>;
@@ -548,6 +550,14 @@ const ADJUST_PHRASE: Record<AdjustmentKey, { up: (d: string) => string; down: (d
   brow_height: {
     up: (d) => `raise the eyebrows ${d} higher above the eyes`,
     down: (d) => `set the eyebrows ${d} lower, closer to the eyes`,
+  },
+  jaw_vline: {
+    up: (d) => `make the jawline ${d} slimmer and more tapered toward the chin, a cleaner V-line`,
+    down: (d) => `make the jawline ${d} rounder and softer, less tapered`,
+  },
+  chin_length: {
+    up: (d) => `make the chin ${d} longer`,
+    down: (d) => `make the chin ${d} shorter`,
   },
 };
 

@@ -1,6 +1,17 @@
 "use client";
 
-import { RotateCcw, SlidersHorizontal, X } from "lucide-react";
+import {
+  Eye,
+  Palette,
+  RotateCcw,
+  ScanFace,
+  SlidersHorizontal,
+  Sparkles,
+  Spline,
+  Triangle,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MicroLabel } from "@/components/ui/label";
 import { credits } from "@/lib/format";
@@ -89,6 +100,16 @@ export function AdjustmentSlider({
   );
 }
 
+/** 묶음마다 아이콘. 글자만 있으면 묶음 경계가 안 보인다. 제목은 models.ts의 ADJUSTMENT_GROUPS다 */
+const GROUP_ICON: Record<string, LucideIcon> = {
+  "머리색": Palette,
+  "화장": Sparkles,
+  "눈": Eye,
+  "코": Triangle,
+  "눈썹": Spline,
+  "턱 라인": ScanFace,
+};
+
 /**
  * 세부 조정 독 — 화면 오른쪽 아래에 떠 있는 버튼과 패널.
  *
@@ -163,7 +184,7 @@ export function AdjustmentDock({
             "fixed z-40 flex flex-col overflow-hidden border border-line bg-surface shadow-overlay",
             // 모바일: 하단 탭 위에 붙는 시트. 데스크톱: 오른쪽 아래 카드
             "inset-x-0 bottom-[var(--bottom-nav-h,0px)] max-h-[78dvh] rounded-t-[20px]",
-            "sm:inset-x-auto sm:bottom-6 sm:right-6 sm:w-[380px] sm:max-h-[min(80dvh,720px)] sm:rounded-[20px]",
+            "sm:inset-x-auto sm:bottom-6 sm:right-6 sm:w-[480px] sm:max-h-[min(84dvh,800px)] sm:rounded-[20px]",
           )}
         >
           <header className="flex items-center gap-3 border-b border-line px-4 py-3">
@@ -201,12 +222,23 @@ export function AdjustmentDock({
             </button>
           </header>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
-            <div className="flex flex-col gap-5">
-              {ADJUSTMENT_GROUPS.map((group) => (
-                <div key={group.title}>
-                  <MicroLabel>{group.title}</MicroLabel>
-                  <div className="mt-2 flex flex-col gap-3">
+          <div className="min-h-0 flex-1 overflow-y-auto bg-cream px-4 py-4">
+            <div className="flex flex-col gap-3">
+              {ADJUSTMENT_GROUPS.map((group) => {
+                const Icon = GROUP_ICON[group.title] ?? SlidersHorizontal;
+                return (
+                <section
+                  key={group.title}
+                  aria-label={group.title}
+                  className="rounded-[14px] border border-line bg-surface px-4 pb-4 pt-3"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="flex size-7 items-center justify-center rounded-full bg-primary-soft text-primary" aria-hidden>
+                      <Icon className="size-4" strokeWidth={2} />
+                    </span>
+                    <MicroLabel>{group.title}</MicroLabel>
+                  </div>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
                     {group.items.map((item) => (
                       <AdjustmentSlider
                         key={item.key}
@@ -221,8 +253,9 @@ export function AdjustmentDock({
                       />
                     ))}
                   </div>
-                </div>
-              ))}
+                </section>
+                );
+              })}
             </div>
           </div>
 

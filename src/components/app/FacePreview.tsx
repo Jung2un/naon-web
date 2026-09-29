@@ -17,6 +17,8 @@ import { ADJUSTMENT_KEYS, ADJUSTMENT_RANGE, type Adjustments } from "@/types/mod
  * 화장 강도(연하게)는 얼굴 피부 마스크(face-skin 클래스) 안에서 **피부 기준색에서 벗어난 색만** 기준색 쪽으로 되돌린다 —
  * 립 틴트·블러셔처럼 "얹힌 색"이 빠지고, 밝기는 그대로라 피부가 창백해지지 않는다.
  * (처음엔 얼굴 전체의 채도를 낮췄더니 창백한 얼굴이 됐다. 화장은 색이지 채도가 아니다.)
+ * 끝까지 내려도 **입술은 자연 입술색으로 남는다** — 당기는 힘의 상한이 절반이다. 100% 당기면 입술이
+ * 피부색 그대로의 어두운 덩어리(흑백처럼)가 된다. 눈(홍채·렌즈)은 랜드마크로 잡아 아예 손대지 않는다.
  * 머리 모양은 여기서 못 보여준다. 모양을 바꾸는 건 생성이라 적용해야 나온다.
  * 모델 두 개(랜드마크·세그멘테이션)와 wasm은 CDN에서 처음 한 번 받는다. 못 받으면 원본만 보여준다 —
  * 어느 경우에도 화면이 비지 않는다.
@@ -45,6 +47,9 @@ type Face = {
   browR: Point;
   noseBridge: Point;
   noseTip: Point;
+  chin: Point;
+  jawL: Point; // 턱선 중간(턱끝과 턱 각 사이). 화면 왼쪽
+  jawR: Point;
   /** 두 눈 중심 사이 거리. 모든 반지름·이동량의 단위다 */
   unit: number;
   eyeHalfWidth: number;
@@ -54,6 +59,7 @@ type Face = {
 const L = { outer: 33, inner: 133, top: 159, bottom: 145, browOuter: 70, browInner: 107, browMid: 105 };
 const R = { outer: 263, inner: 362, top: 386, bottom: 374, browOuter: 300, browInner: 336, browMid: 334 };
 const NOSE = { bridge: 6, tip: 1 };
+const JAW = { chin: 152, midL: 136, midR: 365 };
 
 type Landmark = { x: number; y: number };
 
@@ -70,6 +76,9 @@ function faceFrom(lm: Landmark[], w: number, h: number): Face {
     browR: mid(mid(p(R.browOuter), p(R.browInner)), p(R.browMid)),
     noseBridge: mid(p(NOSE.bridge), p(NOSE.tip)),
     noseTip: p(NOSE.tip),
+    chin: p(JAW.chin),
+    jawL: p(JAW.midL),
+    jawR: p(JAW.midR),
     unit,
     eyeHalfWidth: Math.abs(p(L.outer).x - p(L.inner).x) / 2 || unit * 0.25,
   };
@@ -127,6 +136,19 @@ function fieldsFor(face: Face, a: Adjustments): Field[] {
     const d = v("nose_tilt") * 0.035 * u;
     fields.push(lift(face.noseTip, 0.35 * u, d));
   }
+  if (v("jaw_vline")) {
+    // 턱선 양쪽을 얼굴 가운데 축 쪽으로(+) 또는 바깥으로(−) 민다. 턱끝 근처가 갸름해진다
+    const d = v("jaw_vline") * 0.045 * u;
+    fields.push(
+      { c: face.jawL, radius: 0.55 * u, move: () => [d, 0] },
+      { c: face.jawR, radius: 0.55 * u, move: () => [-d, 0] },
+    );
+  }
+  if (v("chin_length")) {
+    // 턱끝을 아래로(+) 또는 위로(−). lift는 위가 +라 부호를 뒤집는다
+    const d = v("chin_length") * 0.05 * u;
+    fields.push(lift(face.chin, 0.5 * u, -d));
+  }
   return fields;
 }
 
@@ -179,7 +201,7 @@ function render(
   dst: ImageData,
   fields: Field[],
   hair: { mask: Float32Array; depth: number; tint: Rgb | null; meanLuma: number } | null,
-  skin: { mask: Float32Array; makeup: number; ref: [number, number] } | null,
+  skin: { mask: Float32Array; makeup: number; ref: [number, number]; keepOut: Point[]; keepOutRadius: number } | null,
 ) {
   const { width: w, height: h, data: s } = src;
   const d = dst.data;
@@ -197,6 +219,10 @@ function render(
   const crRef = skin?.ref[1] ?? 0;
   // 색차 거리(0~255 스케일)가 이 아래면 피부 그 자체라 건드리지 않고, 위쪽부터 부드럽게 당긴다
   const DEV_LO = 5, DEV_HI = 18;
+  // 끝까지 내려도 얹힌 색의 절반만 뺀다 — 화장기 없는 입술도 피부보다는 붉다
+  const PULL_MAX = 0.5;
+  const keepOut = skin?.keepOut ?? [];
+  const keepR2 = skin ? skin.keepOutRadius * skin.keepOutRadius : 0;
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       let ox = 0;
@@ -244,7 +270,12 @@ function render(
         }
       }
       if (skin && m > 0) {
-        const a = skin.mask[y * w + x];
+        let a = skin.mask[y * w + x];
+        // 눈(홍채·렌즈)은 화장이 아니다. 눈 중심 반경 안은 손대지 않는다
+        for (const k of keepOut) {
+          const kx = x - k.x, ky = y - k.y;
+          if (kx * kx + ky * ky < keepR2) { a = 0; break; }
+        }
         if (a > 0.02) {
           const Y = luma(r, g, b);
           const cb = -0.1687 * r - 0.3313 * g + 0.5 * b;
@@ -252,7 +283,7 @@ function render(
           const dev = Math.hypot(cb - cbRef, cr - crRef);
           if (dev > DEV_LO) {
             const wgt = Math.min((dev - DEV_LO) / (DEV_HI - DEV_LO), 1);
-            const pull = m * wgt * a;
+            const pull = m * wgt * a * PULL_MAX;
             const ncb = cb + (cbRef - cb) * pull;
             const ncr = cr + (crRef - cr) * pull;
             r = Y + 1.402 * ncr;
@@ -428,7 +459,15 @@ export function FacePreview({
         out,
         face && needsFace(adjustments) ? fieldsFor(face, adjustments) : [],
         hair && (depth || tint) ? { mask: hair, depth, tint, meanLuma: hairLumaRef.current } : null,
-        skin && makeup < 0 ? { mask: skin, makeup, ref: skinChromaRef.current } : null,
+        skin && makeup < 0
+          ? {
+              mask: skin,
+              makeup,
+              ref: skinChromaRef.current,
+              keepOut: face ? [face.eyeL, face.eyeR] : [],
+              keepOutRadius: face ? face.unit * 0.32 : 0,
+            }
+          : null,
       );
       ctx.putImageData(out, 0, 0);
     });

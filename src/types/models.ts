@@ -221,6 +221,8 @@ export const ADJUSTMENT_KEYS = [
   "nose_tilt",
   "brow_tilt",
   "brow_height",
+  "jaw_vline",
+  "chin_length",
 ] as const;
 export type AdjustmentKey = (typeof ADJUSTMENT_KEYS)[number];
 export type Adjustments = Partial<Record<AdjustmentKey, number>>;
@@ -255,6 +257,13 @@ export const ADJUSTMENT_GROUPS: ReadonlyArray<{
     items: [
       { key: "brow_tilt", label: "각도", low: "처지게", high: "올라가게" },
       { key: "brow_height", label: "높낮이", low: "낮게", high: "높게" },
+    ],
+  },
+  {
+    title: "턱 라인",
+    items: [
+      { key: "jaw_vline", label: "V라인", low: "둥글게", high: "갸름하게" },
+      { key: "chin_length", label: "턱 길이", low: "짧게", high: "길게" },
     ],
   },
 ];

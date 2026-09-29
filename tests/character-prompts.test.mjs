@@ -371,6 +371,7 @@ test("slider adjustments become relative instructions and nothing else is touche
   // Makeup only goes lighter. The current look is the ceiling, in line with the identity lock.
   assert.deepEqual(asAdjustments({ makeup: 40 }), {});
   assert.match(editInstruction(traits, traits, options, {}, { makeup: -70 }), /make the makeup strongly lighter and more sheer/);
+  assert.match(editInstruction(traits, traits, options, {}, { jaw_vline: 50, chin_length: -30 }), /jawline clearly slimmer[^.]*V-line, make the chin slightly shorter/);
   // Chips and sliders share one instruction, so one apply is one credit.
   const both = editInstruction(traits, { ...traits, vibe: "vibe2" }, new Map([...options, ["vibe2", { id: "vibe2", kind: "vibe", prompt: "a warm look" }]]), {}, { nose_tilt: 20 });
   assert.match(both, /change the expression to a warm look, turn the nose tip slightly upward/);
