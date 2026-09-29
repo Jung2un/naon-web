@@ -267,15 +267,6 @@ export const ADJUSTMENT_GROUPS: ReadonlyArray<{ title: string; items: ReadonlyAr
     ],
   },
   {
-    title: "메이크업",
-    items: [
-      { key: "makeup_liner", label: "아이라인 · 섀도", low: "연하게", high: "지금처럼", max: 0 },
-      { key: "makeup_mascara", label: "속눈썹 (마스카라)", low: "연하게", high: "지금처럼", max: 0 },
-      { key: "makeup_lip", label: "입술", low: "연하게", high: "지금처럼", max: 0 },
-      { key: "makeup_blush", label: "블러셔", low: "연하게", high: "지금처럼", max: 0 },
-    ],
-  },
-  {
     title: "눈",
     items: [
       { key: "eye_tilt", label: "눈꼬리 각도", low: "내려가게", high: "올라가게" },
@@ -301,6 +292,15 @@ export const ADJUSTMENT_GROUPS: ReadonlyArray<{ title: string; items: ReadonlyAr
     items: [
       { key: "jaw_vline", label: "V라인", low: "둥글게", high: "갸름하게" },
       { key: "chin_length", label: "턱 길이", low: "짧게", high: "길게" },
+    ],
+  },
+  {
+    title: "메이크업",
+    items: [
+      { key: "makeup_liner", label: "아이라인 · 섀도", low: "연하게", high: "지금처럼", max: 0 },
+      { key: "makeup_mascara", label: "속눈썹 (마스카라)", low: "연하게", high: "지금처럼", max: 0 },
+      { key: "makeup_lip", label: "입술", low: "연하게", high: "지금처럼", max: 0 },
+      { key: "makeup_blush", label: "블러셔", low: "연하게", high: "지금처럼", max: 0 },
     ],
   },
 ];

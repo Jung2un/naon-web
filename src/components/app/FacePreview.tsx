@@ -115,8 +115,57 @@ function faceFrom(lm: Landmark[], w: number, h: number): Face {
   };
 }
 
-/** 변위장 하나. 중심에서 radius 안의 픽셀을 `move`가 정하는 만큼 옮긴다(부드러운 종 모양 감쇠). */
-type Field = { c: Point; radius: number; move: (dx: number, dy: number) => [number, number] };
+/**
+ * 변위장 하나. 중심에서 radius 안의 픽셀을 `move`가 정하는 만큼 옮긴다(부드러운 종 모양 감쇠).
+ * `weight`가 있으면 원형 감쇠 대신 그것을 쓴다(눈썹처럼 선을 따라가는 띠). radius는 그때 경계 상자다.
+ */
+type Field = {
+  c: Point;
+  radius: number;
+  move: (dx: number, dy: number) => [number, number];
+  weight?: (x: number, y: number) => number;
+};
+
+/** 눈썹 선의 x에서의 y. 선은 바깥→안쪽 순서라 x로 정렬해 선형 보간한다 */
+function lineYAt(line: Point[], x: number): number {
+  const pts = [...line].sort((a, b) => a.x - b.x);
+  if (x <= pts[0].x) return pts[0].y;
+  for (let i = 0; i + 1 < pts.length; i++) {
+    if (x <= pts[i + 1].x) {
+      const t = (x - pts[i].x) / (pts[i + 1].x - pts[i].x || 1);
+      return pts[i].y + (pts[i + 1].y - pts[i].y) * t;
+    }
+  }
+  return pts[pts.length - 1].y;
+}
+
+/**
+ * 눈썹 두께 — 눈썹 선을 따라가는 좁은 띠 안에서만 세로로 늘이고 줄인다.
+ * 원형 변위장으로 하면 그 원이 눈까지 닿아서 눈이 같이 늘어난다(얄미운 눈·울상). 띠 밖은 0이다.
+ */
+function browThicknessField(line: Point[], unit: number, k: number): Field {
+  const xs = line.map((p) => p.x), ys = line.map((p) => p.y);
+  const c = { x: (Math.min(...xs) + Math.max(...xs)) / 2, y: (Math.min(...ys) + Math.max(...ys)) / 2 };
+  const band = unit * 0.16;
+  const halfLen = (Math.max(...xs) - Math.min(...xs)) / 2 + unit * 0.05;
+  return {
+    c,
+    radius: Math.hypot(halfLen, band) + 1,
+    weight: (x, y) => {
+      // 가로로는 눈썹 길이 안, 세로로는 선에서 band 안. 둘 다 종 모양으로 죽는다
+      const ax = Math.abs(x - c.x) / halfLen;
+      if (ax >= 1) return 0;
+      const dyl = Math.abs(y - lineYAt(line, x)) / band;
+      if (dyl >= 1) return 0;
+      return (1 - ax * ax) * (1 - dyl * dyl) * (1 - dyl * dyl);
+    },
+    move: (dx, dy) => {
+      // 선 위 픽셀은 위로, 아래 픽셀은 아래로(두껍게 +). 선에서 먼 만큼 비례
+      const x = c.x + dx, y = c.y + dy;
+      return [0, (y - lineYAt(line, x)) * k];
+    },
+  };
+}
 
 function fieldsFor(face: Face, a: Adjustments): Field[] {
   const u = face.unit;
@@ -162,9 +211,12 @@ function fieldsFor(face: Face, a: Adjustments): Field[] {
     fields.push(scale(face.eyeL, 0.6 * u, 0, k), scale(face.eyeR, 0.6 * u, 0, k));
   }
   if (v("brow_thickness")) {
-    // 눈썹 선을 중심으로 세로만 늘이고(+) 줄인다(−). 가로는 그대로라 길이는 안 바뀐다
-    const k = v("brow_thickness") * 0.16;
-    fields.push(scale(face.browL, 0.45 * u, 0, k), scale(face.browR, 0.45 * u, 0, k));
+    // 눈썹 선을 따라가는 띠 안에서만 세로로. 눈은 띠 밖이라 안 움직인다
+    const k = v("brow_thickness") * 0.35;
+    fields.push(
+      browThicknessField(face.browLineL, u, k),
+      browThicknessField(face.browLineR, u, k),
+    );
   }
   if (v("brow_height")) {
     const d = v("brow_height") * 0.045 * u;
@@ -409,7 +461,10 @@ function render(
   // 블러셔는 색차가 옅다. 볼 안에서는 문턱을 더 낮춰서 끝까지 내리면 거의 사라지게
   const CHEEK_DEV_LO = 1.2, CHEEK_DEV_HI = 5;
   const LIP_MAX = 0.5; // 화장 안 한 입술도 피부보다 붉다
-  const BLUSH_MAX = 0.92; // 기준이 진짜 피부라 거의 다 되돌려도 피부색이다. 8%는 볼의 자연스러운 결로 남긴다
+  // 블러셔는 **붉은 성분(Cr)**을 빼는 것이지 채도를 빼는 게 아니다. Cb까지 기준으로 밀면 볼이 회갈색(다크서클처럼)이 된다.
+  // Cr 초과분은 최대 75%, Cb 초과분은 30%만 되돌리고, 빠진 만큼 밝기를 아주 살짝(최대 4%) 올려 칙칙함을 상쇄한다
+  const BLUSH_MAX = 1.0;
+  const BLUSH_CR = 0.75, BLUSH_CB = 0.3, BLUSH_LIFT = 0.04;
   const LID_MAX = 0.8;
   const LINER_LIFT_MAX = 0.5; // 라인의 어두움은 절반까지만 — 생속눈썹은 남는다
   const MASCARA_LIFT_MAX = 0.6; // 길어진 속눈썹을 옅게. 피부까지 올리면 눈 위가 허옇게 뜬다
@@ -426,7 +481,8 @@ function render(
         const dy = y - f.c.y;
         const r2 = (dx * dx + dy * dy) / (f.radius * f.radius);
         if (r2 >= 1) continue;
-        const wgt = (1 - r2) * (1 - r2);
+        const wgt = f.weight ? f.weight(x, y) : (1 - r2) * (1 - r2);
+        if (wgt <= 0) continue;
         const [mx, my] = f.move(dx, dy);
         ox += mx * wgt;
         oy += my * wgt;
@@ -476,6 +532,9 @@ function render(
         for (let li = 0; li < brow.lines.length; li++) {
           const line = brow.lines[li];
           if (y > brow.belowLimit[li]) continue;
+          // 바깥 끝점(line[0])을 넘어간 픽셀은 눈썹이 아니다 — 관자놀이 그늘·잔머리가 꼬리로 잡히지 않게
+          const outer = line[0], inner = line[line.length - 1];
+          if (outer.x > inner.x ? x > outer.x + brow.band * 0.3 : x < outer.x - brow.band * 0.3) continue;
           const dist = distToPolyline(x, y, line);
           if (dist >= brow.band) continue;
           // 눈썹 꼬리(바깥 끝)는 관자놀이 머리카락과 붙어 있다. 바깥 1/3에서 띠를 좁힌다
@@ -576,12 +635,16 @@ function render(
             if (otherPull > 0.005 && dev > DEV_LO) {
               pull = Math.min(otherPull, 1) * Math.min((dev - DEV_LO) / (DEV_HI - DEV_LO), 1);
             }
-            if (cheekPull > 0.005 && dev > CHEEK_DEV_LO) {
-              pull = Math.max(pull, Math.min(cheekPull, 1) * Math.min((dev - CHEEK_DEV_LO) / (CHEEK_DEV_HI - CHEEK_DEV_LO), 1));
-            }
             if (pull > 0) {
               ncb = cb + (cbRef - cb) * pull;
               ncr = cr + (crRef - cr) * pull;
+            }
+            if (cheekPull > 0.005 && dev > CHEEK_DEV_LO) {
+              const bp = Math.min(cheekPull, 1) * Math.min((dev - CHEEK_DEV_LO) / (CHEEK_DEV_HI - CHEEK_DEV_LO), 1);
+              // 붉은 쪽(cr > 기준)만 되돌린다. 기준보다 덜 붉은 픽셀은 블러셔가 아니다
+              if (cr > crRef) ncr = Math.min(ncr, cr + (crRef - cr) * bp * BLUSH_CR);
+              ncb = ncb + (cbRef - ncb) * bp * BLUSH_CB;
+              Y = Y * (1 + BLUSH_LIFT * bp);
             }
             // 어두운 라인·속눈썹만 밝기를 올린다. 목표는 피부가 아니라 **피부보다 한참 아래**(속눈썹은 남아야 한다).
             // 밝은 픽셀은 그대로라 눈 주변이 뿌옇게 되지 않는다
