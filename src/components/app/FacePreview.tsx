@@ -255,10 +255,31 @@ function render(
   const t = hair ? hair.depth / ADJUSTMENT_RANGE : 0;
   const satK = 1 + t * 0.45;
   const lumK = 1 - t * 0.22;
-  // 염색 — 머리의 평균 밝기를 고른 색의 밝기로 옮기고, 가닥마다의 명암은 그 비율대로 남긴다.
+  // 염색 — 머리의 평균 밝기를 고른 색의 밝기 쪽으로 옮기고, 가닥마다의 명암은 비율대로 남긴다.
   // (색상만 바꾸고 밝기를 두면 갈색 머리에 검정을 골라도 회색이 된다 — 검정은 색이 아니라 밝기다.)
+  //
+  // 밝은 색(금발·애쉬·핑크 브라운)에서 머리가 플라스틱처럼 빛났던 이유 셋. — 09-29
+  //   1. 어두운 머리의 하이라이트는 평균의 3배쯤이라, 그 비율을 그대로 곱하면 255에서 잘려 하얗게 탄다
+  //      → 비율에 감마(0.6)를 먹이고, 200 위는 무릎을 꺾어 부드럽게 눌러 둔다
+  //   2. 견본색(UI 스와치)은 실제 머리보다 채도가 높다 → 채도를 60%로 낮춘 색을 쓴다
+  //   3. 모든 가닥이 같은 색이 되면 질감이 죽는다 → 원본 픽셀을 20% 남긴다
+  //   평균 밝기 자체도 끝까지 옮기지 않는다(80%). 검정 머리가 완전한 금발이 되는 건 미리보기가 아니라 거짓말이다.
   const tint = hair?.tint ?? null;
   const hairMean = Math.max(hair?.meanLuma ?? 0, 8);
+  const tintLumaRaw = tint ? luma(tint[0], tint[1], tint[2]) : 0;
+  const targetMean = hairMean + (tintLumaRaw - hairMean) * 0.8;
+  // 채도를 낮춘 견본색과 그 밝기. 색의 비율(색상)은 이걸로 정한다
+  const tintSoft: Rgb | null = tint
+    ? [
+        tintLumaRaw + (tint[0] - tintLumaRaw) * 0.6,
+        tintLumaRaw + (tint[1] - tintLumaRaw) * 0.6,
+        tintLumaRaw + (tint[2] - tintLumaRaw) * 0.6,
+      ]
+    : null;
+  const tintSoftLuma = tintSoft ? Math.max(luma(tintSoft[0], tintSoft[1], tintSoft[2]), 8) : 1;
+  const KNEE = 200;
+  const softKnee = (v: number) => (v <= KNEE ? v : KNEE + (255 - KNEE) * (1 - Math.exp(-(v - KNEE) / (255 - KNEE))));
+  const TEXTURE_KEEP = 0.2;
   // 화장 연하게 — 0 ~ 1. 피부 기준 색차(Cb·Cr)에서 멀리 떨어진 픽셀(립·블러셔)만 기준 쪽으로 당긴다. 밝기(Y)는 손대지 않는다.
   const m = skin ? Math.min(Math.max(-skin.makeup, 0), ADJUSTMENT_RANGE) / ADJUSTMENT_RANGE : 0;
   const cbRef = skin?.ref[0] ?? 0;
@@ -307,9 +328,14 @@ function render(
         if (a > 0.02) {
           let lum = luma(r, g, b);
           let hr = r, hg = g, hb = b;
-          if (tint) {
-            const k = lum / hairMean;
-            hr = Math.min(tint[0] * k, 255); hg = Math.min(tint[1] * k, 255); hb = Math.min(tint[2] * k, 255);
+          if (tintSoft) {
+            // 이 가닥이 평균보다 얼마나 밝은가(감마 압축) × 목표 평균 밝기 = 이 가닥의 새 밝기
+            const ratio = Math.pow(Math.max(lum, 1) / hairMean, 0.6);
+            const newLum = softKnee(targetMean * ratio);
+            const k = newLum / tintSoftLuma;
+            hr = Math.min(tintSoft[0] * k, 255); hg = Math.min(tintSoft[1] * k, 255); hb = Math.min(tintSoft[2] * k, 255);
+            // 원본 질감을 조금 남긴다 — 가닥마다의 미세한 색 차이가 진짜 머리를 만든다
+            hr = hr + (r - hr) * TEXTURE_KEEP; hg = hg + (g - hg) * TEXTURE_KEEP; hb = hb + (b - hb) * TEXTURE_KEEP;
             lum = luma(hr, hg, hb);
           }
           const nr = (lum + (hr - lum) * satK) * lumK;
