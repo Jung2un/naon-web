@@ -51,6 +51,8 @@ type Face = {
   noseBridge: Point;
   noseTip: Point;
   chin: Point;
+  cheekL: Point; // 광대 아래 볼. 블러셔 자리
+  cheekR: Point;
   alaL: Point; // 콧볼 바깥. 화면 왼쪽
   alaR: Point;
   upperLip: Point;
@@ -67,6 +69,7 @@ const R = { outer: 263, inner: 362, top: 386, bottom: 374, browOuter: 300, browI
 const NOSE = { bridge: 6, tip: 1 };
 const JAW = { chin: 152, midL: 136, midR: 365 };
 const ALA = { left: 129, right: 358 };
+const CHEEK = { left: 50, right: 280 };
 const UPPER_LIP = 0;
 
 type Landmark = { x: number; y: number };
@@ -85,6 +88,8 @@ function faceFrom(lm: Landmark[], w: number, h: number): Face {
     noseBridge: mid(p(NOSE.bridge), p(NOSE.tip)),
     noseTip: p(NOSE.tip),
     chin: p(JAW.chin),
+    cheekL: p(CHEEK.left),
+    cheekR: p(CHEEK.right),
     alaL: p(ALA.left),
     alaR: p(ALA.right),
     upperLip: p(UPPER_LIP),
@@ -208,18 +213,22 @@ function meanLuma(base: ImageData, mask: Float32Array): number {
 
 function skinReference(base: ImageData, mask: Float32Array): [number, number, number] {
   const s = base.data;
-  let cb = 0, cr = 0, y = 0, n = 0;
+  const samples: [number, number, number][] = [];
   for (let i = 0, p = 0; i < mask.length; i++, p += 4) {
     if (mask[i] < 0.8) continue;
     const r = s[p], g = s[p + 1], b = s[p + 2];
     const Y = 0.299 * r + 0.587 * g + 0.114 * b;
     if (Y < 60 || Y > 235) continue;
-    cb += -0.1687 * r - 0.3313 * g + 0.5 * b;
-    cr += 0.5 * r - 0.4187 * g - 0.0813 * b;
-    y += Y;
-    n++;
+    samples.push([-0.1687 * r - 0.3313 * g + 0.5 * b, 0.5 * r - 0.4187 * g - 0.0813 * b, Y]);
   }
-  return n ? [cb / n, cr / n, y / n] : [0, 0, 0];
+  if (samples.length === 0) return [0, 0, 0];
+  // 붉은 정도(Cr)로 줄 세워 **덜 붉은 절반**만 기준으로 삼는다. 볼 전체가 블러셔면 평균이 분홍으로
+  // 끌려가서 블러셔가 "피부"로 잡히고, 그러면 아무리 내려도 볼이 안 빠진다.
+  samples.sort((a, b) => a[1] - b[1]);
+  const keep = samples.slice(0, Math.max(1, Math.floor(samples.length * 0.5)));
+  let cb = 0, cr = 0, y = 0;
+  for (const [a, b, c] of keep) { cb += a; cr += b; y += c; }
+  return [cb / keep.length, cr / keep.length, y / keep.length];
 }
 function hexToRgb(hex: string): Rgb | null {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
@@ -247,6 +256,8 @@ function render(
     refY: number;
     /** 눈 중심과 눈 반너비. 눈알은 빼고 그 둘레가 눈꺼풀 띠다 */
     eyes: { c: Point; hw: number }[];
+    /** 볼 중심과 반지름. 이 안은 블러셔 자리라 색을 더 세게 뺀다 */
+    cheeks: { c: Point; r: number }[];
   } | null,
 ) {
   const { width: w, height: h, data: s } = src;
@@ -261,19 +272,20 @@ function render(
   // 밝은 색(금발·애쉬·핑크 브라운)에서 머리가 플라스틱처럼 빛났던 이유 셋. — 09-29
   //   1. 어두운 머리의 하이라이트는 평균의 3배쯤이라, 그 비율을 그대로 곱하면 255에서 잘려 하얗게 탄다
   //      → 비율에 감마(0.6)를 먹이고, 200 위는 무릎을 꺾어 부드럽게 눌러 둔다
-  //   2. 견본색(UI 스와치)은 실제 머리보다 채도가 높다 → 채도를 60%로 낮춘 색을 쓴다
+  //   2. 견본색이 실제 머리보다 채도가 높았다 → 이제 견본 자체가 레퍼런스 사진에서 뽑은 색이라(hair-colors.ts)
+  //      살짝만(90%) 누른다
   //   3. 모든 가닥이 같은 색이 되면 질감이 죽는다 → 원본 픽셀을 20% 남긴다
-  //   평균 밝기 자체도 끝까지 옮기지 않는다(80%). 검정 머리가 완전한 금발이 되는 건 미리보기가 아니라 거짓말이다.
+  //   평균 밝기 자체도 끝까지 옮기지 않는다(85%). 검정 머리가 완전한 금발이 되는 건 미리보기가 아니라 거짓말이다.
   const tint = hair?.tint ?? null;
   const hairMean = Math.max(hair?.meanLuma ?? 0, 8);
   const tintLumaRaw = tint ? luma(tint[0], tint[1], tint[2]) : 0;
-  const targetMean = hairMean + (tintLumaRaw - hairMean) * 0.8;
+  const targetMean = hairMean + (tintLumaRaw - hairMean) * 0.85;
   // 채도를 낮춘 견본색과 그 밝기. 색의 비율(색상)은 이걸로 정한다
   const tintSoft: Rgb | null = tint
     ? [
-        tintLumaRaw + (tint[0] - tintLumaRaw) * 0.6,
-        tintLumaRaw + (tint[1] - tintLumaRaw) * 0.6,
-        tintLumaRaw + (tint[2] - tintLumaRaw) * 0.6,
+        tintLumaRaw + (tint[0] - tintLumaRaw) * 0.9,
+        tintLumaRaw + (tint[1] - tintLumaRaw) * 0.9,
+        tintLumaRaw + (tint[2] - tintLumaRaw) * 0.9,
       ]
     : null;
   const tintSoftLuma = tintSoft ? Math.max(luma(tintSoft[0], tintSoft[1], tintSoft[2]), 8) : 1;
@@ -284,10 +296,14 @@ function render(
   const m = skin ? Math.min(Math.max(-skin.makeup, 0), ADJUSTMENT_RANGE) / ADJUSTMENT_RANGE : 0;
   const cbRef = skin?.ref[0] ?? 0;
   const crRef = skin?.ref[1] ?? 0;
-  // 색차 거리(0~255 스케일)가 이 아래면 피부 그 자체라 건드리지 않고, 위쪽부터 부드럽게 당긴다
-  const DEV_LO = 5, DEV_HI = 18;
-  // 끝까지 내려도 얹힌 색의 절반만 뺀다 — 화장기 없는 입술·볼도 피부보다는 붉다
+  // 색차 거리(0~255 스케일)가 이 아래면 피부 그 자체라 건드리지 않고, 위쪽부터 부드럽게 당긴다.
+  // 블러셔는 립보다 훨씬 옅은 색차(5~12)라 문턱이 낮아야 잡힌다
+  const DEV_LO = 2.5, DEV_HI = 12;
+  // 끝까지 내려도 얹힌 색의 절반만 뺀다 — 화장기 없는 입술도 피부보다는 붉다
   const PULL_MAX = 0.5;
+  // 볼(블러셔 자리)은 더 뺀다 — 화장 안 한 볼은 피부색 그대로다
+  const CHEEK_PULL_MAX = 0.85;
+  const cheeks = skin?.cheeks ?? [];
   // 눈꺼풀 띠는 더 뺀다 — 화장 안 한 눈꺼풀은 피부색 그대로다. 라인의 어두움은 절반까지만 올린다
   const LID_PULL_MAX = 0.8;
   const LINER_LIFT_MAX = 0.5;
@@ -348,6 +364,12 @@ function render(
         let a = skin.mask[y * w + x];
         // 눈알(홍채·렌즈)은 화장이 아니다 — 타원 안은 손대지 않는다. 그 둘레 띠는 눈꺼풀(섀도·라인)이다
         let lid = 0;
+        let cheek = 0;
+        for (const k of cheeks) {
+          const dx = x - k.c.x, dy = y - k.c.y;
+          const d2 = (dx * dx + dy * dy) / (k.r * k.r);
+          if (d2 < 1) cheek = Math.max(cheek, (1 - d2) * (1 - d2));
+        }
         for (const e of eyes) {
           const dx = (x - e.c.x) / e.hw;
           const dy = (y - e.c.y) / e.hw;
@@ -367,7 +389,8 @@ function render(
             const wgt = Math.min((dev - DEV_LO) / (DEV_HI - DEV_LO), 1);
             // 눈꺼풀 띠는 마스크가 흔들려도 띠 가중치로 간다(섀도는 피부가 아니라 마스크에서 빠질 수 있다)
             const cover = Math.max(a, lid);
-            const pull = m * wgt * cover * (lid > 0 ? LID_PULL_MAX : PULL_MAX);
+            const strength = lid > 0 ? LID_PULL_MAX : PULL_MAX + (CHEEK_PULL_MAX - PULL_MAX) * cheek;
+            const pull = m * wgt * cover * strength;
             ncb = cb + (cbRef - cb) * pull;
             ncr = cr + (crRef - cr) * pull;
           }
@@ -558,6 +581,12 @@ export function FacePreview({
                 ? [
                     { c: face.eyeL, hw: face.eyeHalfWidth },
                     { c: face.eyeR, hw: face.eyeHalfWidth },
+                  ]
+                : [],
+              cheeks: face
+                ? [
+                    { c: face.cheekL, r: face.unit * 0.5 },
+                    { c: face.cheekR, r: face.unit * 0.5 },
                   ]
                 : [],
             }
