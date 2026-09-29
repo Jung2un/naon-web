@@ -465,7 +465,7 @@ const CHANGE_PHRASE: Record<string, (p: string) => string> = {
 /**
  * 얼굴 세부 조정 — 슬라이더. — 09-29 · docs/기획서.md §3
  *
- * 칩으로는 못 정하는 것(눈꼬리 각도, 콧대 높이, 눈썹 높이, 머리색 강도)을 -2 ~ +2 다섯 칸으로 받는다.
+ * 칩으로는 못 정하는 것(눈꼬리 각도, 콧대 높이, 눈썹 높이, 머리색 강도)을 -100 ~ +100 정수로 받는다.
  * 자유 프롬프트가 아니다 — 값은 정수, 문장은 여기서만 만든다.
  *
  * **지시는 상대값이다.** 편집 모델은 지금 얼굴(base image)을 입력으로 받으니, 저장된 값과
@@ -483,9 +483,11 @@ export const ADJUSTMENT_KEYS = [
 ] as const;
 export type AdjustmentKey = (typeof ADJUSTMENT_KEYS)[number];
 export type Adjustments = Partial<Record<AdjustmentKey, number>>;
-export const ADJUSTMENT_RANGE = 2;
+export const ADJUSTMENT_RANGE = 100;
+/** 이보다 작은 차이는 "바뀐 것"으로 안 친다 — 손잡이를 살짝 건드린 것에 크레딧을 받지 않는다. */
+export const ADJUSTMENT_DEAD_ZONE = 10;
 
-/** 받은 값 중 우리가 아는 키의 정수(-2~2)만 남긴다. 0은 "그대로"라 버린다. */
+/** 받은 값 중 우리가 아는 키의 정수(-100~100)만 남긴다. 0은 "그대로"라 버린다. */
 export function asAdjustments(value: unknown): Adjustments {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   const out: Adjustments = {};
@@ -498,10 +500,10 @@ export function asAdjustments(value: unknown): Adjustments {
   return out;
 }
 
-/** 얼마나 움직이는가. 차이 1칸은 "조금", 2칸은 "확실히", 그 이상은 "크게". */
+/** 얼마나 움직이는가. 차이가 범위의 1/3까지면 "조금", 2/3까지면 "확실히", 그 이상은 "크게". */
 function degree(delta: number): string {
-  const steps = Math.abs(delta);
-  return steps >= 3 ? "strongly" : steps === 2 ? "clearly" : "slightly";
+  const steps = Math.abs(delta) / ADJUSTMENT_RANGE;
+  return steps > 2 / 3 ? "strongly" : steps > 1 / 3 ? "clearly" : "slightly";
 }
 
 /**
@@ -545,7 +547,7 @@ export function adjustmentPhrases(before: Adjustments, after: Adjustments): stri
   const phrases: string[] = [];
   for (const key of ADJUSTMENT_KEYS) {
     const delta = (after[key] ?? 0) - (before[key] ?? 0);
-    if (delta === 0) continue;
+    if (Math.abs(delta) < ADJUSTMENT_DEAD_ZONE) continue;
     const phrase = ADJUST_PHRASE[key];
     phrases.push(delta > 0 ? phrase.up(degree(delta)) : phrase.down(degree(delta)));
   }

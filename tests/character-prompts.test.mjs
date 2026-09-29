@@ -357,17 +357,19 @@ test("a selected face type defines the face; candidates differ by how strongly i
 
 test("slider adjustments become relative instructions and nothing else is touched", () => {
   const { traits, options } = fixture();
-  assert.equal(editInstruction(traits, traits, options, { eye_tilt: 1 }, { eye_tilt: 1 }), null);
-  const text = editInstruction(traits, traits, options, { eye_tilt: 1, brow_height: 2 }, { eye_tilt: 2, brow_height: 0, hair_color_depth: -2 });
+  assert.equal(editInstruction(traits, traits, options, { eye_tilt: 50 }, { eye_tilt: 50 }), null);
+  // A nudge inside the dead zone is not a change, so it cannot cost a credit.
+  assert.equal(editInstruction(traits, traits, options, {}, { eye_tilt: 6 }), null);
+  const text = editInstruction(traits, traits, options, { eye_tilt: 40, brow_height: 60 }, { eye_tilt: 70, brow_height: 0, hair_color_depth: -100 });
   assert.match(text, /tilt the outer corners of the eyes slightly upward/);
   assert.match(text, /set the eyebrows clearly lower/);
-  assert.match(text, /hair color clearly lighter and softer, keeping the same hue/);
+  assert.match(text, /hair color strongly lighter and softer, keeping the same hue/);
   assert.match(text, /leave every other part of the face exactly as it is/);
   assert.match(text, /keep the same person/);
   assert.doesNotMatch(text, /change the hairstyle/);
-  assert.deepEqual(asAdjustments({ eye_tilt: 2, nose_height: 0, brow_tilt: 5, eye_height: 1.5, junk: 1 }), { eye_tilt: 2 });
+  assert.deepEqual(asAdjustments({ eye_tilt: 2, nose_height: 0, brow_tilt: 500, eye_height: 1.5, junk: 1 }), { eye_tilt: 2 });
   // Chips and sliders share one instruction, so one apply is one credit.
-  const both = editInstruction(traits, { ...traits, vibe: "vibe2" }, new Map([...options, ["vibe2", { id: "vibe2", kind: "vibe", prompt: "a warm look" }]]), {}, { nose_tilt: 1 });
+  const both = editInstruction(traits, { ...traits, vibe: "vibe2" }, new Map([...options, ["vibe2", { id: "vibe2", kind: "vibe", prompt: "a warm look" }]]), {}, { nose_tilt: 20 });
   assert.match(both, /change the expression to a warm look, turn the nose tip slightly upward/);
 });
 

@@ -8,7 +8,7 @@ import { Check } from "lucide-react";
 import { Stepper, scrollToStep, stepAnchor } from "./Stepper";
 import { ToneTile } from "./ToneTile";
 import { TraitRow } from "./TraitChip";
-import { AdjustmentPanel } from "./AdjustmentSlider";
+import { AdjustmentDock } from "./AdjustmentSlider";
 import { FacePreview } from "./FacePreview";
 import { ActionBar } from "./ActionBar";
 import { SectionHeader } from "./PageHeader";
@@ -47,7 +47,8 @@ import {
  *   2단계 후보 고르기 (stage=draft)    고르는 건 공짜, 다시 뽑기는 1크레딧
  *   3단계 다듬기      (stage=refining) 수정 1회 1크레딧, 되돌리기는 공짜
  *                     칩(머리·머리색·체형·분위기) + 슬라이더(머리색 강도·눈·코·눈썹). 한 번 적용이 1크레딧
- *                     슬라이더는 그 자리에서 미리 보인다(FacePreview) — 진짜 결과는 적용해야 나온다
+ *                     슬라이더는 오른쪽 아래 독(AdjustmentDock)에 있고 그 자리에서 미리 보인다(FacePreview)
+ *                     — 진짜 결과는 적용해야 나온다
  *   4단계 완성        (stage=building) 3방향 2크레딧
  *
  * 상태는 여기 들고 있지 않는다. 서버 컴포넌트가 읽어 내려주고, 바뀌면 Realtime이
@@ -385,29 +386,9 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
               ))}
             </div>
 
-            {/* 세부 조정 — 칩으로는 못 정하는 것. 움직이면 위의 얼굴이 바로 따라온다 */}
-            <div className="mt-8">
-              <div className="flex items-center gap-2">
-                <MicroLabel>세부 조정</MicroLabel>
-              </div>
-              <p className="mt-1 text-caption text-muted">
-                움직이면 지금 얼굴에 바로 미리 보여요. 가운데가 &quot;그대로&quot;예요.
-              </p>
-              <div className="mt-3">
-                <AdjustmentPanel
-                  value={adjust}
-                  disabled={working}
-                  onChange={(key, next) =>
-                    setAdjust((prev) => {
-                      const copy = { ...prev };
-                      if (next === 0) delete copy[key];
-                      else copy[key] = next;
-                      return copy;
-                    })
-                  }
-                />
-              </div>
-            </div>
+            <p className="mt-6 text-caption text-muted">
+              눈·코·눈썹의 각도와 높낮이, 머리색 강도는 오른쪽 아래 &quot;세부 조정&quot;에서 슬라이더로 고쳐요.
+            </p>
 
             <div className="mt-6 flex flex-wrap items-center gap-3">
               <Button
@@ -479,6 +460,28 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
             }
           />
         </>
+      )}
+
+      {/* 세부 조정 독 — 오른쪽 아래에 떠 있다. 다듬기 단계에서만 */}
+      {character.stage === "refining" && (
+        <AdjustmentDock
+          src={working ? null : character.base_image_url}
+          value={adjust}
+          disabled={working || Boolean(pending)}
+          dirty={!sameAdjustments(adjust, serverAdjust)}
+          pending={pending === "refine"}
+          cost={CHARACTER_COST.refine}
+          onChange={(key, next) =>
+            setAdjust((prev) => {
+              const copy = { ...prev };
+              if (next === 0) delete copy[key];
+              else copy[key] = next;
+              return copy;
+            })
+          }
+          onReset={() => setAdjust({})}
+          onApply={refine}
+        />
       )}
 
       {character.stage === "building" && (

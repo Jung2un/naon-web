@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import { ADJUSTMENT_KEYS, type Adjustments } from "@/types/models";
+import { ADJUSTMENT_KEYS, ADJUSTMENT_RANGE, type Adjustments } from "@/types/models";
 
 /**
  * 얼굴 세부 조정의 **즉시 미리보기.** — docs/기획서.md §3
@@ -11,17 +11,23 @@ import { ADJUSTMENT_KEYS, type Adjustments } from "@/types/models";
  * 30초~2분)이 만들고, 여기는 **방향을 미리 보는 근사치**다 — 이미지 모델을 슬라이더마다 돌릴 수는 없다.
  *
  * 어떻게: 브라우저에서 얼굴 랜드마크(MediaPipe Face Landmarker)를 한 번 찾고, 눈·코·눈썹 자리에
- * 작은 변위장을 얹어 캔버스에서 픽셀을 다시 샘플링한다(리퀴파이). 머리색 강도는 CSS 필터다.
- * 랜드마크 모델(약 3MB)과 wasm은 CDN에서 처음 한 번 받는다. 못 받으면 머리색 필터만 남고,
- * 이미지를 캔버스에 못 올리면(CORS) 필터 없는 원본만 보여준다 — 어느 경우에도 화면이 비지 않는다.
+ * 작은 변위장을 얹어 캔버스에서 픽셀을 다시 샘플링한다(리퀴파이).
+ * 머리색 강도는 **머리카락 마스크 안에서만** 색을 바꾼다(MediaPipe Image Segmenter, hair 클래스).
+ * 전체 필터로 하면 사진 전체의 대비가 같이 움직여서 "머리색"이 아니라 "사진 보정"이 된다.
+ * 모델 두 개(랜드마크·세그멘테이션)와 wasm은 CDN에서 처음 한 번 받는다. 못 받으면 원본만 보여준다 —
+ * 어느 경우에도 화면이 비지 않는다.
  *
  * 서버가 만드는 문장(_shared/prompt.ts의 ADJUST_PHRASE)과 **방향이 같아야 한다.**
- * +는 위로·진하게·높게, −는 아래로·연하게·낮게.
+ * +는 위로·진하게·높게, −는 아래로·연하게·낮게. 값은 -100 ~ +100이다.
  */
 
 const WASM_BASE = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm";
-const MODEL_URL =
+const LANDMARK_MODEL =
   "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
+/** 셀피 다중 클래스 — 0 배경 · 1 머리카락 · 2 몸 피부 · 3 얼굴 피부 · 4 옷 · 5 기타 */
+const SEGMENT_MODEL =
+  "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_multiclass_256x256/float32/1/selfie_multiclass_256x256.tflite";
+const HAIR_CLASS = 1;
 /** 미리보기 캔버스 너비. 3:4라 높이는 4/3배. 픽셀 루프가 도는 크기라 너무 크면 슬라이더가 끊긴다. */
 const PREVIEW_WIDTH = 420;
 
@@ -69,7 +75,8 @@ type Field = { c: Point; radius: number; move: (dx: number, dy: number) => [numb
 
 function fieldsFor(face: Face, a: Adjustments): Field[] {
   const u = face.unit;
-  const v = (key: keyof Adjustments) => a[key] ?? 0;
+  // -100~100을 -2~2 스케일로. 끝까지 밀면 두 칸 움직인 만큼이다
+  const v = (key: keyof Adjustments) => ((a[key] ?? 0) / ADJUSTMENT_RANGE) * 2;
   const fields: Field[] = [];
 
   const lift = (c: Point, radius: number, amount: number): Field => ({
@@ -118,10 +125,22 @@ function fieldsFor(face: Face, a: Adjustments): Field[] {
   return fields;
 }
 
-/** 출력 픽셀마다 "어디서 가져올지"를 정해 다시 샘플링한다(역방향 매핑, 쌍선형). */
-function warp(src: ImageData, dst: ImageData, fields: Field[]) {
+/**
+ * 출력 픽셀마다 "어디서 가져올지"를 정해 다시 샘플링한다(역방향 매핑, 쌍선형).
+ * 같은 루프에서 머리카락 마스크 안의 픽셀에만 색 강도를 건다 — 두 번 돌지 않게.
+ */
+function render(
+  src: ImageData,
+  dst: ImageData,
+  fields: Field[],
+  hair: { mask: Float32Array; depth: number } | null,
+) {
   const { width: w, height: h, data: s } = src;
   const d = dst.data;
+  // 머리색 강도. +면 진하게(채도 ↑·밝기 ↓), −면 연하게. 끝까지 밀어도 머리가 검게 뭉개지지 않는 크기.
+  const t = hair ? hair.depth / ADJUSTMENT_RANGE : 0;
+  const satK = 1 + t * 0.45;
+  const lumK = 1 - t * 0.22;
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       let ox = 0;
@@ -137,36 +156,60 @@ function warp(src: ImageData, dst: ImageData, fields: Field[]) {
         oy += my * wgt;
       }
       const o = (y * w + x) * 4;
+      let r: number, g: number, b: number;
       if (ox === 0 && oy === 0) {
-        const i = o;
-        d[o] = s[i]; d[o + 1] = s[i + 1]; d[o + 2] = s[i + 2]; d[o + 3] = s[i + 3];
-        continue;
-      }
-      // 화면에서 +로 움직여 보이려면 그 자리엔 −쪽 픽셀을 가져온다
-      const sx = Math.min(Math.max(x - ox, 0), w - 1.001);
-      const sy = Math.min(Math.max(y - oy, 0), h - 1.001);
-      const x0 = sx | 0, y0 = sy | 0;
-      const fx = sx - x0, fy = sy - y0;
-      const i00 = (y0 * w + x0) * 4, i10 = i00 + 4, i01 = i00 + w * 4, i11 = i01 + 4;
-      for (let c = 0; c < 4; c++) {
-        d[o + c] =
+        r = s[o]; g = s[o + 1]; b = s[o + 2]; d[o + 3] = s[o + 3];
+      } else {
+        // 화면에서 +로 움직여 보이려면 그 자리엔 −쪽 픽셀을 가져온다
+        const sx = Math.min(Math.max(x - ox, 0), w - 1.001);
+        const sy = Math.min(Math.max(y - oy, 0), h - 1.001);
+        const x0 = sx | 0, y0 = sy | 0;
+        const fx = sx - x0, fy = sy - y0;
+        const i00 = (y0 * w + x0) * 4, i10 = i00 + 4, i01 = i00 + w * 4, i11 = i01 + 4;
+        const mix = (c: number) =>
           s[i00 + c] * (1 - fx) * (1 - fy) + s[i10 + c] * fx * (1 - fy) +
           s[i01 + c] * (1 - fx) * fy + s[i11 + c] * fx * fy;
+        r = mix(0); g = mix(1); b = mix(2); d[o + 3] = mix(3);
       }
+      if (hair && t !== 0) {
+        const a = hair.mask[y * w + x];
+        if (a > 0.02) {
+          const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+          const nr = (lum + (r - lum) * satK) * lumK;
+          const ng = (lum + (g - lum) * satK) * lumK;
+          const nb = (lum + (b - lum) * satK) * lumK;
+          r = r + (nr - r) * a; g = g + (ng - g) * a; b = b + (nb - b) * a;
+        }
+      }
+      d[o] = r; d[o + 1] = g; d[o + 2] = b;
     }
   }
 }
 
-/** 머리색 강도. 캔버스 전체에 걸리는 근사치라 피부도 아주 조금 같이 움직인다. */
-function hairFilter(a: Adjustments): string {
-  const v = a.hair_color_depth ?? 0;
-  if (!v) return "none";
-  return `saturate(${(1 + v * 0.18).toFixed(2)}) brightness(${(1 - v * 0.06).toFixed(2)})`;
+/** 세그멘테이션 결과(256×256 신뢰도)를 캔버스 크기로 늘린다. 경계는 쌍선형이라 저절로 부드럽다. */
+function resizeMask(src: Float32Array, sw: number, sh: number, w: number, h: number): Float32Array {
+  const out = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) {
+    const sy = Math.min((y / h) * sh, sh - 1.001);
+    const y0 = sy | 0, fy = sy - y0;
+    for (let x = 0; x < w; x++) {
+      const sx = Math.min((x / w) * sw, sw - 1.001);
+      const x0 = sx | 0, fx = sx - x0;
+      const i = y0 * sw + x0;
+      out[y * w + x] =
+        src[i] * (1 - fx) * (1 - fy) + src[i + 1] * fx * (1 - fy) +
+        src[i + sw] * (1 - fx) * fy + src[i + sw + 1] * fx * fy;
+    }
+  }
+  return out;
 }
 
-const NO_FACE_FIELDS = new Set<keyof Adjustments>(["hair_color_depth"]);
+const NO_FACE_KEYS = new Set<keyof Adjustments>(["hair_color_depth"]);
 function needsFace(a: Adjustments): boolean {
-  return ADJUSTMENT_KEYS.some((key) => !NO_FACE_FIELDS.has(key) && (a[key] ?? 0) !== 0);
+  return ADJUSTMENT_KEYS.some((key) => !NO_FACE_KEYS.has(key) && (a[key] ?? 0) !== 0);
+}
+function idle(a: Adjustments): boolean {
+  return ADJUSTMENT_KEYS.every((key) => (a[key] ?? 0) === 0);
 }
 
 type Status = "loading" | "ready" | "no-face" | "no-canvas";
@@ -183,16 +226,18 @@ export function FacePreview({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const baseRef = useRef<ImageData | null>(null);
   const faceRef = useRef<Face | null>(null);
+  const hairRef = useRef<Float32Array | null>(null);
   const frameRef = useRef(0);
   // 상태는 src에 매인다. src가 바뀌면 그 자체로 "loading"이라 effect 안에서 setState를 부를 일이 없다.
   const [state, setState] = useState<{ src: string; status: Status }>({ src, status: "loading" });
   const status: Status = state.src === src ? state.status : "loading";
 
-  // 이미지 한 번 올리고, 랜드마크 한 번 찾는다. src가 바뀔 때(수정이 끝났을 때)만 다시 한다.
+  // 이미지 한 번 올리고, 랜드마크·머리카락 마스크를 한 번 찾는다. src가 바뀔 때(수정이 끝났을 때)만 다시 한다.
   useEffect(() => {
     let cancelled = false;
     baseRef.current = null;
     faceRef.current = null;
+    hairRef.current = null;
     const setStatus = (next: Status) => setState({ src, status: next });
 
     const image = new Image();
@@ -216,15 +261,36 @@ export function FacePreview({
         return;
       }
       try {
-        const { FaceLandmarker, FilesetResolver } = await import("@mediapipe/tasks-vision");
+        const { FaceLandmarker, ImageSegmenter, FilesetResolver } = await import("@mediapipe/tasks-vision");
         const fileset = await FilesetResolver.forVisionTasks(WASM_BASE);
-        const landmarker = await FaceLandmarker.createFromOptions(fileset, {
-          baseOptions: { modelAssetPath: MODEL_URL },
-          runningMode: "IMAGE",
-          numFaces: 1,
-        });
+        const [landmarker, segmenter] = await Promise.all([
+          FaceLandmarker.createFromOptions(fileset, {
+            baseOptions: { modelAssetPath: LANDMARK_MODEL },
+            runningMode: "IMAGE",
+            numFaces: 1,
+          }),
+          ImageSegmenter.createFromOptions(fileset, {
+            baseOptions: { modelAssetPath: SEGMENT_MODEL },
+            runningMode: "IMAGE",
+            outputConfidenceMasks: true,
+            outputCategoryMask: false,
+          }),
+        ]);
         const result = landmarker.detect(image);
         landmarker.close();
+        const seg = segmenter.segment(image);
+        const hairMask = seg.confidenceMasks?.[HAIR_CLASS];
+        if (hairMask) {
+          hairRef.current = resizeMask(
+            Float32Array.from(hairMask.getAsFloat32Array()),
+            hairMask.width,
+            hairMask.height,
+            w,
+            h,
+          );
+        }
+        seg.close();
+        segmenter.close();
         const lm = result.faceLandmarks[0];
         if (cancelled) return;
         if (!lm) {
@@ -234,7 +300,7 @@ export function FacePreview({
         faceRef.current = faceFrom(lm, w, h);
         setStatus("ready");
       } catch (e) {
-        console.warn("얼굴 미리보기: 랜드마크를 못 찾았어요", e);
+        console.warn("얼굴 미리보기: 얼굴을 못 찾았어요", e);
         if (!cancelled) setStatus("no-face");
       }
     };
@@ -256,25 +322,32 @@ export function FacePreview({
       const ctx = canvas?.getContext("2d", { willReadFrequently: true });
       if (!canvas || !base || !ctx) return;
       const face = faceRef.current;
-      if (!face || !needsFace(adjustments)) {
+      const hair = hairRef.current;
+      const depth = adjustments.hair_color_depth ?? 0;
+      if (idle(adjustments) || (!face && !hair)) {
         ctx.putImageData(base, 0, 0);
         return;
       }
       const out = ctx.createImageData(base.width, base.height);
-      warp(base, out, fieldsFor(face, adjustments));
+      render(
+        base,
+        out,
+        face && needsFace(adjustments) ? fieldsFor(face, adjustments) : [],
+        hair && depth ? { mask: hair, depth } : null,
+      );
       ctx.putImageData(out, 0, 0);
     });
     return () => cancelAnimationFrame(frameRef.current);
   }, [adjustments, status]);
 
-  const filter = status === "no-canvas" ? "none" : hairFilter(adjustments);
+  const wanted = !idle(adjustments);
+  const unavailable = status === "no-face" || status === "no-canvas";
 
   return (
     <div className={cn("relative", className)}>
       <canvas
         ref={canvasRef}
         className="block size-full object-cover"
-        style={{ filter }}
         aria-label="얼굴 조정 미리보기"
         role="img"
       />
@@ -283,7 +356,7 @@ export function FacePreview({
         // eslint-disable-next-line @next/next/no-img-element
         <img src={src} alt="" className="absolute inset-0 size-full object-cover" />
       )}
-      {(status === "no-face" || status === "no-canvas") && needsFace(adjustments) && (
+      {unavailable && wanted && (
         <p className="absolute inset-x-2 bottom-2 rounded-[8px] bg-scrim px-2 py-1 text-center text-[11px] leading-snug text-on-dark">
           미리보기를 준비하지 못했어요. 적용하면 결과에는 반영돼요.
         </p>

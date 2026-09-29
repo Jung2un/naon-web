@@ -204,7 +204,8 @@ export const REFINABLE_TRAIT_KINDS: readonly OptionKind[] = [
 /**
  * 얼굴 세부 조정 — 다듬기의 슬라이더. — 기획서 §3
  *
- * 칩으로 못 정하는 것(눈꼬리 각도, 콧대 높이, 눈썹 높이, 머리색 강도)을 -2 ~ +2 다섯 칸으로 고친다.
+ * 칩으로 못 정하는 것(눈꼬리 각도, 콧대 높이, 눈썹 높이, 머리색 강도)을 -100 ~ +100 연속값으로 고친다.
+ * 숫자는 화면에 안 보인다 — 양 끝 라벨과 미리보기가 값의 전부다.
  * 자유 프롬프트가 아니다. 키·범위는 `_shared/prompt.ts`의 ADJUSTMENT_KEYS와 같아야 한다.
  * 문장은 서버가 만든다 — 화면은 정수만 보낸다.
  */
@@ -219,7 +220,7 @@ export const ADJUSTMENT_KEYS = [
 ] as const;
 export type AdjustmentKey = (typeof ADJUSTMENT_KEYS)[number];
 export type Adjustments = Partial<Record<AdjustmentKey, number>>;
-export const ADJUSTMENT_RANGE = 2;
+export const ADJUSTMENT_RANGE = 100;
 
 /** 화면에 나오는 순서와 문구. `low`·`high`는 슬라이더 양 끝 라벨이다. */
 export const ADJUSTMENT_GROUPS: ReadonlyArray<{
