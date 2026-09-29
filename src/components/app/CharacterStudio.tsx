@@ -8,6 +8,8 @@ import { Check } from "lucide-react";
 import { Stepper, scrollToStep, stepAnchor } from "./Stepper";
 import { ToneTile } from "./ToneTile";
 import { TraitRow } from "./TraitChip";
+import { AdjustmentPanel } from "./AdjustmentSlider";
+import { FacePreview } from "./FacePreview";
 import { ActionBar } from "./ActionBar";
 import { SectionHeader } from "./PageHeader";
 import { Button } from "@/components/ui/button";
@@ -30,7 +32,10 @@ import {
   REF_ANGLES,
   STAGE_STEP,
   TRAIT_DISPLAY_KINDS,
+  asAdjustments,
   asTraits,
+  sameAdjustments,
+  type Adjustments,
   type CharacterBuild,
   type CharacterImageWithUrl,
   type Traits,
@@ -41,6 +46,8 @@ import {
  *
  *   2단계 후보 고르기 (stage=draft)    고르는 건 공짜, 다시 뽑기는 1크레딧
  *   3단계 다듬기      (stage=refining) 수정 1회 1크레딧, 되돌리기는 공짜
+ *                     칩(머리·머리색·체형·분위기) + 슬라이더(머리색 강도·눈·코·눈썹). 한 번 적용이 1크레딧
+ *                     슬라이더는 그 자리에서 미리 보인다(FacePreview) — 진짜 결과는 적용해야 나온다
  *   4단계 완성        (stage=building) 3방향 2크레딧
  *
  * 상태는 여기 들고 있지 않는다. 서버 컴포넌트가 읽어 내려주고, 바뀌면 Realtime이
@@ -50,6 +57,7 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
   const router = useRouter();
   const requestLock = useRef(false);
   const serverTraits = asTraits(character.traits);
+  const serverAdjust = asAdjustments(character.adjustments);
 
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -60,12 +68,14 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
   );
   const nameReady = name.trim().length > 0 && name.trim().length <= 20;
   const [traits, setTraits] = useState<Traits>(serverTraits);
+  const [adjust, setAdjust] = useState<Adjustments>(serverAdjust);
   const [syncedAt, setSyncedAt] = useState(character.updated_at);
 
-  // 서버에서 캐릭터가 바뀌면(수정이 끝났다든가) 칩도 그 값으로 돌아온다.
+  // 서버에서 캐릭터가 바뀌면(수정이 끝났다든가) 칩과 슬라이더도 그 값으로 돌아온다.
   if (character.updated_at !== syncedAt) {
     setSyncedAt(character.updated_at);
     setTraits(serverTraits);
+    setAdjust(serverAdjust);
     setToneId(character.tone_id ?? "");
   }
 
@@ -82,9 +92,10 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
       (image.kind === "candidate" || image.kind === "refined"),
   );
 
-  const changed = REFINABLE_TRAIT_KINDS.some(
-    (kind) => traits[kind] && traits[kind] !== serverTraits[kind],
-  );
+  const changed =
+    REFINABLE_TRAIT_KINDS.some(
+      (kind) => traits[kind] && traits[kind] !== serverTraits[kind],
+    ) || !sameAdjustments(adjust, serverAdjust);
 
   async function run(
     action: string,
@@ -140,6 +151,7 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
       await invokeFunction(supabase, "refine-character", {
         character_id: character.id,
         traits,
+        adjustments: adjust,
       });
     });
 
@@ -156,7 +168,9 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
     if (retryKind === "view") return build();
     return run("refine", async (supabase) => {
       await invokeFunction(supabase, "refine-character", {
-        character_id: character.id, traits: asTraits(newestImage?.traits),
+        character_id: character.id,
+        traits: asTraits(newestImage?.traits),
+        adjustments: asAdjustments(newestImage?.adjustments),
       });
     });
   };
@@ -218,8 +232,8 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
           <section id={stepAnchor(0)} className="mt-10 scroll-mt-20">
             <SectionHeader title="설정 바꿔서 다시 뽑기" />
             <p className="text-caption text-muted">
-              톤·성별·나이대는 여기서만 바꿀 수 있어요. 고른 얼굴을 다듬는 단계에서는
-              머리·머리색·체형·분위기만 바뀌어요.
+              톤·성별·얼굴상·나이대는 여기서만 바꿀 수 있어요. 고른 얼굴을 다듬는 단계에서는
+              머리·머리색·체형·분위기와 눈·코·눈썹의 세부만 바뀌어요.
             </p>
 
             <div className="mt-4">
@@ -293,20 +307,23 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
                 {working ? (
                   <Skeleton className="size-full rounded-none" />
                 ) : character.base_image_url ? (
-                  <Image
+                  // 슬라이더 값이 그대로 이 그림에 얹혀 보인다. 적용하면 진짜 결과로 바뀐다.
+                  <FacePreview
                     src={character.base_image_url}
-                    alt=""
-                    fill
-                    sizes="260px"
-                    className="object-cover"
+                    adjustments={adjust}
+                    className="size-full"
                   />
                 ) : null}
               </div>
-              {working && (
+              {working ? (
                 <p className="mt-2 text-caption text-muted">
                   수정을 반영하는 중이에요. 30초~2분 걸려요.
                 </p>
-              )}
+              ) : !sameAdjustments(adjust, serverAdjust) ? (
+                <p className="mt-2 text-caption text-muted">
+                  미리보기예요. 아래 &quot;이 수정 적용&quot;을 누르면 진짜 결과가 나와요.
+                </p>
+              ) : null}
             </div>
 
             <div className="min-w-0 flex-1">
@@ -366,6 +383,30 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
                   onChange={(id) => setTraits((prev) => ({ ...prev, [kind]: id }))}
                 />
               ))}
+            </div>
+
+            {/* 세부 조정 — 칩으로는 못 정하는 것. 움직이면 위의 얼굴이 바로 따라온다 */}
+            <div className="mt-8">
+              <div className="flex items-center gap-2">
+                <MicroLabel>세부 조정</MicroLabel>
+              </div>
+              <p className="mt-1 text-caption text-muted">
+                움직이면 지금 얼굴에 바로 미리 보여요. 가운데가 &quot;그대로&quot;예요.
+              </p>
+              <div className="mt-3">
+                <AdjustmentPanel
+                  value={adjust}
+                  disabled={working}
+                  onChange={(key, next) =>
+                    setAdjust((prev) => {
+                      const copy = { ...prev };
+                      if (next === 0) delete copy[key];
+                      else copy[key] = next;
+                      return copy;
+                    })
+                  }
+                />
+              </div>
             </div>
 
             <div className="mt-6 flex flex-wrap items-center gap-3">

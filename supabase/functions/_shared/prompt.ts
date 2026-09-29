@@ -16,7 +16,8 @@ export type OptionKind =
   | "hair"
   | "hair_color"
   | "body"
-  | "vibe";
+  | "vibe"
+  | "face";
 
 export type Option = {
   id: string;
@@ -34,6 +35,7 @@ export type Traits = Partial<Record<OptionKind, string>>;
 export const TRAIT_KINDS: OptionKind[] = [
   "gender",
   "age",
+  "face",
   "hair",
   "hair_color",
   "body",
@@ -45,7 +47,8 @@ export const REQUIRED_TRAITS: OptionKind[] = ["gender", "age"];
 
 /**
  * 다듬기에서 바꿀 수 있는 것.
- * 성별·나이대·톤은 편집으로 못 바꾼다 — 그건 다른 사람을 만드는 일이라 다시 뽑아야 한다.
+ * 성별·나이대·얼굴상·톤은 편집으로 못 바꾼다 — 그건 다른 사람을 만드는 일이라 다시 뽑아야 한다.
+ * 얼굴의 세부(눈·코·눈썹의 각도와 높낮이, 머리색 강도)는 칩이 아니라 슬라이더다 — `Adjustments`.
  */
 export const REFINABLE_TRAITS: OptionKind[] = [
   "hair",
@@ -170,7 +173,7 @@ const GENDER_PRESENTATION: Record<string, Presentation> = {
     features:
       "Natural Korean features with distinctive, camera-ready bone structure and her own individual character. Real human anatomy, not app-filter geometry: no shrunken jaw, no facial structure melted away by smoothing.",
     grooming:
-      "Korean makeup in a cool, low-saturation palette — cool rose, mauve, dusty pink and soft taupe, never coral, peach or orange. Keep the whole face barely-there: the impression is someone who simply looks good, not someone wearing a full face of makeup. Definition goes on the eyes and almost nowhere else — a very thin tightlined waterline in grey-brown rather than black, densely curled upper lashes and lightly defined lower lashes, the faintest wash of mauve-taupe on the lid carrying a soft sheen but almost no visible colour, and a softly highlighted under-eye ridge (aegyo-sal) so the eye reads full and round. Blush is almost imperceptible: a whisper of desaturated cool pink in a narrow band just under the eyes — never a coloured cheek, never a sweep across the cheekbones, never a flushed face. Soft ash-brown brows with visible hairs, light and never drawn on or dark. A dewy skin-like base and a sheer cool pink lip tint with a natural gloss, not a strong lip colour. Salon-cut hair that reads healthy and glossy and has clearly been styled on purpose, not left unbrushed. If in doubt, apply less.",
+      "Korean makeup in a cool, low-saturation palette — cool rose, mauve, dusty pink and soft taupe, never coral, peach or orange. Keep the whole face barely-there: the impression is someone who simply looks good, not someone wearing a full face of makeup. Definition goes on the eyes and almost nowhere else — a very thin tightlined waterline in grey-brown rather than black, densely curled upper lashes and lightly defined lower lashes, the faintest wash of mauve-taupe on the lid carrying a soft sheen but almost no visible colour, and a softly highlighted under-eye ridge (aegyo-sal) so the eye reads full and round. Blush is almost imperceptible: a whisper of desaturated cool pink in a narrow band just under the eyes — never a coloured cheek, never a sweep across the cheekbones, never a flushed face. Soft ash-brown brows with visible hairs, light and never drawn on or dark. A dewy skin-like base and a sheer cool pink lip tint with a natural gloss, not a strong lip colour. Salon-cut hair that reads healthy and has clearly been styled on purpose, not left unbrushed — with the soft natural sheen of real hair, never a glossy or lacquered shine. If in doubt, apply less.",
     complexion:
       "Korean foundation shade 19 to 21, toward the 21 end of that range.",
     skin:
@@ -181,7 +184,7 @@ const GENDER_PRESENTATION: Record<string, Presentation> = {
     features:
       "Natural Korean masculine features with distinctive, camera-ready bone structure and his own individual character. Real human anatomy, not app-filter geometry: no melted jawline, no cartoon proportions, no bodybuilder physique.",
     grooming:
-      "Groomed, but wearing no makeup at all — only skincare, at the level a Korean man his age actually goes out in. Clean natural brows tidied at the edges, neat natural lashes, and clear well-cared-for skin with a healthy natural sheen rather than a matte or oily finish. No foundation, no eye makeup, no tinted lip, nothing that reads as applied. A deliberate salon haircut with product worked through it, facial hair either cleanly shaved or intentionally shaped for the age. Menswear styling with a current fashion sense.",
+      "Groomed, but wearing no makeup at all — only skincare, at the level a Korean man his age actually goes out in. Clean natural brows tidied at the edges, neat natural lashes, and clear well-cared-for skin with a healthy natural sheen rather than a matte or oily finish. No foundation, no eye makeup, no tinted lip, nothing that reads as applied. A deliberate salon haircut with matte product worked through it, facial hair either cleanly shaved or intentionally shaped for the age. Menswear styling with a current fashion sense.",
     complexion:
       "Korean foundation shade 21 to 23, a step deeper than the womens range and clearly not pale.",
     skin:
@@ -221,6 +224,17 @@ const DEFAULT_PRESENTATION: Presentation = {
  */
 const EYE_DIRECTION =
   "The eyes are the focal point and must read large, open and bright — they have to keep carrying once the character moves in video, where subtle definition flattens out. Get there with light, lash definition and whatever grooming this particular character actually wears: an open unshadowed eye socket, well-defined lashes, and a large clear catchlight in a warm brown iris. Do not add makeup to a character whose grooming says they wear none. Keep the eye round and wide open rather than elongated into a cat-eye. Never with warped anatomy — the eye socket, iris size, lid structure and inner-corner shape stay those of a real Korean adult.";
+
+/**
+ * 머릿결. **윤기를 뺀다.** — 09-29
+ *
+ * 그 전 결과물은 머리가 한 덩어리의 광택면으로 나왔다 — 거울 같은 하이라이트 띠, 젖은 듯한 광,
+ * 모든 가닥이 같은 방향으로 붙은 CG 머리. 사진에서 AI 티가 가장 먼저 나는 자리가 이것이다.
+ * 진짜 머리는 가닥이 제각각이고, 잔머리가 있고, 빛을 넓고 부드럽게 흩어 낸다.
+ * `grooming`의 "glossy"를 걷어내고, 사진 계열 톤에는 이 문장을 붙이고, `avoid`에도 넣는다.
+ */
+const HAIR_TEXTURE =
+  "Hair renders as real hair, not a glossy shell: a soft diffused natural sheen rather than a mirror-like highlight band or a wet, lacquered look; individual strands going slightly different directions, a few fine flyaways at the hairline and crown, and slight variation in tone between strands. Well-groomed, but matte-leaning rather than shiny.";
 
 /**
  * 피부 색조. 한국 파운데이션 호수로 준다 — 성별마다 기준이 다르다. — 09-22 4차
@@ -266,6 +280,19 @@ const FACE_VARIATIONS = [
 ];
 
 /**
+ * 얼굴상(강아지상·고양이상…)을 골랐을 때의 후보 차이. — 09-29
+ *
+ * 얼굴상이 윤곽을 이미 정하고 있어서(공룡상은 긴 얼굴, 두부상은 둥근 얼굴) 위의 윤곽 변주를
+ * 그 위에 얹으면 서로 싸운다. 대신 **같은 얼굴상을 얼마나 세게 읽을지**로 넷을 가른다.
+ */
+const FACE_TYPE_VARIATIONS = [
+  "a softer, rounder reading of that face type",
+  "a sharper, more defined reading of that face type",
+  "a more delicate, smaller-featured reading of that face type",
+  "a bolder, stronger-featured reading of that face type",
+];
+
+/**
  * 1단계 — 카탈로그 톤의 미감과 사용자 속성을 함께 지키는 새 성인 인물.
  *
  * 구조화된 JSON 텍스트로 보낸다. 고정되는 것(identity)과 바뀌는 것(scene·styling)을 나눠 두면
@@ -287,6 +314,7 @@ export function draftPrompt(
   };
   const gender = pick("gender");
   const age = pick("age");
+  const faceType = pick("face");
   const hair = pick("hair");
   const hairColor = pick("hair_color");
   const body = pick("body");
@@ -295,10 +323,12 @@ export function draftPrompt(
   const photographic = isPhotographicTone(tone);
   const presentation = GENDER_PRESENTATION[traits.gender ?? ""] ??
     DEFAULT_PRESENTATION;
-  const variation = FACE_VARIATIONS[
-    ((Math.trunc(candidateIndex) || 0) % FACE_VARIATIONS.length +
-      FACE_VARIATIONS.length) % FACE_VARIATIONS.length
-  ];
+  const slot = ((Math.trunc(candidateIndex) || 0) % FACE_VARIATIONS.length +
+    FACE_VARIATIONS.length) % FACE_VARIATIONS.length;
+  // 얼굴상을 골랐으면 그 얼굴상이 윤곽을 정한다. 후보 차이는 읽는 세기로 낸다.
+  const face = faceType
+    ? `${faceType}; ${FACE_TYPE_VARIATIONS[slot]}`
+    : FACE_VARIATIONS[slot];
 
   // 고른 나이대는 협상 대상이 아니다. 사진이 아무리 좋아도 다른 연령대로 읽히면 틀린 결과다.
   const ageDirection = `${
@@ -320,17 +350,17 @@ export function draftPrompt(
         gender: gender ?? "an adult",
         age: age ?? "an adult",
         age_direction: ageDirection,
-        face: variation,
+        face,
         ...(body ? { build: body } : {}),
         ...(hair || hairColor
           ? { hair: [hair, hairColor].filter(Boolean).join(", ") }
           : {}),
         priority:
-          "These selected traits override any styling default. Preserve the selected gender presentation, age, hairstyle, hair color and body type exactly.",
+          "These selected traits override any styling default. Preserve the selected gender presentation, age, face type, hairstyle, hair color and body type exactly.",
       },
       casting: CASTING_LEVEL,
       presentation: photographic
-        ? `${presentation.features} ${presentation.grooming} ${EYE_DIRECTION} Complexion depth: ${presentation.complexion} ${COMPLEXION_GUARD} ${presentation.skin}`
+        ? `${presentation.features} ${presentation.grooming} ${HAIR_TEXTURE} ${EYE_DIRECTION} Complexion depth: ${presentation.complexion} ${COMPLEXION_GUARD} ${presentation.skin}`
         : `${presentation.features} ${presentation.grooming}`,
       styling: {
         wardrobe:
@@ -362,12 +392,13 @@ export function draftPrompt(
       color:
         "Commit to the color and light described in the scene: a deliberate color mood, warm or cool, with believable saturation that is not flattened toward grey. Light should shape the face and the space behind it. Keep white balance neutral and clean at roughly 5500K so skin stays true. Warm light in the scene is welcome; a yellow, orange or green cast over the whole photograph is not, and the makeup itself stays cool-toned regardless of how warm the light is.",
       retouching:
-        "Premium commercial retouching: even out skin tone and clear low-quality mottling, while preserving high-frequency skin texture, pores and fine facial detail. Render the iris, eyelashes, brows, individual hair strands and fabric weave crisply and cleanly. Do not invent blemishes, freckles or moles; do not smooth skin toward plastic; no haloing, no oversharpening, no heavy HDR.",
+        "Premium commercial retouching: even out skin tone and clear low-quality mottling, while preserving high-frequency skin texture, pores and fine facial detail. Render the iris, eyelashes, brows, individual hair strands and fabric weave crisply and cleanly; keep hair strands separate and matte-leaning rather than fused into one shiny surface. Do not invent blemishes, freckles or moles; do not smooth skin toward plastic; no haloing, no oversharpening, no heavy HDR.",
       style:
         "Korean editorial and lifestyle photography: candid, understated, authentic; reads as a real photograph, not a render.",
     };
     request.avoid = [
       "beauty-filter or CGI look, plastic, waxy or overly smooth skin",
+      "hair rendered as one glossy lacquered mass: a mirror-like highlight band, wet-look or CGI shine, every strand fused in the same direction",
       "mottled, blotchy or patchy skin tone; low-resolution noise, compression artifacts, colour bleed or smeared detail",
       "coral, peach or orange makeup of any kind; a strong warm blush sweep across the cheekbones; a flushed red face",
       "a full face of makeup: coloured eyelids, coloured cheeks, a strong lip colour, drawn-on dark brows",
@@ -395,6 +426,7 @@ export function draftPrompt(
     request.avoid = [
       "photographic skin pores or lens artifacts inside the illustration",
       "exaggerated doll-like proportions or a repeated template face",
+      "hair drawn as one glossy lacquered mass with a mirror-like highlight band",
       "plain unstyled casting: unbrushed hair, no grooming, a washed-out face",
       "passport or ID-photo framing: head centered with wide empty headroom",
       "an empty flat backdrop with no light, shadow or depth behind the person",
@@ -420,7 +452,7 @@ export function draftPrompt(
  * 여기 없는 항목은 그 단계에서 유지되지 않는다고 봐야 한다.
  */
 export const IDENTITY_LOCK =
-  "keep the same person: the same face and identity, the same apparent age, the same complexion depth and skin tone, and the same makeup at the same strength — do not add makeup or make it stronger, do not lighten or warm the skin, do not age the face";
+  "keep the same person: the same face and identity, the same apparent age, the same complexion depth and skin tone, the same makeup at the same strength, and the same natural matte-leaning hair texture — do not add makeup or make it stronger, do not lighten or warm the skin, do not age the face, do not add gloss to the hair";
 
 /** 갈래마다 지시문이 다르다. "머리를 단발로"와 "체형을 마른으로"는 같은 문장이 아니다. */
 const CHANGE_PHRASE: Record<string, (p: string) => string> = {
@@ -431,14 +463,109 @@ const CHANGE_PHRASE: Record<string, (p: string) => string> = {
 };
 
 /**
+ * 얼굴 세부 조정 — 슬라이더. — 09-29 · docs/기획서.md §3
+ *
+ * 칩으로는 못 정하는 것(눈꼬리 각도, 콧대 높이, 눈썹 높이, 머리색 강도)을 -2 ~ +2 다섯 칸으로 받는다.
+ * 자유 프롬프트가 아니다 — 값은 정수, 문장은 여기서만 만든다.
+ *
+ * **지시는 상대값이다.** 편집 모델은 지금 얼굴(base image)을 입력으로 받으니, 저장된 값과
+ * 새 값의 **차이**만큼 "조금 더 / 확실히 더" 움직이라고 말한다. 절대값("+2로")은 모델에게 의미가 없다.
+ * 화면의 `ADJUSTMENTS`(models.ts)와 키·범위가 같아야 한다.
+ */
+export const ADJUSTMENT_KEYS = [
+  "hair_color_depth",
+  "eye_tilt",
+  "eye_height",
+  "nose_height",
+  "nose_tilt",
+  "brow_tilt",
+  "brow_height",
+] as const;
+export type AdjustmentKey = (typeof ADJUSTMENT_KEYS)[number];
+export type Adjustments = Partial<Record<AdjustmentKey, number>>;
+export const ADJUSTMENT_RANGE = 2;
+
+/** 받은 값 중 우리가 아는 키의 정수(-2~2)만 남긴다. 0은 "그대로"라 버린다. */
+export function asAdjustments(value: unknown): Adjustments {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const out: Adjustments = {};
+  for (const key of ADJUSTMENT_KEYS) {
+    const raw = (value as Record<string, unknown>)[key];
+    if (typeof raw !== "number" || !Number.isInteger(raw) || raw === 0) continue;
+    if (Math.abs(raw) > ADJUSTMENT_RANGE) continue;
+    out[key] = raw;
+  }
+  return out;
+}
+
+/** 얼마나 움직이는가. 차이 1칸은 "조금", 2칸은 "확실히", 그 이상은 "크게". */
+function degree(delta: number): string {
+  const steps = Math.abs(delta);
+  return steps >= 3 ? "strongly" : steps === 2 ? "clearly" : "slightly";
+}
+
+/**
+ * 키마다 문장이 다르다. `up`은 값이 커지는 방향의 지시, `down`은 작아지는 방향.
+ * 눈·코·눈썹은 "그것만" 바꾸고 나머지 얼굴은 그대로 두라는 말을 끝에 붙인다 —
+ * 그 말이 없으면 편집 모델이 눈을 손보면서 얼굴을 다시 그린다.
+ */
+const ADJUST_PHRASE: Record<AdjustmentKey, { up: (d: string) => string; down: (d: string) => string }> = {
+  hair_color_depth: {
+    up: (d) => `make the hair color ${d} deeper and more saturated, keeping the same hue`,
+    down: (d) => `make the hair color ${d} lighter and softer, keeping the same hue`,
+  },
+  eye_tilt: {
+    up: (d) => `tilt the outer corners of the eyes ${d} upward`,
+    down: (d) => `tilt the outer corners of the eyes ${d} downward`,
+  },
+  eye_height: {
+    up: (d) => `place the eyes ${d} higher on the face`,
+    down: (d) => `place the eyes ${d} lower on the face`,
+  },
+  nose_height: {
+    up: (d) => `make the nose bridge ${d} higher and more defined`,
+    down: (d) => `make the nose bridge ${d} lower and softer`,
+  },
+  nose_tilt: {
+    up: (d) => `turn the nose tip ${d} upward`,
+    down: (d) => `turn the nose tip ${d} downward`,
+  },
+  brow_tilt: {
+    up: (d) => `angle the eyebrows ${d} upward toward the temples`,
+    down: (d) => `angle the eyebrows ${d} downward, flatter and softer`,
+  },
+  brow_height: {
+    up: (d) => `raise the eyebrows ${d} higher above the eyes`,
+    down: (d) => `set the eyebrows ${d} lower, closer to the eyes`,
+  },
+};
+
+/** 저장된 값과 새 값의 차이만 문장으로. 바뀐 게 없으면 빈 배열. */
+export function adjustmentPhrases(before: Adjustments, after: Adjustments): string[] {
+  const phrases: string[] = [];
+  for (const key of ADJUSTMENT_KEYS) {
+    const delta = (after[key] ?? 0) - (before[key] ?? 0);
+    if (delta === 0) continue;
+    const phrase = ADJUST_PHRASE[key];
+    phrases.push(delta > 0 ? phrase.up(degree(delta)) : phrase.down(degree(delta)));
+  }
+  return phrases;
+}
+
+/**
  * 3단계 — **바뀐 것만** 지시문으로 만든다.
  * 전체 설명을 다시 넘기면 편집 모델이 얼굴까지 새로 그린다.
  * 바꾼 게 없으면 null — 호출부가 NO_CHANGES로 돌려준다.
+ *
+ * 칩(traits)과 슬라이더(adjustments)가 한 지시문에 같이 들어간다 — 한 번의 수정이 1크레딧이라
+ * 사람이 둘을 한꺼번에 고쳐도 한 번만 낸다.
  */
 export function editInstruction(
   before: Traits,
   after: Traits,
   options: Map<string, Option>,
+  adjustBefore: Adjustments = {},
+  adjustAfter: Adjustments = {},
 ): string | null {
   const changes: string[] = [];
 
@@ -448,6 +575,13 @@ export function editInstruction(
     const option = options.get(next);
     if (!option) continue;
     changes.push(CHANGE_PHRASE[kind](option.prompt));
+  }
+
+  const adjustments = adjustmentPhrases(adjustBefore, adjustAfter);
+  if (adjustments.length > 0) {
+    changes.push(
+      `${adjustments.join(", ")} — change only those features and leave every other part of the face exactly as it is`,
+    );
   }
 
   if (changes.length === 0) return null;
@@ -473,11 +607,27 @@ export function viewInstruction(angle: string): string {
   return [
     ANGLE_PHRASE[angle] ?? ANGLE_PHRASE.front,
     IDENTITY_LOCK,
+    // 3방향은 영상 변환(Wan-Animate)이 얼굴을 옮겨 오는 유일한 레퍼런스다. 영상 모델은 텍스트를
+    // 안 받으니 영상에 살아남아야 할 것(눈빛·시선·표정)은 전부 여기서 그림에 박아 둔다. — 09-29
+    VIDEO_REFERENCE_DIRECTION,
     "keep the same hairstyle, clothing and lighting",
     // 여기서는 무지 배경이 맞다 — 3방향은 연기 영상이 쓰는 레퍼런스지 작품이 아니다. — 기획서 §10
     "plain neutral background, upper body",
   ].join(". ");
 }
+
+/**
+ * 영상 레퍼런스용 지시. — 09-29
+ *
+ * 영상 변환(fal Wan-Animate Replace)은 `video_url`·`image_url`만 받고 **프롬프트를 받지 않는다.**
+ * 그래서 영상 품질을 텍스트로 올릴 자리는 레퍼런스 이미지(3방향)를 만드는 이 지시문뿐이다.
+ * 영상 프롬프트 가이드(정체성 고정 · 시선축 유지 · 표정을 구체적 행동으로)에서 이미지에 적용되는 것만 가져왔다.
+ *   - 고정 형질(immutable traits)을 이름으로 부른다: 골격·눈 모양·헤어라인·머리색·피부 톤·화장
+ *   - 눈은 영상에서 뭉개지는 자리라 캐치라이트·홍채·속눈썹을 또렷하게, 시선은 렌즈로
+ *   - 표정은 "자연스럽게"가 아니라 근육의 상태로 적는다: 이완된 이마, 살짝 든 입꼬리, 살아 있는 눈
+ */
+export const VIDEO_REFERENCE_DIRECTION =
+  "this image is a motion reference: keep these immutable traits identical to the source — facial bone structure, eye shape and spacing, eyebrow shape, nose, lip shape, hairline, hair color and texture, skin tone and makeup. Eyes sharp and open with a clear catchlight, crisp iris detail and defined lashes, gaze steady into the lens along the same eye line. A relaxed, alive expression: relaxed forehead, soft jaw, a faint lift at the mouth corners, presence in the eyes rather than a blank stare. Face fully lit and unobstructed, no hair across the eyes, no motion blur";
 
 /**
  * 룩 — 사람은 그대로 두고 스타일만 바꾼다.

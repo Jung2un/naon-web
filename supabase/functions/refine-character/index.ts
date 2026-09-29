@@ -2,7 +2,8 @@
  * refine-character — 고른 얼굴을 유지한 채 속성만 고친다. 캐릭터 만들기의 3단계다.
  *
  * 화면 계약 (`src/components/app/CharacterStudio.tsx`)
- *   body     { character_id, traits }
+ *   body     { character_id, traits, adjustments? }
+ *            adjustments는 슬라이더 값 { 키: -2~2 } 전체다. 없으면 저장된 값 그대로다 — _shared/prompt.ts
  *   응답     { image_id }
  *   비용     1크레딧 · 원장 사유 character_edit_charge
  *
@@ -19,8 +20,10 @@ import { inBackground, runImageBatch } from "../_shared/batch.ts";
 import {
   loadOptions,
   editInstruction,
+  asAdjustments,
   TRAIT_KINDS,
   matchesGender,
+  type Adjustments,
   type Traits,
 } from "../_shared/prompt.ts";
 
@@ -54,7 +57,7 @@ Deno.serve(async (req) => {
 
   const { data: character } = await admin
     .from("characters")
-    .select("id, stage, status, traits, base_image_path")
+    .select("id, stage, status, traits, adjustments, base_image_path")
     .eq("id", characterId)
     .eq("user_id", userId)
     .maybeSingle();
@@ -67,6 +70,11 @@ Deno.serve(async (req) => {
 
   const before = (character.traits ?? {}) as Traits;
   const merged: Traits = { ...before, ...wanted };
+  // 슬라이더는 전체 상태로 온다. 안 실려 오면 저장된 값 그대로다(칩만 고친 수정).
+  const adjustBefore: Adjustments = asAdjustments(character.adjustments);
+  const adjustAfter: Adjustments = body.adjustments === undefined
+    ? adjustBefore
+    : asAdjustments(body.adjustments);
 
   const options = await loadOptions(admin, Object.values(merged));
   // 갈래가 맞는 값인지 본다. 화면이 먼저 막지만 서버는 그걸 믿지 않는다.
@@ -79,7 +87,7 @@ Deno.serve(async (req) => {
     if (!matchesGender(option, merged.gender)) return fail(req, 400, "NO_CHANGES");
   }
 
-  const instruction = editInstruction(before, merged, options);
+  const instruction = editInstruction(before, merged, options, adjustBefore, adjustAfter);
   if (!instruction) return fail(req, 400, "NO_CHANGES");
 
   const gemini = geminiConfig();
@@ -113,6 +121,7 @@ Deno.serve(async (req) => {
     kind: "refined",
     round,
     traits: merged,
+    adjustments: adjustAfter,
     source_image_path: character.base_image_path,
     status: "queued",
   });

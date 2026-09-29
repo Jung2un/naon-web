@@ -165,6 +165,7 @@ export const REF_ANGLES: readonly RefAngle[] = [
 export const TRAIT_KINDS: readonly OptionKind[] = [
   "gender",
   "age",
+  "face",
   "hair",
   "hair_color",
   "body",
@@ -172,11 +173,13 @@ export const TRAIT_KINDS: readonly OptionKind[] = [
 ] as const;
 
 /**
- * 화면에서 속성을 보여주는 순서 — 성별 → (톤) → 머리 → 나이대 → 머리색 → 체형 → 분위기.
- * 머리는 사진이라 톤 바로 다음에 둔다. 프롬프트 문장 순서(TRAIT_KINDS)와는 별개다.
+ * 화면에서 속성을 보여주는 순서 — 성별 → 얼굴상 → (톤) → 머리 → 나이대 → 머리색 → 체형 → 분위기.
+ * 얼굴상은 성별에 매여 있어 성별 바로 다음, 머리는 사진이라 톤 바로 다음에 둔다.
+ * 프롬프트 문장 순서(TRAIT_KINDS)와는 별개다.
  */
 export const TRAIT_DISPLAY_KINDS: readonly OptionKind[] = [
   "gender",
+  "face",
   "hair",
   "hair_color",
   "age",
@@ -188,7 +191,7 @@ export const TRAIT_DISPLAY_KINDS: readonly OptionKind[] = [
 export const REQUIRED_TRAIT_KINDS: readonly OptionKind[] = ["gender", "age"];
 
 /**
- * 다듬기에서 바꿀 수 있는 것. 성별·나이대·톤은 편집으로 못 바꾼다 —
+ * 다듬기에서 바꿀 수 있는 것. 성별·나이대·얼굴상·톤은 편집으로 못 바꾼다 —
  * 그건 다른 사람을 만드는 일이라 다시 뽑아야 한다. — 기획서 §2
  */
 export const REFINABLE_TRAIT_KINDS: readonly OptionKind[] = [
@@ -198,6 +201,72 @@ export const REFINABLE_TRAIT_KINDS: readonly OptionKind[] = [
   "vibe",
 ];
 
+/**
+ * 얼굴 세부 조정 — 다듬기의 슬라이더. — 기획서 §3
+ *
+ * 칩으로 못 정하는 것(눈꼬리 각도, 콧대 높이, 눈썹 높이, 머리색 강도)을 -2 ~ +2 다섯 칸으로 고친다.
+ * 자유 프롬프트가 아니다. 키·범위는 `_shared/prompt.ts`의 ADJUSTMENT_KEYS와 같아야 한다.
+ * 문장은 서버가 만든다 — 화면은 정수만 보낸다.
+ */
+export const ADJUSTMENT_KEYS = [
+  "hair_color_depth",
+  "eye_tilt",
+  "eye_height",
+  "nose_height",
+  "nose_tilt",
+  "brow_tilt",
+  "brow_height",
+] as const;
+export type AdjustmentKey = (typeof ADJUSTMENT_KEYS)[number];
+export type Adjustments = Partial<Record<AdjustmentKey, number>>;
+export const ADJUSTMENT_RANGE = 2;
+
+/** 화면에 나오는 순서와 문구. `low`·`high`는 슬라이더 양 끝 라벨이다. */
+export const ADJUSTMENT_GROUPS: ReadonlyArray<{
+  title: string;
+  items: ReadonlyArray<{ key: AdjustmentKey; label: string; low: string; high: string }>;
+}> = [
+  { title: "머리색", items: [{ key: "hair_color_depth", label: "강도", low: "연하게", high: "진하게" }] },
+  {
+    title: "눈",
+    items: [
+      { key: "eye_tilt", label: "눈꼬리 각도", low: "내려가게", high: "올라가게" },
+      { key: "eye_height", label: "높낮이", low: "낮게", high: "높게" },
+    ],
+  },
+  {
+    title: "코",
+    items: [
+      { key: "nose_height", label: "콧대 높이", low: "낮게", high: "높게" },
+      { key: "nose_tilt", label: "코끝 각도", low: "내려가게", high: "올라가게" },
+    ],
+  },
+  {
+    title: "눈썹",
+    items: [
+      { key: "brow_tilt", label: "각도", low: "처지게", high: "올라가게" },
+      { key: "brow_height", label: "높낮이", low: "낮게", high: "높게" },
+    ],
+  },
+];
+
+/** `characters.adjustments`(Json)를 화면에서 쓰는 모양으로. 범위 밖·0·모르는 키는 버린다. */
+export function asAdjustments(value: unknown): Adjustments {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const out: Adjustments = {};
+  for (const key of ADJUSTMENT_KEYS) {
+    const raw = (value as Record<string, unknown>)[key];
+    if (typeof raw !== "number" || !Number.isInteger(raw) || raw === 0) continue;
+    if (Math.abs(raw) > ADJUSTMENT_RANGE) continue;
+    out[key] = raw;
+  }
+  return out;
+}
+
+export function sameAdjustments(a: Adjustments, b: Adjustments): boolean {
+  return ADJUSTMENT_KEYS.every((key) => (a[key] ?? 0) === (b[key] ?? 0));
+}
+
 export const OPTION_KIND_LABEL: Record<OptionKind, string> = {
   tone: "톤",
   gender: "성별",
@@ -206,6 +275,7 @@ export const OPTION_KIND_LABEL: Record<OptionKind, string> = {
   hair_color: "머리색",
   body: "체형",
   vibe: "분위기",
+  face: "얼굴상",
 };
 
 /** 캐릭터가 어디까지 왔나. status(지금 걸린 생성)와는 다른 질문이다. — 기획서 §5 */

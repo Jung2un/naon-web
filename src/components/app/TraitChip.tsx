@@ -126,6 +126,8 @@ export function TraitRow({
 }) {
   const required = REQUIRED_TRAIT_KINDS.includes(kind);
   const visible = options.filter((option) => matchesGender(option, gender));
+  // 이 성별에 쓸 옵션이 하나도 없으면 줄을 안 그린다 — 중성적에는 얼굴상이 없다
+  if (visible.length === 0) return null;
   const asTiles =
     visible.length > 0 && visible.every((option) => Boolean(option.thumbnail_url));
 

@@ -120,6 +120,10 @@ Deno.serve(async (req) => {
           video_url: video.data.signedUrl,
           image_url: image.data.signedUrl,
           resolution: "720p",
+          // 이 엔드포인트는 프롬프트를 받지 않는다. 품질 손잡이는 이 둘뿐이다 — 기본 20단계·high.
+          // 30단계는 얼굴(눈·입가)의 깜빡임을 줄이는 대신 처리 시간이 는다. 요금이 단계 수를 따르는지는 fal 가격표에서 본다.
+          num_inference_steps: 30,
+          video_quality: "high",
           enable_safety_checker: true,
         }),
       });

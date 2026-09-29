@@ -161,6 +161,7 @@ export async function getCharacterOptions(): Promise<
     hair_color: [],
     body: [],
     vibe: [],
+    face: [],
   };
 
   const rows: CharacterOptionWithUrl[] = await (async () => {

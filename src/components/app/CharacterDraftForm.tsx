@@ -28,7 +28,9 @@ import {
 } from "@/types/models";
 
 /** 톤·머리 다음에 칩으로 고르는 갈래, 화면 순서대로 — 머리색 → 나이대 → 체형 → 분위기 */
-const LATER_KINDS = TRAIT_DISPLAY_KINDS.filter((kind) => kind !== "gender" && kind !== "hair");
+const LATER_KINDS = TRAIT_DISPLAY_KINDS.filter(
+  (kind) => kind !== "gender" && kind !== "face" && kind !== "hair",
+);
 
 /**
  * 캐릭터 만들기 1단계 — 톤과 속성을 고른다. — docs/기획서.md §2
@@ -72,6 +74,7 @@ export function CharacterDraftForm({
     options[kind].find((o) => o.id === traits[kind])?.name;
   const chosen = [
     nameOf("gender"),
+    nameOf("face"),
     options.tone.find((o) => o.id === toneId)?.name,
     nameOf("hair"),
     ...LATER_KINDS.map(nameOf),
@@ -153,6 +156,21 @@ export function CharacterDraftForm({
             );
           })}
         </div>
+      </section>
+
+      {/*
+        얼굴상은 얼굴의 인상 자체라 성별 바로 다음, 후보를 뽑기 전에 정한다.
+        고른 얼굴을 다듬는 단계에서는 못 바꾼다 — 얼굴을 바꾸는 건 다른 사람을 만드는 일이다.
+        중성적에는 얼굴상이 없어서 이 줄이 안 나온다.
+      */}
+      <section className="mt-8">
+        <TraitRow
+          kind="face"
+          options={options.face}
+          gender={traits.gender}
+          value={traits.face}
+          onChange={(id) => setTraits((prev) => ({ ...prev, face: id }))}
+        />
       </section>
 
       <section className="mt-8">

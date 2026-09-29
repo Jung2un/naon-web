@@ -122,6 +122,8 @@ Deno.serve(async (req) => {
         name,
         tone_id: toneId,
         traits,
+        // 새 얼굴이다. 이전 얼굴에 맞춰 둔 슬라이더는 의미가 없다
+        adjustments: {},
         stage: "draft",
         status: "processing",
         error_code: null,

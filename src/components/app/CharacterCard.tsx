@@ -3,6 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { UserRound, ArrowUpRight } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
+import { cn } from "@/lib/utils";
 import { STAGE_LABEL, type CharacterListItem } from "@/types/models";
 
 export function CharacterCard({ character }: { character: CharacterListItem }) {
@@ -24,16 +25,30 @@ export function CharacterCard({ character }: { character: CharacterListItem }) {
             className="object-cover"
           />
         ) : <div className="flex h-full items-center justify-center"><UserRound className="size-12 text-muted" aria-hidden /></div>}
-        {(building || character.status !== "done") && (
+        {/*
+          배지는 한 규칙이다. 생성이 돌거나 실패했으면 그 상태(처리 중·실패), 만드는 중이면
+          어느 단계인지(후보 고르는 중·다듬는 중), 완성이면 없음 — 완성이 기본 상태라 표시할 게 없다.
+          전에는 만드는 중인데 배치가 끝난 카드에 "완료"가 붙어서 완성과 구분이 안 됐다. — 기획서 §8
+        */}
+        {character.status !== "done" ? (
           <span className="absolute left-2 top-2">
             <StatusBadge status={character.status} />
           </span>
-        )}
+        ) : building ? (
+          <span
+            className={cn(
+              "absolute left-2 top-2 inline-flex h-[22px] items-center rounded-full px-2 text-badge font-normal",
+              "bg-primary-soft text-primary",
+            )}
+          >
+            {STAGE_LABEL[character.stage]}
+          </span>
+        ) : null}
       </div>
       <p className="mt-3 flex items-center justify-between gap-2 px-2 text-card font-semibold text-ink"><span className="truncate">{character.name}</span><ArrowUpRight className="size-4 shrink-0 text-muted" aria-hidden /></p>
       <p className="px-2 pb-3 pt-1 text-caption tabular text-muted">
         {building
-          ? STAGE_LABEL[character.stage]
+          ? "눌러서 이어 만들기"
           : `${LOOKS_ENABLED ? `룩 ${character.look_count} · ` : ""}작업물 ${character.job_count}`}
       </p>
     </Link>

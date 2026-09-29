@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { draftPrompt, editInstruction, lookInstruction, viewInstruction } from "../supabase/functions/_shared/prompt.ts";
+import { asAdjustments, draftPrompt, editInstruction, lookInstruction, viewInstruction } from "../supabase/functions/_shared/prompt.ts";
 
 // Load the actual migration text so the tone used in tests matches the DB update.
 const migration = readFileSync(new URL("../supabase/migrations/20260922000001_tone_prompts_scene_depth.sql", import.meta.url), "utf8");
@@ -328,3 +328,57 @@ test("every stage after the draft names what it must keep, or the edit model dro
   assert.doesNotMatch(look, /plain neutral background/);
   assert.match(look, /full body visible from head to shoes/);
 });
+
+// ---------------------------------------------------------------- 09-29
+
+test("hair is directed toward a natural matte sheen, never gloss, at every stage", () => {
+  const { traits, options } = fixture(0, genderId(1));
+  const request = parse(draftPrompt(tones[0], traits, options));
+  assert.doesNotMatch(request.subject.presentation, /healthy and glossy/);
+  assert.match(request.subject.presentation, /never a glossy or lacquered shine/);
+  assert.match(request.subject.presentation, /matte-leaning rather than shiny/);
+  assert.match(request.camera_technical.retouching, /matte-leaning rather than fused/);
+  assert.match(request.avoid.join(" "), /glossy lacquered mass/);
+  // Later stages must not put the gloss back.
+  assert.match(viewInstruction("front"), /do not add gloss to the hair/);
+  assert.match(editInstruction(traits, { ...traits, hair: "color" }, new Map([...options, ["color", { id: "color", kind: "hair", prompt: "a bob" }]])), /matte-leaning hair texture/);
+});
+
+test("a selected face type defines the face; candidates differ by how strongly it reads", () => {
+  const { traits, options } = fixture(0, genderId(1));
+  const withFace = new Map([...options, ["face", { id: "face", kind: "face", prompt: "a \"cat-like\" face: almond eyes" }]]);
+  const faces = [0, 1, 2, 3].map((i) => parse(draftPrompt(tones[0], { ...traits, face: "face" }, withFace, i)).subject.identity_fixed.face);
+  for (const face of faces) assert.ok(face.startsWith("a \"cat-like\" face: almond eyes; "), face);
+  assert.equal(new Set(faces).size, 4);
+  assert.match(parse(draftPrompt(tones[0], { ...traits, face: "face" }, withFace)).subject.identity_fixed.priority, /face type/);
+  // Without a face type the contour variations are unchanged.
+  assert.equal(parse(draftPrompt(tones[0], traits, options, 2)).subject.identity_fixed.face, "a softly rounded face and balanced facial proportions");
+});
+
+test("slider adjustments become relative instructions and nothing else is touched", () => {
+  const { traits, options } = fixture();
+  assert.equal(editInstruction(traits, traits, options, { eye_tilt: 1 }, { eye_tilt: 1 }), null);
+  const text = editInstruction(traits, traits, options, { eye_tilt: 1, brow_height: 2 }, { eye_tilt: 2, brow_height: 0, hair_color_depth: -2 });
+  assert.match(text, /tilt the outer corners of the eyes slightly upward/);
+  assert.match(text, /set the eyebrows clearly lower/);
+  assert.match(text, /hair color clearly lighter and softer, keeping the same hue/);
+  assert.match(text, /leave every other part of the face exactly as it is/);
+  assert.match(text, /keep the same person/);
+  assert.doesNotMatch(text, /change the hairstyle/);
+  assert.deepEqual(asAdjustments({ eye_tilt: 2, nose_height: 0, brow_tilt: 5, eye_height: 1.5, junk: 1 }), { eye_tilt: 2 });
+  // Chips and sliders share one instruction, so one apply is one credit.
+  const both = editInstruction(traits, { ...traits, vibe: "vibe2" }, new Map([...options, ["vibe2", { id: "vibe2", kind: "vibe", prompt: "a warm look" }]]), {}, { nose_tilt: 1 });
+  assert.match(both, /change the expression to a warm look, turn the nose tip slightly upward/);
+});
+
+test("the three views carry the video reference direction, since the video model takes no prompt", () => {
+  for (const angle of ["front", "left45", "right45"]) {
+    const text = viewInstruction(angle);
+    assert.match(text, /motion reference/);
+    assert.match(text, /immutable traits/);
+    assert.match(text, /gaze steady into the lens/);
+    assert.match(text, /relaxed forehead, soft jaw/);
+    assert.match(text, /clear catchlight/);
+  }
+});
+

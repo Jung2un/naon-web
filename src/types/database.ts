@@ -41,6 +41,7 @@ export type Database = {
     Tables: {
       character_images: {
         Row: {
+          adjustments: Json
           angle: Database["public"]["Enums"]["ref_angle"] | null
           character_id: string
           created_at: string
@@ -55,6 +56,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          adjustments?: Json
           angle?: Database["public"]["Enums"]["ref_angle"] | null
           character_id: string
           created_at?: string
@@ -69,6 +71,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          adjustments?: Json
           angle?: Database["public"]["Enums"]["ref_angle"] | null
           character_id?: string
           created_at?: string
@@ -170,6 +173,7 @@ export type Database = {
       }
       characters: {
         Row: {
+          adjustments: Json
           base_image_path: string | null
           created_at: string
           error_code: string | null
@@ -184,6 +188,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          adjustments?: Json
           base_image_path?: string | null
           created_at?: string
           error_code?: string | null
@@ -198,6 +203,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          adjustments?: Json
           base_image_path?: string | null
           created_at?: string
           error_code?: string | null
@@ -558,6 +564,7 @@ export type Database = {
         | "hair_color"
         | "body"
         | "vibe"
+        | "face"
       character_stage: "draft" | "refining" | "building" | "ready"
       job_status: "queued" | "processing" | "done" | "failed"
       ledger_reason:
@@ -715,6 +722,7 @@ export const Constants = {
         "hair_color",
         "body",
         "vibe",
+        "face",
       ],
       character_stage: ["draft", "refining", "building", "ready"],
       job_status: ["queued", "processing", "done", "failed"],
