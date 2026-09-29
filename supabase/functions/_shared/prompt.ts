@@ -17,7 +17,8 @@ export type OptionKind =
   | "hair_color"
   | "body"
   | "vibe"
-  | "face";
+  | "face"
+  | "makeup";
 
 export type Option = {
   id: string;
@@ -40,6 +41,7 @@ export const TRAIT_KINDS: OptionKind[] = [
   "hair_color",
   "body",
   "vibe",
+  "makeup",
 ];
 
 /** 이 둘이 없으면 사람이 안 정해진다. */
@@ -55,6 +57,7 @@ export const REFINABLE_TRAITS: OptionKind[] = [
   "hair_color",
   "body",
   "vibe",
+  "makeup",
 ];
 
 /**
@@ -213,6 +216,10 @@ const DEFAULT_PRESENTATION: Presentation = {
     "Clear, well-cared-for skin that still photographs as skin: fine pores and real high-frequency texture, carried on an even tone. No plastic or waxy smoothing — but equally no mottled or blotchy patches, no invented blemishes or moles, and no dull or tired complexion.",
 };
 
+/** 메이크업 칩을 골랐을 때 성별 연출의 화장 문장을 무르는 한 줄. `styling.makeup`이 이긴다. */
+const MAKEUP_OVERRIDE =
+  "Makeup: follow styling.makeup exactly; it replaces any makeup described above.";
+
 /**
  * 눈. 사진 한 장으로 보면 괜찮은데 **영상에서 밋밋해지는** 자리라 또렷하게 키운다. — 09-22 3차
  *
@@ -319,6 +326,8 @@ export function draftPrompt(
   const hairColor = pick("hair_color");
   const body = pick("body");
   const vibe = pick("vibe");
+  // 메이크업을 골랐으면 성별 연출에 박힌 화장 문장 대신 이것이 화장이다. — 09-29
+  const makeup = pick("makeup");
 
   const photographic = isPhotographicTone(tone);
   const presentation = GENDER_PRESENTATION[traits.gender ?? ""] ??
@@ -356,13 +365,14 @@ export function draftPrompt(
           ? { hair: [hair, hairColor].filter(Boolean).join(", ") }
           : {}),
         priority:
-          "These selected traits override any styling default. Preserve the selected gender presentation, age, face type, hairstyle, hair color and body type exactly.",
+          `These selected traits override any styling default. Preserve the selected gender presentation, age, face type, hairstyle, hair color${makeup ? ", makeup" : ""} and body type exactly.`,
       },
       casting: CASTING_LEVEL,
       presentation: photographic
-        ? `${presentation.features} ${presentation.grooming} ${HAIR_TEXTURE} ${EYE_DIRECTION} Complexion depth: ${presentation.complexion} ${COMPLEXION_GUARD} ${presentation.skin}`
-        : `${presentation.features} ${presentation.grooming}`,
+        ? `${presentation.features} ${presentation.grooming} ${HAIR_TEXTURE} ${EYE_DIRECTION} Complexion depth: ${presentation.complexion} ${COMPLEXION_GUARD} ${presentation.skin}${makeup ? ` ${MAKEUP_OVERRIDE}` : ""}`
+        : `${presentation.features} ${presentation.grooming}${makeup ? ` ${MAKEUP_OVERRIDE}` : ""}`,
       styling: {
+        ...(makeup ? { makeup } : {}),
         wardrobe:
           "Current Korean fashion styling that belongs in the scene: well-fitted, in one considered color with visible fabric texture (knit, wool, cotton, denim). It must look chosen and put together, never thrown on or shapeless — while still not pulling attention off the face.",
         expression: vibe
@@ -460,6 +470,8 @@ const CHANGE_PHRASE: Record<string, (p: string) => string> = {
   hair_color: (p) => `change the hair color to ${p}`,
   body: (p) => `change the body type to ${p}`,
   vibe: (p) => `change the expression to ${p}`,
+  // 화장은 얼굴을 안 바꾼다. IDENTITY_LOCK의 "같은 화장"보다 이 문장이 먼저 와서 이긴다
+  makeup: (p) => `change the makeup to ${p} — this replaces the current makeup while the face itself stays the same`,
 };
 
 /**

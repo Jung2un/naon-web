@@ -170,6 +170,7 @@ export const TRAIT_KINDS: readonly OptionKind[] = [
   "hair_color",
   "body",
   "vibe",
+  "makeup",
 ] as const;
 
 /**
@@ -185,6 +186,7 @@ export const TRAIT_DISPLAY_KINDS: readonly OptionKind[] = [
   "age",
   "body",
   "vibe",
+  "makeup",
 ] as const;
 
 /** 이 둘이 없으면 사람이 안 정해진다. 나머지는 비워도 모델이 알아서 채운다 */
@@ -202,6 +204,7 @@ export const REFINABLE_TRAIT_KINDS: readonly OptionKind[] = [
   "hair_color",
   "body",
   "vibe",
+  "makeup",
 ];
 
 /**
@@ -330,6 +333,7 @@ export const OPTION_KIND_LABEL: Record<OptionKind, string> = {
   body: "체형",
   vibe: "분위기",
   face: "얼굴상",
+  makeup: "메이크업",
 };
 
 /** 캐릭터가 어디까지 왔나. status(지금 걸린 생성)와는 다른 질문이다. — 기획서 §5 */

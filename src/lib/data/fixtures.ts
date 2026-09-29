@@ -87,6 +87,16 @@ export const fixtureCharacterOptions: CharacterOptionWithUrl[] = [
   { id: "a8888888-0000-4000-8000-000000000205", kind: "face", name: "두부상", description: null, prompt: "", gender_id: "a2222222-0000-4000-8000-000000000002", thumbnail_path: null, thumbnail_url: null, sort_order: 5, is_active: true },
   { id: "a8888888-0000-4000-8000-000000000206", kind: "face", name: "아랍상", description: null, prompt: "", gender_id: "a2222222-0000-4000-8000-000000000002", thumbnail_path: null, thumbnail_url: null, sort_order: 6, is_active: true },
 
+  // 메이크업 — 성별별 (마이그레이션 20260929000005)
+  { id: "a9999999-0000-4000-8000-000000000101", kind: "makeup", name: "노메이크업", description: null, prompt: "", gender_id: "a2222222-0000-4000-8000-000000000001", thumbnail_path: null, thumbnail_url: null, sort_order: 1, is_active: true },
+  { id: "a9999999-0000-4000-8000-000000000102", kind: "makeup", name: "내추럴", description: null, prompt: "", gender_id: "a2222222-0000-4000-8000-000000000001", thumbnail_path: null, thumbnail_url: null, sort_order: 2, is_active: true },
+  { id: "a9999999-0000-4000-8000-000000000103", kind: "makeup", name: "데일리", description: null, prompt: "", gender_id: "a2222222-0000-4000-8000-000000000001", thumbnail_path: null, thumbnail_url: null, sort_order: 3, is_active: true },
+  { id: "a9999999-0000-4000-8000-000000000104", kind: "makeup", name: "글램", description: null, prompt: "", gender_id: "a2222222-0000-4000-8000-000000000001", thumbnail_path: null, thumbnail_url: null, sort_order: 4, is_active: true },
+  { id: "a9999999-0000-4000-8000-000000000105", kind: "makeup", name: "스모키", description: null, prompt: "", gender_id: "a2222222-0000-4000-8000-000000000001", thumbnail_path: null, thumbnail_url: null, sort_order: 5, is_active: true },
+  { id: "a9999999-0000-4000-8000-000000000201", kind: "makeup", name: "맨얼굴", description: null, prompt: "", gender_id: "a2222222-0000-4000-8000-000000000002", thumbnail_path: null, thumbnail_url: null, sort_order: 1, is_active: true },
+  { id: "a9999999-0000-4000-8000-000000000202", kind: "makeup", name: "그루밍", description: null, prompt: "", gender_id: "a2222222-0000-4000-8000-000000000002", thumbnail_path: null, thumbnail_url: null, sort_order: 2, is_active: true },
+  { id: "a9999999-0000-4000-8000-000000000203", kind: "makeup", name: "가벼운 메이크업", description: null, prompt: "", gender_id: "a2222222-0000-4000-8000-000000000002", thumbnail_path: null, thumbnail_url: null, sort_order: 3, is_active: true },
+
   { id: "a5555555-0000-4000-8000-000000000001", kind: "hair_color", name: "검정", description: null, prompt: "", gender_id: null, thumbnail_path: null, thumbnail_url: null, sort_order: 1, is_active: true },
   { id: "a5555555-0000-4000-8000-000000000002", kind: "hair_color", name: "진갈색", description: null, prompt: "", gender_id: null, thumbnail_path: null, thumbnail_url: null, sort_order: 2, is_active: true },
   { id: "a5555555-0000-4000-8000-000000000003", kind: "hair_color", name: "밝은 갈색", description: null, prompt: "", gender_id: null, thumbnail_path: null, thumbnail_url: null, sort_order: 3, is_active: true },

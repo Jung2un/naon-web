@@ -162,6 +162,7 @@ export async function getCharacterOptions(): Promise<
     body: [],
     vibe: [],
     face: [],
+    makeup: [],
   };
 
   const rows: CharacterOptionWithUrl[] = await (async () => {

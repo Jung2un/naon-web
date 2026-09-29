@@ -273,6 +273,21 @@ function skinReference(base: ImageData, mask: Float32Array): [number, number, nu
   return [cb / keep.length, cr / keep.length, y / keep.length];
 }
 
+/** 점이 꺾은선의 어디쯤인지 0(시작)~1(끝). 눈썹 선은 바깥→안쪽 순서라 0이 꼬리다 */
+function polylineParam(x: number, y: number, line: Point[]): number {
+  let best = Infinity, bestT = 0;
+  const segs = line.length - 1;
+  for (let i = 0; i < segs; i++) {
+    const a = line[i], b = line[i + 1];
+    const vx = b.x - a.x, vy = b.y - a.y;
+    const len2 = vx * vx + vy * vy || 1;
+    const t = clamp01(((x - a.x) * vx + (y - a.y) * vy) / len2);
+    const d = Math.hypot(x - (a.x + vx * t), y - (a.y + vy * t));
+    if (d < best) { best = d; bestT = (i + t) / segs; }
+  }
+  return bestT;
+}
+
 /** 점에서 꺾은선까지의 거리 */
 function distToPolyline(x: number, y: number, line: Point[]): number {
   let best = Infinity;
@@ -306,9 +321,9 @@ type MakeupOp = {
   ref: [number, number, number];
   eyes: { c: Point; hw: number }[];
   cheeks: { c: Point; r: number }[];
+  /** 볼에서 콧잔등을 지나 반대 볼까지 이어지는 블러셔 띠(타원). 한국식 블러셔는 이 띠 위에 얹힌다 */
+  blushBand: { c: Point; hw: number; hh: number };
   mouth: { c: Point; hw: number; hh: number } | null;
-  /** 코 축 x. 이 근처(콧등)는 블러셔 자리가 아니다 */
-  noseX: number;
   unit: number;
   /** 0~1. 얼마나 뺄 것인가 */
   liner: number;
@@ -363,7 +378,7 @@ function render(
   const BLUSH_MAX = 1.0;
   const LID_MAX = 0.8;
   const LINER_LIFT_MAX = 0.5; // 라인의 어두움은 절반까지만 — 생속눈썹은 남는다
-  const MASCARA_LIFT_MAX = 0.9; // 마스카라로 길어진 구간은 거의 다 지운다
+  const MASCARA_LIFT_MAX = 0.6; // 길어진 속눈썹을 옅게. 피부까지 올리면 눈 위가 허옇게 뜬다
 
   // ---- 눈썹
   const browT = brow ? brow.depth / ADJUSTMENT_RANGE : 0;
@@ -426,10 +441,14 @@ function render(
         let inBand = 0;
         for (const line of brow.lines) {
           const dist = distToPolyline(x, y, line);
-          if (dist < brow.band) inBand = Math.max(inBand, 1 - (dist / brow.band) ** 2);
+          if (dist >= brow.band) continue;
+          // 눈썹 꼬리(바깥 끝)는 관자놀이 머리카락과 붙어 있다. 바깥 1/3에서 띠를 좁힌다
+          const t = polylineParam(x, y, line);
+          const taper = t < 0.33 ? 0.45 + (t / 0.33) * 0.55 : 1;
+          if (dist < brow.band * taper) inBand = Math.max(inBand, 1 - (dist / (brow.band * taper)) ** 2);
         }
-        // 띠 안이라도 머리카락(앞머리)이면 눈썹이 아니다
-        if (inBand > 0 && brow.hairMask && brow.hairMask[y * w + x] > 0.5) inBand = 0;
+        // 띠 안이라도 머리카락(앞머리·관자)이면 눈썹이 아니다. 문턱을 낮춰 애매한 픽셀도 뺀다
+        if (inBand > 0 && brow.hairMask && brow.hairMask[y * w + x] > 0.2) inBand = 0;
         if (inBand > 0) {
           const Y = luma(r, g, b);
           const darkness = clamp01((brow.skinY - 12 - Y) / 45); // 피부 대비 얼마나 어두운가 = 얼마나 털인가
@@ -442,7 +461,9 @@ function render(
               cb = cb + (brow.match.cb - cb) * wgt;
               cr = cr + (brow.match.cr - cr) * wgt;
               const ratio = Math.min(Math.max(Math.pow(Math.max(Y, 1) / Math.max(brow.meanY, 8), 0.7), 0.6), 1.5);
-              const target = brow.match.y * ratio;
+              // 맞추기는 **어둡게 하지 않는다.** 검정 칩이어도 눈썹이 지금보다 검어지면 "검은 뭉텅이"가 된다.
+              // 밝은 쪽(금발·애쉬)으로만 밝기를 따라가고, 어두운 쪽은 색차만 따라간다
+              const target = Math.max(brow.match.y * ratio, Y);
               nY = Y + (target - Y) * wgt;
             }
             if (browT !== 0) {
@@ -478,19 +499,25 @@ function render(
           // 눈꺼풀 가장자리(아이라인 + 생속눈썹 뿌리) — 눈알 바로 바깥의 얇은 고리
           const d2e = (dx * dx) / 1.7 + (dy * dy) / 0.55;
           if (d2e < 1) edge = Math.max(edge, 1 - d2e * d2e);
-          // 마스카라로 길어진 속눈썹 — 눈 위쪽, 가장자리 고리 **바깥**에서 반너비 1.15배까지
-          if (dy < 0 && d2e >= 0.8) {
+          // 마스카라로 길어진 속눈썹 — 눈 위쪽, 가장자리 고리 **완전히 바깥**(d2e ≥ 1)에서 반너비 1.15배까지.
+          // 고리에 가까울수록 약하게(생속눈썹 뿌리·아이라인은 그대로), 바깥 끝에서 가장 세게
+          if (dy < 0 && d2e >= 1) {
             const d2l = (dx * dx) / 2.6 + (dy * dy) / 1.3;
-            if (d2l < 1) lash = Math.max(lash, 1 - d2l * d2l);
+            if (d2l < 1) lash = Math.max(lash, (1 - d2l * d2l) * clamp01((d2e - 1) / 0.5));
           }
         }
         if (!eyeball) {
-          // 볼. 콧등 근처(코 축 ±0.35u)는 블러셔 자리가 아니라 뺀다
-          const noseStrip = clamp01((Math.abs(x - makeup.noseX) - 0.3 * makeup.unit) / (0.2 * makeup.unit));
+          // 블러셔 자리 = 볼 원 두 개 + 볼→콧잔등→볼 띠. 콧잔등 위 블러셔도 같이 빠져야 한다
           for (const k of makeup.cheeks) {
             const dx = x - k.c.x, dy = y - k.c.y;
             const d2 = (dx * dx + dy * dy) / (k.r * k.r);
-            if (d2 < 1) cheek = Math.max(cheek, (1 - d2) * (1 - d2) * noseStrip);
+            if (d2 < 1) cheek = Math.max(cheek, (1 - d2) * (1 - d2));
+          }
+          {
+            const bx = (x - makeup.blushBand.c.x) / makeup.blushBand.hw;
+            const by = (y - makeup.blushBand.c.y) / makeup.blushBand.hh;
+            const d2 = bx * bx + by * by;
+            if (d2 < 1) cheek = Math.max(cheek, 1 - d2 * d2);
           }
           if (makeup.mouth) {
             const dx = (x - makeup.mouth.c.x) / (makeup.mouth.hw * 1.15);
@@ -519,11 +546,12 @@ function render(
               ncb = cb + (cbRef - cb) * pull;
               ncr = cr + (crRef - cr) * pull;
             }
-            // 어두운 라인·속눈썹만 피부 밝기 쪽으로. 밝은 픽셀은 그대로라 눈 주변이 뿌옇게 되지 않는다
+            // 어두운 라인·속눈썹만 밝기를 올린다. 목표는 피부가 아니라 **피부보다 한참 아래**(속눈썹은 남아야 한다).
+            // 밝은 픽셀은 그대로라 눈 주변이 뿌옇게 되지 않는다
             const lift = Math.max(linerLift, mascaraLift);
             if (lift > 0.005 && Y < skinY - 25) {
               const dark = Math.min((skinY - 25 - Y) / 60, 1);
-              Y = Y + (skinY - 10 - Y) * lift * dark;
+              Y = Y + (skinY - 45 - Y) * lift * dark;
             }
             r = Y + 1.402 * ncr;
             g = Y - 0.344 * ncb - 0.714 * ncr;
@@ -768,7 +796,11 @@ export function FacePreview({
                 { c: face.cheekR, r: face.unit * 0.5 },
               ],
               mouth: { c: face.mouth, hw: face.mouthHalfWidth, hh: face.mouthHalfHeight },
-              noseX: face.noseTip.x,
+              blushBand: {
+                c: { x: (face.cheekL.x + face.cheekR.x) / 2, y: (face.cheekL.y + face.cheekR.y) / 2 - face.unit * 0.05 },
+                hw: (face.cheekR.x - face.cheekL.x) / 2 + face.unit * 0.35,
+                hh: face.unit * 0.32,
+              },
               unit: face.unit,
               liner, mascara, lip, blush,
             }

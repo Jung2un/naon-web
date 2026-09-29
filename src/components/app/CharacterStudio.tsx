@@ -247,7 +247,7 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
             <SectionHeader title="설정 바꿔서 다시 뽑기" />
             <p className="text-caption text-muted">
               톤·성별·얼굴상·나이대는 여기서만 바꿀 수 있어요. 고른 얼굴을 다듬는 단계에서는
-              머리·머리색·체형·분위기와 눈·코·눈썹의 세부만 바뀌어요.
+              머리색·체형·분위기·메이크업과 눈·코·눈썹의 세부만 바뀌어요.
             </p>
 
             <div className="mt-4">

@@ -565,6 +565,7 @@ export type Database = {
         | "body"
         | "vibe"
         | "face"
+        | "makeup"
       character_stage: "draft" | "refining" | "building" | "ready"
       job_status: "queued" | "processing" | "done" | "failed"
       ledger_reason:
@@ -723,6 +724,7 @@ export const Constants = {
         "body",
         "vibe",
         "face",
+        "makeup",
       ],
       character_stage: ["draft", "refining", "building", "ready"],
       job_status: ["queued", "processing", "done", "failed"],
