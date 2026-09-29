@@ -17,7 +17,6 @@ import { Button } from "@/components/ui/button";
 import { MicroLabel } from "@/components/ui/label";
 import { credits } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { FacePreview } from "./FacePreview";
 import {
   ADJUSTMENT_GROUPS,
   ADJUSTMENT_RANGE,
@@ -125,8 +124,6 @@ const GROUP_ICON: Record<string, LucideIcon> = {
 export function AdjustmentDock({
   open,
   onOpenChange,
-  src,
-  hairColor,
   value,
   disabled,
   dirty,
@@ -134,14 +131,11 @@ export function AdjustmentDock({
   cost,
   onChange,
   onReset,
+  onResetGroup,
   onApply,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** 지금 얼굴. 없으면 미리보기 없이 슬라이더만 */
-  src: string | null;
-  /** 고른 머리색 견본. 저장된 것과 같으면 null */
-  hairColor?: string | null;
   value: Adjustments;
   disabled?: boolean;
   /** 서버에 저장된 값과 다른가 — 적용 버튼이 이걸 본다 */
@@ -149,7 +143,10 @@ export function AdjustmentDock({
   pending?: boolean;
   cost: number;
   onChange: (key: AdjustmentKey, next: number) => void;
+  /** 전부 그대로로 */
   onReset: () => void;
+  /** 한 묶음만 그대로로. 다른 묶음은 건드리지 않는다 */
+  onResetGroup: (keys: readonly AdjustmentKey[]) => void;
   onApply: () => void;
 }) {
   const setOpen = onOpenChange;
@@ -190,30 +187,13 @@ export function AdjustmentDock({
           )}
         >
           <header className="flex items-center gap-3 border-b border-line px-4 py-3">
-            {src && (
-              <FacePreview
-                src={src}
-                adjustments={value}
-                hairColor={hairColor}
-                className="aspect-[3/4] w-16 shrink-0 overflow-hidden rounded-[8px] border border-line bg-sunken"
-              />
-            )}
             <div className="min-w-0 flex-1">
               <p className="text-base font-semibold text-ink">세부 조정</p>
-              <p className="mt-0.5 text-caption text-muted">
-                얼굴을 보면서 조금씩 조절해 보세요. 마음에 들면 적용해요.
-              </p>
+              <p className="mt-0.5 text-caption text-muted">얼굴을 보면서 조금씩 조절해 보세요.</p>
             </div>
-            <button
-              type="button"
-              onClick={onReset}
-              disabled={disabled || !touched}
-              className="flex size-9 items-center justify-center rounded-full text-muted transition-colors hover:bg-hover disabled:opacity-30"
-              aria-label="전부 그대로로"
-              title="전부 그대로로"
-            >
-              <RotateCcw className="size-4" aria-hidden />
-            </button>
+            <Button variant="outline" size="sm" onClick={onReset} disabled={disabled || !touched}>
+              초기화
+            </Button>
             <button
               type="button"
               onClick={() => setOpen(false)}
@@ -239,6 +219,17 @@ export function AdjustmentDock({
                       <Icon className="size-4" strokeWidth={2} />
                     </span>
                     <MicroLabel>{group.title}</MicroLabel>
+                    {/* 이 묶음만 되돌린다. 다른 묶음은 그대로 */}
+                    <button
+                      type="button"
+                      onClick={() => onResetGroup(group.items.map((item) => item.key))}
+                      disabled={disabled || !group.items.some((item) => value[item.key])}
+                      className="ml-auto inline-flex h-8 items-center gap-1 rounded-full px-2 text-caption text-muted transition-colors hover:bg-hover hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent"
+                      aria-label={`${group.title} 되돌리기`}
+                    >
+                      <RotateCcw className="size-3.5" aria-hidden />
+                      되돌리기
+                    </button>
                   </div>
                   <div className="mt-3 grid gap-3 sm:grid-cols-2">
                     {group.items.map((item) =>

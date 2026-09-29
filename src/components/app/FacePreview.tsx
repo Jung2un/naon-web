@@ -15,11 +15,13 @@ import { ADJUSTMENT_KEYS, ADJUSTMENT_RANGE, type Adjustments } from "@/types/mod
  *
  *   머리   머리카락 마스크(MediaPipe Image Segmenter, hair 클래스) 안에서만. 염색(고른 칩)과 강도.
  *          강도 "연하게"는 **채도**를 빼는 것이지 머리를 밝히는 게 아니다 — 밝기는 ±10%만 움직인다.
- *   눈썹   눈썹 랜드마크 띠 안의 어두운 픽셀. 색 진하기(밝기는 살짝만, 눈썹이 빛나면 안 된다)와
- *          "머리색과 맞추기"(지금 머리의 색차를 눈썹에 얹는다. 밝기는 머리보다 한 단계 어둡게).
- *   메이크업  아이라인·섀도(눈꺼풀 띠의 색과 어두움) · 속눈썹(눈 위 띠의 어두움) · 입술(입 타원의 색) ·
- *          블러셔(볼 반경의 색). 전부 **피부 기준색 쪽으로 되돌리는** 것이고 밝기(Y)는 손대지 않아
- *          창백해지거나 흑백이 되지 않는다. 상한이 있어서 끝까지 내려도 입술은 입술색, 속눈썹은 남는다.
+ *   눈썹   눈썹 랜드마크 띠 안의 어두운 픽셀(머리카락 마스크는 뺀다 — 앞머리가 같이 물들면 안 된다).
+ *          색 진하기(밝기는 살짝만, 눈썹이 빛나면 안 된다)와 "머리색과 맞추기" — 다듬기에서 고른 머리색 칩의
+ *          견본색 그대로를 목표로, 밝기는 그 색의 밝기에 가닥 명암을 얹는다.
+ *   메이크업  아이라인·섀도(눈꺼풀 가장자리의 어두움 + 눈꺼풀 띠의 색) · 속눈썹(마스카라로 길어진 바깥 구간의
+ *          어두움만 — 눈꺼풀 가장자리의 생속눈썹은 남긴다) · 입술(입 타원의 색) · 블러셔(콧등을 뺀 볼의 색, 끝까지
+ *          내리면 거의 사라진다). 전부 **피부 기준색 쪽으로 되돌리는** 것이고 밝기(Y)는 손대지 않아
+ *          창백해지거나 흑백이 되지 않는다. 입술은 상한이 있어 끝까지 내려도 입술색이다.
  *
  * 모델 두 개(랜드마크·세그멘테이션)와 wasm은 CDN에서 처음 한 번 받는다. 못 받으면 원본만 보여준다 —
  * 어느 경우에도 화면이 비지 않는다. 머리 모양은 여기서 못 보여준다 — 그건 생성이라 적용해야 나온다.
@@ -73,7 +75,7 @@ const R = { outer: 263, inner: 362, top: 386, bottom: 374, brow: [300, 293, 334,
 const NOSE = { bridge: 6, tip: 1 };
 const JAW = { chin: 152, midL: 136, midR: 365 };
 const ALA = { left: 129, right: 358 };
-const CHEEK = { left: 50, right: 280 };
+const CHEEK = { innerL: 50, outerL: 116, innerR: 280, outerR: 345 };
 const MOUTH = { top: 0, bottom: 17, left: 61, right: 291 };
 
 type Landmark = { x: number; y: number };
@@ -103,8 +105,9 @@ function faceFrom(lm: Landmark[], w: number, h: number): Face {
     mouthHalfWidth: Math.abs(p(MOUTH.right).x - p(MOUTH.left).x) / 2 || unit * 0.35,
     mouthHalfHeight: Math.abs(mouthBottom.y - mouthTop.y) / 2 || unit * 0.12,
     chin: p(JAW.chin),
-    cheekL: p(CHEEK.left),
-    cheekR: p(CHEEK.right),
+    // 볼 중심은 코 옆(50)과 바깥 볼(116)의 중간. 콧등 쪽으로 번지지 않게 바깥으로 뺀다
+    cheekL: mid(p(CHEEK.innerL), p(CHEEK.outerL)),
+    cheekR: mid(p(CHEEK.innerR), p(CHEEK.outerR)),
     jawL: p(JAW.midL),
     jawR: p(JAW.midR),
     unit,
@@ -290,11 +293,13 @@ type BrowOp = {
   band: number;
   /** 눈썹 색 진하기 −100~100 */
   depth: number;
-  /** 머리색과 맞추기. 목표 [Cb, Cr]와 목표 밝기(머리보다 한 단계 어둡게) */
+  /** 머리색과 맞추기. 목표 [Cb, Cr]와 목표 밝기(고른 머리색 견본의 밝기) */
   match: { cb: number; cr: number; y: number } | null;
   /** 눈썹 픽셀의 평균 밝기 */
   meanY: number;
   skinY: number;
+  /** 머리카락 마스크. 띠 안이라도 머리카락이면 눈썹이 아니다 */
+  hairMask: Float32Array | null;
 };
 type MakeupOp = {
   skinMask: Float32Array;
@@ -302,6 +307,9 @@ type MakeupOp = {
   eyes: { c: Point; hw: number }[];
   cheeks: { c: Point; r: number }[];
   mouth: { c: Point; hw: number; hh: number } | null;
+  /** 코 축 x. 이 근처(콧등)는 블러셔 자리가 아니다 */
+  noseX: number;
+  unit: number;
   /** 0~1. 얼마나 뺄 것인가 */
   liner: number;
   mascara: number;
@@ -349,11 +357,13 @@ function render(
   const crRef = makeup?.ref[1] ?? 0;
   const skinY = makeup?.ref[2] ?? 0;
   const DEV_LO = 2.5, DEV_HI = 12;
+  // 블러셔는 색차가 옅다. 볼 안에서는 문턱을 더 낮춰서 끝까지 내리면 거의 사라지게
+  const CHEEK_DEV_LO = 1.2, CHEEK_DEV_HI = 5;
   const LIP_MAX = 0.5; // 화장 안 한 입술도 피부보다 붉다
-  const BLUSH_MAX = 0.85;
+  const BLUSH_MAX = 1.0;
   const LID_MAX = 0.8;
-  const LINER_LIFT_MAX = 0.5; // 라인의 어두움은 절반까지만 — 속눈썹 없는 눈은 화장이 아니라 얼굴이 바뀐 것
-  const MASCARA_LIFT_MAX = 0.55;
+  const LINER_LIFT_MAX = 0.5; // 라인의 어두움은 절반까지만 — 생속눈썹은 남는다
+  const MASCARA_LIFT_MAX = 0.9; // 마스카라로 길어진 구간은 거의 다 지운다
 
   // ---- 눈썹
   const browT = brow ? brow.depth / ADJUSTMENT_RANGE : 0;
@@ -418,6 +428,8 @@ function render(
           const dist = distToPolyline(x, y, line);
           if (dist < brow.band) inBand = Math.max(inBand, 1 - (dist / brow.band) ** 2);
         }
+        // 띠 안이라도 머리카락(앞머리)이면 눈썹이 아니다
+        if (inBand > 0 && brow.hairMask && brow.hairMask[y * w + x] > 0.5) inBand = 0;
         if (inBand > 0) {
           const Y = luma(r, g, b);
           const darkness = clamp01((brow.skinY - 12 - Y) / 45); // 피부 대비 얼마나 어두운가 = 얼마나 털인가
@@ -425,11 +437,13 @@ function render(
           if (wgt > 0.01) {
             let cb = toCb(r, g, b), cr = toCr(r, g, b), nY = Y;
             if (brow.match) {
-              // 색차는 머리색으로, 밝기는 머리보다 한 단계 어두운 목표로 — 비율을 제한해서 눈썹이 빛나지 않게
+              // 색차는 고른 머리색 견본으로. 밝기는 견본 밝기에 이 가닥의 명암(평균 대비 비율, 감마 압축)을 얹는다.
+              // 비율은 0.6~1.5로 묶는다 — 눈썹이 검게 뭉개지지도, 빛나지도 않게
               cb = cb + (brow.match.cb - cb) * wgt;
               cr = cr + (brow.match.cr - cr) * wgt;
-              const k = Math.min(Math.max(brow.match.y / Math.max(brow.meanY, 8), 0.7), 1.35);
-              nY = Y + (Y * k - Y) * wgt;
+              const ratio = Math.min(Math.max(Math.pow(Math.max(Y, 1) / Math.max(brow.meanY, 8), 0.7), 0.6), 1.5);
+              const target = brow.match.y * ratio;
+              nY = Y + (target - Y) * wgt;
             }
             if (browT !== 0) {
               // 진하게(+): 어둡고 색 진하게. 연하게(−): 채도 빼고 피부 밝기 쪽으로 **조금만**(최대 25%)
@@ -452,25 +466,31 @@ function render(
       // ---- 메이크업
       if (makeup) {
         const a = makeup.skinMask[y * w + x];
-        let eyeball = false, lid = 0, lash = 0, cheek = 0, lipZ = 0;
+        let eyeball = false, lid = 0, edge = 0, lash = 0, cheek = 0, lipZ = 0;
         for (const e of makeup.eyes) {
           const dx = (x - e.c.x) / e.hw;
           const dy = (y - e.c.y) / e.hw;
           if ((dx * dx) / 1.21 + (dy * dy) / 0.3 < 1) { eyeball = true; break; }
+          // 눈꺼풀 띠(섀도 색이 있는 자리) — 위로는 눈썹 직전, 아래로는 애교살까지
           const ny = dy < 0 ? dy / 1.15 : dy / 1.0;
           const d2 = (dx * dx) / 4 + ny * ny;
           if (d2 < 1) lid = Math.max(lid, 1 - d2 * d2);
-          // 속눈썹 띠 — 눈 위쪽, 눈알 가장자리 바로 바깥에서 반너비 0.9배까지
-          if (dy < 0.15) {
-            const d2l = (dx * dx) / 1.9 + (dy * dy) / 0.9;
+          // 눈꺼풀 가장자리(아이라인 + 생속눈썹 뿌리) — 눈알 바로 바깥의 얇은 고리
+          const d2e = (dx * dx) / 1.7 + (dy * dy) / 0.55;
+          if (d2e < 1) edge = Math.max(edge, 1 - d2e * d2e);
+          // 마스카라로 길어진 속눈썹 — 눈 위쪽, 가장자리 고리 **바깥**에서 반너비 1.15배까지
+          if (dy < 0 && d2e >= 0.8) {
+            const d2l = (dx * dx) / 2.6 + (dy * dy) / 1.3;
             if (d2l < 1) lash = Math.max(lash, 1 - d2l * d2l);
           }
         }
         if (!eyeball) {
+          // 볼. 콧등 근처(코 축 ±0.35u)는 블러셔 자리가 아니라 뺀다
+          const noseStrip = clamp01((Math.abs(x - makeup.noseX) - 0.3 * makeup.unit) / (0.2 * makeup.unit));
           for (const k of makeup.cheeks) {
             const dx = x - k.c.x, dy = y - k.c.y;
             const d2 = (dx * dx + dy * dy) / (k.r * k.r);
-            if (d2 < 1) cheek = Math.max(cheek, (1 - d2) * (1 - d2));
+            if (d2 < 1) cheek = Math.max(cheek, (1 - d2) * (1 - d2) * noseStrip);
           }
           if (makeup.mouth) {
             const dx = (x - makeup.mouth.c.x) / (makeup.mouth.hw * 1.15);
@@ -478,24 +498,26 @@ function render(
             const d2 = dx * dx + dy * dy;
             if (d2 < 1) lipZ = 1 - d2 * d2;
           }
-          const colourPull =
-            makeup.lip * lipZ * LIP_MAX +
-            makeup.blush * cheek * BLUSH_MAX * Math.max(a, 0.5) +
-            makeup.liner * lid * LID_MAX;
-          const linerLift = makeup.liner * lid * LINER_LIFT_MAX;
+          const cheekPull = makeup.blush * cheek * BLUSH_MAX * Math.max(a, 0.5);
+          const otherPull = makeup.lip * lipZ * LIP_MAX + makeup.liner * lid * LID_MAX;
+          // 아이라인은 가장자리 고리의 어두움(절반까지), 마스카라는 그 바깥 구간의 어두움(거의 다)
+          const linerLift = makeup.liner * edge * LINER_LIFT_MAX;
           const mascaraLift = makeup.mascara * lash * MASCARA_LIFT_MAX;
-          if (colourPull > 0.005 || linerLift > 0.005 || mascaraLift > 0.005) {
+          if (cheekPull > 0.005 || otherPull > 0.005 || linerLift > 0.005 || mascaraLift > 0.005) {
             let Y = luma(r, g, b);
             const cb = toCb(r, g, b), cr = toCr(r, g, b);
             let ncb = cb, ncr = cr;
-            if (colourPull > 0.005) {
-              const dev = Math.hypot(cb - cbRef, cr - crRef);
-              if (dev > DEV_LO) {
-                const wgt = Math.min((dev - DEV_LO) / (DEV_HI - DEV_LO), 1);
-                const pull = Math.min(colourPull, 1) * wgt;
-                ncb = cb + (cbRef - cb) * pull;
-                ncr = cr + (crRef - cr) * pull;
-              }
+            const dev = Math.hypot(cb - cbRef, cr - crRef);
+            let pull = 0;
+            if (otherPull > 0.005 && dev > DEV_LO) {
+              pull = Math.min(otherPull, 1) * Math.min((dev - DEV_LO) / (DEV_HI - DEV_LO), 1);
+            }
+            if (cheekPull > 0.005 && dev > CHEEK_DEV_LO) {
+              pull = Math.max(pull, Math.min(cheekPull, 1) * Math.min((dev - CHEEK_DEV_LO) / (CHEEK_DEV_HI - CHEEK_DEV_LO), 1));
+            }
+            if (pull > 0) {
+              ncb = cb + (cbRef - cb) * pull;
+              ncr = cr + (crRef - cr) * pull;
             }
             // 어두운 라인·속눈썹만 피부 밝기 쪽으로. 밝은 픽셀은 그대로라 눈 주변이 뿌옇게 되지 않는다
             const lift = Math.max(linerLift, mascaraLift);
@@ -569,12 +591,15 @@ export function FacePreview({
   src,
   adjustments,
   hairColor = null,
+  browHairColor = null,
   className,
 }: {
   src: string;
   adjustments: Adjustments;
   /** 고른 머리색 칩의 견본색(#rrggbb). 서버에 저장된 것과 같으면 null — 이미 그 색이다 */
   hairColor?: string | null;
+  /** "머리색과 맞추기"의 목표. 다듬기에서 지금 선택돼 있는 머리색 칩의 견본색. 없으면 지금 머리의 평균색 */
+  browHairColor?: string | null;
   className?: string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -661,7 +686,7 @@ export function FacePreview({
         faceRef.current = face;
         if (base) {
           browLumaRef.current = browMeanLuma(
-            base, [face.browLineL, face.browLineR], face.unit * 0.13, skinStatsRef.current[2] || 150,
+            base, [face.browLineL, face.browLineR], face.unit * 0.085, skinStatsRef.current[2] || 150,
           );
         }
         setStatus("ready");
@@ -700,15 +725,16 @@ export function FacePreview({
       const hair: HairOp | null =
         hairMask && (depth || tint) ? { mask: hairMask, depth, tint, mean: hairStatsRef.current } : null;
 
-      // 눈썹이 맞출 머리색 — 고른 칩이 있으면 그 색, 없으면 지금 머리의 평균 색차. 밝기는 머리보다 한 단계 어둡게
+      // 눈썹이 맞출 머리색 — 다듬기에 선택돼 있는 머리색 칩의 견본색 그대로. 칩이 없으면 지금 머리의 평균색
       const matchOn = (a.brow_match_hair ?? 0) >= 50;
       let match: BrowOp["match"] = null;
       if (matchOn) {
-        if (tint) {
-          match = { cb: toCb(tint[0], tint[1], tint[2]), cr: toCr(tint[0], tint[1], tint[2]), y: luma(tint[0], tint[1], tint[2]) * 0.7 };
+        const target = browHairColor ? hexToRgb(browHairColor) : tint;
+        if (target) {
+          match = { cb: toCb(target[0], target[1], target[2]), cr: toCr(target[0], target[1], target[2]), y: luma(target[0], target[1], target[2]) };
         } else if (hairStatsRef.current[0] > 0) {
           const [hy, hcb, hcr] = hairStatsRef.current;
-          match = { cb: hcb, cr: hcr, y: hy * 0.7 };
+          match = { cb: hcb, cr: hcr, y: hy };
         }
       }
       const browDepth = a.brow_depth ?? 0;
@@ -716,11 +742,12 @@ export function FacePreview({
         face && (browDepth || match)
           ? {
               lines: [face.browLineL, face.browLineR],
-              band: face.unit * 0.13,
+              band: face.unit * 0.085,
               depth: browDepth,
               match,
               meanY: browLumaRef.current,
               skinY: skinStatsRef.current[2] || 150,
+              hairMask,
             }
           : null;
 
@@ -741,6 +768,8 @@ export function FacePreview({
                 { c: face.cheekR, r: face.unit * 0.5 },
               ],
               mouth: { c: face.mouth, hw: face.mouthHalfWidth, hh: face.mouthHalfHeight },
+              noseX: face.noseTip.x,
+              unit: face.unit,
               liner, mascara, lip, blush,
             }
           : null;
@@ -750,7 +779,7 @@ export function FacePreview({
       ctx.putImageData(out, 0, 0);
     });
     return () => cancelAnimationFrame(frameRef.current);
-  }, [adjustments, hairColor, status]);
+  }, [adjustments, hairColor, browHairColor, status]);
 
   const wanted = !idle(adjustments) || Boolean(hairColor);
   const unavailable = status === "no-face" || status === "no-canvas";

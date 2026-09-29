@@ -102,6 +102,8 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
     traits.hair_color && traits.hair_color !== serverTraits.hair_color && hairColorName
       ? HAIR_COLORS[hairColorName] ?? null
       : null;
+  // "눈썹을 머리색과 맞추기"의 목표 — 지금 선택돼 있는 머리색 칩(바뀌지 않았어도)의 견본색
+  const browHairColor = hairColorName ? HAIR_COLORS[hairColorName] ?? null : null;
   const faceTypeName = character.options.face.find((o) => o.id === serverTraits.face)?.name;
 
   const changed =
@@ -330,6 +332,7 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
                     src={character.base_image_url}
                     adjustments={adjust}
                     hairColor={previewHairColor}
+                    browHairColor={browHairColor}
                     className="size-full"
                   />
                 ) : null}
@@ -486,8 +489,6 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
         <AdjustmentDock
           open={dockOpen}
           onOpenChange={setDockOpen}
-          src={working ? null : character.base_image_url}
-          hairColor={previewHairColor}
           value={adjust}
           disabled={working || Boolean(pending)}
           dirty={!sameAdjustments(adjust, serverAdjust)}
@@ -502,6 +503,13 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
             })
           }
           onReset={() => setAdjust({})}
+          onResetGroup={(keys) =>
+            setAdjust((prev) => {
+              const copy = { ...prev };
+              for (const key of keys) delete copy[key];
+              return copy;
+            })
+          }
           onApply={refine}
         />
       )}
