@@ -18,7 +18,10 @@ import { ADJUSTMENT_KEYS, ADJUSTMENT_RANGE, type Adjustments } from "@/types/mod
  * 립 틴트·블러셔처럼 "얹힌 색"이 빠지고, 밝기는 그대로라 피부가 창백해지지 않는다.
  * (처음엔 얼굴 전체의 채도를 낮췄더니 창백한 얼굴이 됐다. 화장은 색이지 채도가 아니다.)
  * 끝까지 내려도 **입술은 자연 입술색으로 남는다** — 당기는 힘의 상한이 절반이다. 100% 당기면 입술이
- * 피부색 그대로의 어두운 덩어리(흑백처럼)가 된다. 눈(홍채·렌즈)은 랜드마크로 잡아 아예 손대지 않는다.
+ * 피부색 그대로의 어두운 덩어리(흑백처럼)가 된다.
+ * 눈 화장은 따로 다룬다. 눈알(홍채·렌즈)은 타원으로 빼서 손대지 않고, 그 둘레 눈꺼풀 띠에서는
+ * 아이섀도(색)는 피부색 쪽으로, 아이라인·속눈썹의 어두움(밝기)은 피부 밝기 쪽으로 단계적으로 되돌린다.
+ * 밝기를 완전히 피부로 올리지는 않는다 — 속눈썹 없는 눈이 되면 그건 화장이 아니라 얼굴이 바뀐 것이다.
  * 머리 모양은 여기서 못 보여준다. 모양을 바꾸는 건 생성이라 적용해야 나온다.
  * 모델 두 개(랜드마크·세그멘테이션)와 wasm은 CDN에서 처음 한 번 받는다. 못 받으면 원본만 보여준다 —
  * 어느 경우에도 화면이 비지 않는다.
@@ -48,6 +51,9 @@ type Face = {
   noseBridge: Point;
   noseTip: Point;
   chin: Point;
+  alaL: Point; // 콧볼 바깥. 화면 왼쪽
+  alaR: Point;
+  upperLip: Point;
   jawL: Point; // 턱선 중간(턱끝과 턱 각 사이). 화면 왼쪽
   jawR: Point;
   /** 두 눈 중심 사이 거리. 모든 반지름·이동량의 단위다 */
@@ -60,6 +66,8 @@ const L = { outer: 33, inner: 133, top: 159, bottom: 145, browOuter: 70, browInn
 const R = { outer: 263, inner: 362, top: 386, bottom: 374, browOuter: 300, browInner: 336, browMid: 334 };
 const NOSE = { bridge: 6, tip: 1 };
 const JAW = { chin: 152, midL: 136, midR: 365 };
+const ALA = { left: 129, right: 358 };
+const UPPER_LIP = 0;
 
 type Landmark = { x: number; y: number };
 
@@ -77,6 +85,9 @@ function faceFrom(lm: Landmark[], w: number, h: number): Face {
     noseBridge: mid(p(NOSE.bridge), p(NOSE.tip)),
     noseTip: p(NOSE.tip),
     chin: p(JAW.chin),
+    alaL: p(ALA.left),
+    alaR: p(ALA.right),
+    upperLip: p(UPPER_LIP),
     jawL: p(JAW.midL),
     jawR: p(JAW.midR),
     unit,
@@ -136,6 +147,31 @@ function fieldsFor(face: Face, a: Adjustments): Field[] {
     const d = v("nose_tilt") * 0.035 * u;
     fields.push(lift(face.noseTip, 0.35 * u, d));
   }
+  if (v("nose_width")) {
+    // 콧볼 양쪽을 코 축 쪽으로(+ 좁게) 또는 바깥으로(− 넓게)
+    const d = v("nose_width") * 0.03 * u;
+    fields.push(
+      { c: face.alaL, radius: 0.28 * u, move: () => [d, 0] },
+      { c: face.alaR, radius: 0.28 * u, move: () => [-d, 0] },
+    );
+  }
+  if (v("midface")) {
+    // 눈선에서 윗입술까지를 비율대로 늘이고(+) 줄이고(−), 그 아래(입·턱)는 통째로 따라간다.
+    // 눈은 안 움직이고 입 모양도 그대로다 — 사이 거리만 바뀐다. 감쇠는 코끝 중심 큰 반경이라 볼·턱에서 부드럽게 죽는다.
+    const eyeY = (face.eyeL.y + face.eyeR.y) / 2;
+    const span = Math.max(face.upperLip.y - eyeY, 1);
+    const amount = v("midface") * 0.06 * u;
+    const c = { x: face.noseTip.x, y: (eyeY + face.upperLip.y) / 2 };
+    fields.push({
+      c,
+      radius: 1.4 * u,
+      move: (_dx, dy) => {
+        const y = c.y + dy;
+        const t = Math.min(Math.max((y - eyeY) / span, 0), 1);
+        return [0, amount * t];
+      },
+    });
+  }
   if (v("jaw_vline")) {
     // 턱선 양쪽을 얼굴 가운데 축 쪽으로(+) 또는 바깥으로(−) 민다. 턱끝 근처가 갸름해진다
     const d = v("jaw_vline") * 0.045 * u;
@@ -170,9 +206,9 @@ function meanLuma(base: ImageData, mask: Float32Array): number {
   return n ? sum / n : 0;
 }
 
-function skinReference(base: ImageData, mask: Float32Array): [number, number] {
+function skinReference(base: ImageData, mask: Float32Array): [number, number, number] {
   const s = base.data;
-  let cb = 0, cr = 0, n = 0;
+  let cb = 0, cr = 0, y = 0, n = 0;
   for (let i = 0, p = 0; i < mask.length; i++, p += 4) {
     if (mask[i] < 0.8) continue;
     const r = s[p], g = s[p + 1], b = s[p + 2];
@@ -180,9 +216,10 @@ function skinReference(base: ImageData, mask: Float32Array): [number, number] {
     if (Y < 60 || Y > 235) continue;
     cb += -0.1687 * r - 0.3313 * g + 0.5 * b;
     cr += 0.5 * r - 0.4187 * g - 0.0813 * b;
+    y += Y;
     n++;
   }
-  return n ? [cb / n, cr / n] : [0, 0];
+  return n ? [cb / n, cr / n, y / n] : [0, 0, 0];
 }
 function hexToRgb(hex: string): Rgb | null {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
@@ -201,7 +238,16 @@ function render(
   dst: ImageData,
   fields: Field[],
   hair: { mask: Float32Array; depth: number; tint: Rgb | null; meanLuma: number } | null,
-  skin: { mask: Float32Array; makeup: number; ref: [number, number]; keepOut: Point[]; keepOutRadius: number } | null,
+  skin: {
+    mask: Float32Array;
+    makeup: number;
+    /** 피부 기준 색차 [Cb, Cr] */
+    ref: [number, number];
+    /** 피부 기준 밝기 Y */
+    refY: number;
+    /** 눈 중심과 눈 반너비. 눈알은 빼고 그 둘레가 눈꺼풀 띠다 */
+    eyes: { c: Point; hw: number }[];
+  } | null,
 ) {
   const { width: w, height: h, data: s } = src;
   const d = dst.data;
@@ -219,10 +265,13 @@ function render(
   const crRef = skin?.ref[1] ?? 0;
   // 색차 거리(0~255 스케일)가 이 아래면 피부 그 자체라 건드리지 않고, 위쪽부터 부드럽게 당긴다
   const DEV_LO = 5, DEV_HI = 18;
-  // 끝까지 내려도 얹힌 색의 절반만 뺀다 — 화장기 없는 입술도 피부보다는 붉다
+  // 끝까지 내려도 얹힌 색의 절반만 뺀다 — 화장기 없는 입술·볼도 피부보다는 붉다
   const PULL_MAX = 0.5;
-  const keepOut = skin?.keepOut ?? [];
-  const keepR2 = skin ? skin.keepOutRadius * skin.keepOutRadius : 0;
+  // 눈꺼풀 띠는 더 뺀다 — 화장 안 한 눈꺼풀은 피부색 그대로다. 라인의 어두움은 절반까지만 올린다
+  const LID_PULL_MAX = 0.8;
+  const LINER_LIFT_MAX = 0.5;
+  const eyes = skin?.eyes ?? [];
+  const refY = skin?.refY ?? 0;
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       let ox = 0;
@@ -271,25 +320,39 @@ function render(
       }
       if (skin && m > 0) {
         let a = skin.mask[y * w + x];
-        // 눈(홍채·렌즈)은 화장이 아니다. 눈 중심 반경 안은 손대지 않는다
-        for (const k of keepOut) {
-          const kx = x - k.x, ky = y - k.y;
-          if (kx * kx + ky * ky < keepR2) { a = 0; break; }
+        // 눈알(홍채·렌즈)은 화장이 아니다 — 타원 안은 손대지 않는다. 그 둘레 띠는 눈꺼풀(섀도·라인)이다
+        let lid = 0;
+        for (const e of eyes) {
+          const dx = (x - e.c.x) / e.hw;
+          const dy = (y - e.c.y) / e.hw;
+          if ((dx * dx) / 1.21 + (dy * dy) / 0.3 < 1) { a = 0; lid = 0; break; }
+          // 위로는 눈썹 직전(1.15 반너비)까지, 아래로는 애교살까지(1.0 반너비)
+          const ny = dy < 0 ? dy / 1.15 : dy / 1.0;
+          const d2 = (dx * dx) / 4 + ny * ny;
+          if (d2 < 1) lid = Math.max(lid, 1 - d2 * d2);
         }
-        if (a > 0.02) {
-          const Y = luma(r, g, b);
+        if (a > 0.02 || lid > 0) {
+          let Y = luma(r, g, b);
           const cb = -0.1687 * r - 0.3313 * g + 0.5 * b;
           const cr = 0.5 * r - 0.4187 * g - 0.0813 * b;
           const dev = Math.hypot(cb - cbRef, cr - crRef);
+          let ncb = cb, ncr = cr;
           if (dev > DEV_LO) {
             const wgt = Math.min((dev - DEV_LO) / (DEV_HI - DEV_LO), 1);
-            const pull = m * wgt * a * PULL_MAX;
-            const ncb = cb + (cbRef - cb) * pull;
-            const ncr = cr + (crRef - cr) * pull;
-            r = Y + 1.402 * ncr;
-            g = Y - 0.344 * ncb - 0.714 * ncr;
-            b = Y + 1.772 * ncb;
+            // 눈꺼풀 띠는 마스크가 흔들려도 띠 가중치로 간다(섀도는 피부가 아니라 마스크에서 빠질 수 있다)
+            const cover = Math.max(a, lid);
+            const pull = m * wgt * cover * (lid > 0 ? LID_PULL_MAX : PULL_MAX);
+            ncb = cb + (cbRef - cb) * pull;
+            ncr = cr + (crRef - cr) * pull;
           }
+          // 아이라인·속눈썹: 눈꺼풀 띠 안에서 피부보다 확실히 어두운 픽셀만 피부 밝기 쪽으로 절반까지 올린다
+          if (lid > 0 && Y < refY - 25) {
+            const dark = Math.min((refY - 25 - Y) / 60, 1);
+            Y = Y + (refY - 10 - Y) * m * lid * dark * LINER_LIFT_MAX;
+          }
+          r = Y + 1.402 * ncr;
+          g = Y - 0.344 * ncb - 0.714 * ncr;
+          b = Y + 1.772 * ncb;
         }
       }
       d[o] = r; d[o + 1] = g; d[o + 2] = b;
@@ -342,7 +405,7 @@ export function FacePreview({
   const faceRef = useRef<Face | null>(null);
   const hairRef = useRef<Float32Array | null>(null);
   const skinRef = useRef<Float32Array | null>(null);
-  const skinChromaRef = useRef<[number, number]>([0, 0]);
+  const skinChromaRef = useRef<[number, number, number]>([0, 0, 0]);
   const hairLumaRef = useRef(0);
   const frameRef = useRef(0);
   // 상태는 src에 매인다. src가 바뀌면 그 자체로 "loading"이라 effect 안에서 setState를 부를 일이 없다.
@@ -463,9 +526,14 @@ export function FacePreview({
           ? {
               mask: skin,
               makeup,
-              ref: skinChromaRef.current,
-              keepOut: face ? [face.eyeL, face.eyeR] : [],
-              keepOutRadius: face ? face.unit * 0.32 : 0,
+              ref: [skinChromaRef.current[0], skinChromaRef.current[1]],
+              refY: skinChromaRef.current[2],
+              eyes: face
+                ? [
+                    { c: face.eyeL, hw: face.eyeHalfWidth },
+                    { c: face.eyeR, hw: face.eyeHalfWidth },
+                  ]
+                : [],
             }
           : null,
       );

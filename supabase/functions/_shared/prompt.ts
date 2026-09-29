@@ -479,6 +479,8 @@ export const ADJUSTMENT_KEYS = [
   "eye_height",
   "nose_height",
   "nose_tilt",
+  "nose_width",
+  "midface",
   "brow_tilt",
   "brow_height",
   "jaw_vline",
@@ -525,7 +527,7 @@ const ADJUST_PHRASE: Record<AdjustmentKey, { up: (d: string) => string; down: (d
   makeup: {
     up: (d) => `bring the makeup ${d} back toward its previous strength`,
     down: (d) =>
-      `make the makeup ${d} lighter and more sheer — softer eye definition, a more natural lip and less blush, without removing it entirely`,
+      `make the makeup ${d} lighter and more sheer: softer and less visible eyeshadow, a thinner and lighter eyeliner and lash definition, less blush on the cheeks, and a more natural sheer lip — reduce it evenly rather than removing it entirely, keeping natural lip colour and the eyes' own colour`,
   },
   eye_tilt: {
     up: (d) => `tilt the outer corners of the eyes ${d} upward`,
@@ -542,6 +544,15 @@ const ADJUST_PHRASE: Record<AdjustmentKey, { up: (d: string) => string; down: (d
   nose_tilt: {
     up: (d) => `turn the nose tip ${d} upward`,
     down: (d) => `turn the nose tip ${d} downward`,
+  },
+  nose_width: {
+    up: (d) => `make the nostrils and nose wings ${d} narrower`,
+    down: (d) => `make the nostrils and nose wings ${d} wider`,
+  },
+  // 중안부 — 눈과 입 사이 거리. 눈·입 자체는 그대로 두고 그 사이만 늘이거나 줄인다
+  midface: {
+    up: (d) => `make the midface ${d} longer, with more distance between the eyes and the mouth, keeping the eyes and mouth themselves unchanged`,
+    down: (d) => `make the midface ${d} shorter, with less distance between the eyes and the mouth, keeping the eyes and mouth themselves unchanged`,
   },
   brow_tilt: {
     up: (d) => `angle the eyebrows ${d} upward toward the temples`,

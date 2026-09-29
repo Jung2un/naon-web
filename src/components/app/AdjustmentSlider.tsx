@@ -4,6 +4,7 @@ import {
   Eye,
   Palette,
   RotateCcw,
+  Ruler,
   ScanFace,
   SlidersHorizontal,
   Sparkles,
@@ -107,6 +108,7 @@ const GROUP_ICON: Record<string, LucideIcon> = {
   "눈": Eye,
   "코": Triangle,
   "눈썹": Spline,
+  "중안부": Ruler,
   "턱 라인": ScanFace,
 };
 

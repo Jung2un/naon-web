@@ -219,6 +219,8 @@ export const ADJUSTMENT_KEYS = [
   "eye_height",
   "nose_height",
   "nose_tilt",
+  "nose_width",
+  "midface",
   "brow_tilt",
   "brow_height",
   "jaw_vline",
@@ -250,7 +252,12 @@ export const ADJUSTMENT_GROUPS: ReadonlyArray<{
     items: [
       { key: "nose_height", label: "콧대 높이", low: "낮게", high: "높게" },
       { key: "nose_tilt", label: "코끝 각도", low: "내려가게", high: "올라가게" },
+      { key: "nose_width", label: "콧볼", low: "넓게", high: "좁게" },
     ],
+  },
+  {
+    title: "중안부",
+    items: [{ key: "midface", label: "길이 (눈~입)", low: "짧게", high: "길게" }],
   },
   {
     title: "눈썹",
