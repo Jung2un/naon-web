@@ -12,8 +12,10 @@ import { ADJUSTMENT_KEYS, ADJUSTMENT_RANGE, type Adjustments } from "@/types/mod
  *
  * 어떻게: 브라우저에서 얼굴 랜드마크(MediaPipe Face Landmarker)를 한 번 찾고, 눈·코·눈썹 자리에
  * 작은 변위장을 얹어 캔버스에서 픽셀을 다시 샘플링한다(리퀴파이).
- * 머리색 강도는 **머리카락 마스크 안에서만** 색을 바꾼다(MediaPipe Image Segmenter, hair 클래스).
+ * 머리색 강도와 염색(고른 머리색 칩)은 **머리카락 마스크 안에서만** 색을 바꾼다(MediaPipe Image Segmenter, hair 클래스).
  * 전체 필터로 하면 사진 전체의 대비가 같이 움직여서 "머리색"이 아니라 "사진 보정"이 된다.
+ * 화장 강도(연하게)는 얼굴 피부 마스크(face-skin 클래스) 안에서 채도를 낮춘다 — 립·블러셔 색이 빠지는 인상만 낸다.
+ * 머리 모양은 여기서 못 보여준다. 모양을 바꾸는 건 생성이라 적용해야 나온다.
  * 모델 두 개(랜드마크·세그멘테이션)와 wasm은 CDN에서 처음 한 번 받는다. 못 받으면 원본만 보여준다 —
  * 어느 경우에도 화면이 비지 않는다.
  *
@@ -28,6 +30,7 @@ const LANDMARK_MODEL =
 const SEGMENT_MODEL =
   "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_multiclass_256x256/float32/1/selfie_multiclass_256x256.tflite";
 const HAIR_CLASS = 1;
+const FACE_SKIN_CLASS = 3;
 /** 미리보기 캔버스 너비. 3:4라 높이는 4/3배. 픽셀 루프가 도는 크기라 너무 크면 슬라이더가 끊긴다. */
 const PREVIEW_WIDTH = 420;
 
@@ -125,15 +128,25 @@ function fieldsFor(face: Face, a: Adjustments): Field[] {
   return fields;
 }
 
+type Rgb = [number, number, number];
+function hexToRgb(hex: string): Rgb | null {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+const luma = (r: number, g: number, b: number) => 0.299 * r + 0.587 * g + 0.114 * b;
+
 /**
  * 출력 픽셀마다 "어디서 가져올지"를 정해 다시 샘플링한다(역방향 매핑, 쌍선형).
- * 같은 루프에서 머리카락 마스크 안의 픽셀에만 색 강도를 건다 — 두 번 돌지 않게.
+ * 같은 루프에서 머리카락 마스크 안의 픽셀에만 염색·색 강도를, 얼굴 피부 마스크에만 화장 강도를 건다 — 두 번 돌지 않게.
  */
 function render(
   src: ImageData,
   dst: ImageData,
   fields: Field[],
-  hair: { mask: Float32Array; depth: number } | null,
+  hair: { mask: Float32Array; depth: number; tint: Rgb | null } | null,
+  skin: { mask: Float32Array; makeup: number } | null,
 ) {
   const { width: w, height: h, data: s } = src;
   const d = dst.data;
@@ -141,6 +154,13 @@ function render(
   const t = hair ? hair.depth / ADJUSTMENT_RANGE : 0;
   const satK = 1 + t * 0.45;
   const lumK = 1 - t * 0.22;
+  // 염색 — 고른 색으로 밝기를 유지한 채 색만 옮긴다. 밝은 가닥은 밝게, 어두운 가닥은 어둡게 남는다.
+  const tint = hair?.tint ?? null;
+  const tintLuma = tint ? Math.max(luma(tint[0], tint[1], tint[2]), 8) : 1;
+  // 화장 연하게 — 0 ~ 1. 얼굴 피부의 채도를 낮추고 아주 살짝 밝힌다.
+  const m = skin ? Math.min(Math.max(-skin.makeup, 0), ADJUSTMENT_RANGE) / ADJUSTMENT_RANGE : 0;
+  const skinSatK = 1 - m * 0.4;
+  const skinLumK = 1 + m * 0.04;
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       let ox = 0;
@@ -171,13 +191,29 @@ function render(
           s[i01 + c] * (1 - fx) * fy + s[i11 + c] * fx * fy;
         r = mix(0); g = mix(1); b = mix(2); d[o + 3] = mix(3);
       }
-      if (hair && t !== 0) {
+      if (hair && (t !== 0 || tint)) {
         const a = hair.mask[y * w + x];
         if (a > 0.02) {
-          const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-          const nr = (lum + (r - lum) * satK) * lumK;
-          const ng = (lum + (g - lum) * satK) * lumK;
-          const nb = (lum + (b - lum) * satK) * lumK;
+          let lum = luma(r, g, b);
+          let hr = r, hg = g, hb = b;
+          if (tint) {
+            const k = lum / tintLuma;
+            hr = Math.min(tint[0] * k, 255); hg = Math.min(tint[1] * k, 255); hb = Math.min(tint[2] * k, 255);
+            lum = luma(hr, hg, hb);
+          }
+          const nr = (lum + (hr - lum) * satK) * lumK;
+          const ng = (lum + (hg - lum) * satK) * lumK;
+          const nb = (lum + (hb - lum) * satK) * lumK;
+          r = r + (nr - r) * a; g = g + (ng - g) * a; b = b + (nb - b) * a;
+        }
+      }
+      if (skin && m > 0) {
+        const a = skin.mask[y * w + x];
+        if (a > 0.02) {
+          const lum = luma(r, g, b);
+          const nr = (lum + (r - lum) * skinSatK) * skinLumK;
+          const ng = (lum + (g - lum) * skinSatK) * skinLumK;
+          const nb = (lum + (b - lum) * skinSatK) * skinLumK;
           r = r + (nr - r) * a; g = g + (ng - g) * a; b = b + (nb - b) * a;
         }
       }
@@ -204,7 +240,7 @@ function resizeMask(src: Float32Array, sw: number, sh: number, w: number, h: num
   return out;
 }
 
-const NO_FACE_KEYS = new Set<keyof Adjustments>(["hair_color_depth"]);
+const NO_FACE_KEYS = new Set<keyof Adjustments>(["hair_color_depth", "makeup"]);
 function needsFace(a: Adjustments): boolean {
   return ADJUSTMENT_KEYS.some((key) => !NO_FACE_KEYS.has(key) && (a[key] ?? 0) !== 0);
 }
@@ -217,16 +253,20 @@ type Status = "loading" | "ready" | "no-face" | "no-canvas";
 export function FacePreview({
   src,
   adjustments,
+  hairColor = null,
   className,
 }: {
   src: string;
   adjustments: Adjustments;
+  /** 고른 머리색 칩의 견본색(#rrggbb). 서버에 저장된 것과 같으면 null — 이미 그 색이다 */
+  hairColor?: string | null;
   className?: string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const baseRef = useRef<ImageData | null>(null);
   const faceRef = useRef<Face | null>(null);
   const hairRef = useRef<Float32Array | null>(null);
+  const skinRef = useRef<Float32Array | null>(null);
   const frameRef = useRef(0);
   // 상태는 src에 매인다. src가 바뀌면 그 자체로 "loading"이라 effect 안에서 setState를 부를 일이 없다.
   const [state, setState] = useState<{ src: string; status: Status }>({ src, status: "loading" });
@@ -238,6 +278,7 @@ export function FacePreview({
     baseRef.current = null;
     faceRef.current = null;
     hairRef.current = null;
+    skinRef.current = null;
     const setStatus = (next: Status) => setState({ src, status: next });
 
     const image = new Image();
@@ -279,16 +320,14 @@ export function FacePreview({
         const result = landmarker.detect(image);
         landmarker.close();
         const seg = segmenter.segment(image);
-        const hairMask = seg.confidenceMasks?.[HAIR_CLASS];
-        if (hairMask) {
-          hairRef.current = resizeMask(
-            Float32Array.from(hairMask.getAsFloat32Array()),
-            hairMask.width,
-            hairMask.height,
-            w,
-            h,
-          );
-        }
+        const toCanvas = (index: number) => {
+          const mask = seg.confidenceMasks?.[index];
+          return mask
+            ? resizeMask(Float32Array.from(mask.getAsFloat32Array()), mask.width, mask.height, w, h)
+            : null;
+        };
+        hairRef.current = toCanvas(HAIR_CLASS);
+        skinRef.current = toCanvas(FACE_SKIN_CLASS);
         seg.close();
         segmenter.close();
         const lm = result.faceLandmarks[0];
@@ -323,8 +362,11 @@ export function FacePreview({
       if (!canvas || !base || !ctx) return;
       const face = faceRef.current;
       const hair = hairRef.current;
+      const skin = skinRef.current;
       const depth = adjustments.hair_color_depth ?? 0;
-      if (idle(adjustments) || (!face && !hair)) {
+      const makeup = adjustments.makeup ?? 0;
+      const tint = hairColor ? hexToRgb(hairColor) : null;
+      if ((idle(adjustments) && !tint) || (!face && !hair && !skin)) {
         ctx.putImageData(base, 0, 0);
         return;
       }
@@ -333,14 +375,15 @@ export function FacePreview({
         base,
         out,
         face && needsFace(adjustments) ? fieldsFor(face, adjustments) : [],
-        hair && depth ? { mask: hair, depth } : null,
+        hair && (depth || tint) ? { mask: hair, depth, tint } : null,
+        skin && makeup < 0 ? { mask: skin, makeup } : null,
       );
       ctx.putImageData(out, 0, 0);
     });
     return () => cancelAnimationFrame(frameRef.current);
-  }, [adjustments, status]);
+  }, [adjustments, hairColor, status]);
 
-  const wanted = !idle(adjustments);
+  const wanted = !idle(adjustments) || Boolean(hairColor);
   const unavailable = status === "no-face" || status === "no-canvas";
 
   return (

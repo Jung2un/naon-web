@@ -21,6 +21,7 @@ import { invokeFunction } from "@/lib/supabase/functions";
 import { isSupabaseConfigured } from "@/lib/env";
 import { humanError } from "@/lib/errors";
 import { credits } from "@/lib/format";
+import { HAIR_COLORS } from "@/lib/hair-colors";
 import { cn } from "@/lib/utils";
 import {
   ANGLE_LABEL,
@@ -92,6 +93,19 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
       image.image_url &&
       (image.kind === "candidate" || image.kind === "refined"),
   );
+
+  // 고른 머리색 칩이 저장된 것과 다르면 그 견본색으로 머리를 미리 물들여 보여준다 — FacePreview
+  const hairColorName = character.options.hair_color.find((o) => o.id === traits.hair_color)?.name;
+  const previewHairColor =
+    traits.hair_color && traits.hair_color !== serverTraits.hair_color && hairColorName
+      ? HAIR_COLORS[hairColorName] ?? null
+      : null;
+  // 고른 머리 모양이 저장된 것과 다르면 그 사진을 옆에 보여준다 — 모양은 생성이라 얼굴 위에 미리 못 그린다
+  const previewHair =
+    traits.hair && traits.hair !== serverTraits.hair
+      ? character.options.hair.find((o) => o.id === traits.hair) ?? null
+      : null;
+  const faceTypeName = character.options.face.find((o) => o.id === serverTraits.face)?.name;
 
   const changed =
     REFINABLE_TRAIT_KINDS.some(
@@ -312,17 +326,29 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
                   <FacePreview
                     src={character.base_image_url}
                     adjustments={adjust}
+                    hairColor={previewHairColor}
                     className="size-full"
                   />
                 ) : null}
+                {/* 고른 머리 모양. 얼굴 위에 못 그리니 사진을 겹쳐 보여준다 */}
+                {!working && previewHair?.thumbnail_url && (
+                  <span className="absolute bottom-2 right-2 block w-[38%] overflow-hidden rounded-[8px] border border-surface shadow-overlay">
+                    <Image src={previewHair.thumbnail_url} alt="" width={120} height={120} className="block aspect-square w-full object-cover" />
+                    <span className="block bg-surface px-1.5 py-1 text-center text-[11px] leading-tight text-ink">{previewHair.name}</span>
+                  </span>
+                )}
               </div>
               {working ? (
                 <p className="mt-2 text-caption text-muted">
                   수정을 반영하는 중이에요. 30초~2분 걸려요.
                 </p>
-              ) : !sameAdjustments(adjust, serverAdjust) ? (
+              ) : previewHair ? (
                 <p className="mt-2 text-caption text-muted">
-                  미리보기예요. 아래 &quot;이 수정 적용&quot;을 누르면 진짜 결과가 나와요.
+                  적용하면 이 머리 모양으로 바뀌어요. 모양은 만들어 봐야 나와요.
+                </p>
+              ) : !sameAdjustments(adjust, serverAdjust) || previewHairColor ? (
+                <p className="mt-2 text-caption text-muted">
+                  미리보기예요. 적용하면 진짜 결과가 나와요.
                 </p>
               ) : null}
             </div>
@@ -387,7 +413,7 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
             </div>
 
             <p className="mt-6 text-caption text-muted">
-              눈·코·눈썹의 각도와 높낮이, 머리색 강도는 오른쪽 아래 &quot;세부 조정&quot;에서 슬라이더로 고쳐요.
+              눈·코·눈썹의 각도와 높낮이, 머리색·화장 강도는 오른쪽 아래 &quot;세부 조정&quot;에서 슬라이더로 고쳐요.
             </p>
 
             <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -416,7 +442,7 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
                 {pending === "redraft" ? "뽑는 중…" : "후보부터 다시 뽑기"}
               </Button>
               <span className="text-caption text-muted">
-                톤·성별·나이대를 바꾸려면 다시 뽑아야 해요 · 크레딧{" "}
+                {faceTypeName ? `얼굴상(${faceTypeName})·` : "얼굴상·"}톤·성별·나이대를 바꾸려면 다시 뽑아야 해요 · 크레딧{" "}
                 <span className="tabular text-ink">
                   {credits(CHARACTER_COST.draft)}
                 </span>
@@ -466,6 +492,7 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
       {character.stage === "refining" && (
         <AdjustmentDock
           src={working ? null : character.base_image_url}
+          hairColor={previewHairColor}
           value={adjust}
           disabled={working || Boolean(pending)}
           dirty={!sameAdjustments(adjust, serverAdjust)}

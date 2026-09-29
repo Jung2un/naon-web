@@ -211,6 +211,7 @@ export const REFINABLE_TRAIT_KINDS: readonly OptionKind[] = [
  */
 export const ADJUSTMENT_KEYS = [
   "hair_color_depth",
+  "makeup",
   "eye_tilt",
   "eye_height",
   "nose_height",
@@ -222,12 +223,16 @@ export type AdjustmentKey = (typeof ADJUSTMENT_KEYS)[number];
 export type Adjustments = Partial<Record<AdjustmentKey, number>>;
 export const ADJUSTMENT_RANGE = 100;
 
-/** 화면에 나오는 순서와 문구. `low`·`high`는 슬라이더 양 끝 라벨이다. */
+/**
+ * 화면에 나오는 순서와 문구. `low`·`high`는 슬라이더 양 끝 라벨이다.
+ * `max`가 있으면 그 위로는 못 간다 — 화장은 지금 것이 기준이고 연하게만 간다(더 진하게는 안 만든다).
+ */
 export const ADJUSTMENT_GROUPS: ReadonlyArray<{
   title: string;
-  items: ReadonlyArray<{ key: AdjustmentKey; label: string; low: string; high: string }>;
+  items: ReadonlyArray<{ key: AdjustmentKey; label: string; low: string; high: string; max?: number }>;
 }> = [
   { title: "머리색", items: [{ key: "hair_color_depth", label: "강도", low: "연하게", high: "진하게" }] },
+  { title: "화장", items: [{ key: "makeup", label: "강도", low: "연하게", high: "지금처럼", max: 0 }] },
   {
     title: "눈",
     items: [
@@ -259,6 +264,8 @@ export function asAdjustments(value: unknown): Adjustments {
     const raw = (value as Record<string, unknown>)[key];
     if (typeof raw !== "number" || !Number.isInteger(raw) || raw === 0) continue;
     if (Math.abs(raw) > ADJUSTMENT_RANGE) continue;
+    // 화장은 연하게만. 지금 것보다 진하게는 안 만든다 — IDENTITY_LOCK과 같은 방향
+    if (key === "makeup" && raw > 0) continue;
     out[key] = raw;
   }
   return out;

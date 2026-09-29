@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { RotateCcw, SlidersHorizontal, X } from "lucide-react";
+import { Maximize2, Minimize2, RotateCcw, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MicroLabel } from "@/components/ui/label";
 import { credits } from "@/lib/format";
@@ -27,6 +27,7 @@ export function AdjustmentSlider({
   low,
   high,
   value,
+  max = ADJUSTMENT_RANGE,
   disabled,
   onChange,
 }: {
@@ -35,9 +36,13 @@ export function AdjustmentSlider({
   low: string;
   high: string;
   value: number;
+  /** 위쪽 한계. 화장처럼 한쪽으로만 가는 슬라이더는 0 */
+  max?: number;
   disabled?: boolean;
   onChange: (value: number) => void;
 }) {
+  // 가운데 눈금은 "그대로"(0) 자리. 한쪽 슬라이더에서는 오른쪽 끝이 0이다
+  const zeroAt = `${((0 + ADJUSTMENT_RANGE) / (max + ADJUSTMENT_RANGE)) * 100}%`;
   return (
     <div>
       <label htmlFor={id} className="text-sm text-body">
@@ -47,13 +52,14 @@ export function AdjustmentSlider({
         {/* 가운데 눈금 — "그대로" 자리 */}
         <span
           aria-hidden
-          className="pointer-events-none absolute left-1/2 top-1/2 h-3 w-px -translate-x-1/2 -translate-y-1/2 bg-line-strong"
+          className="pointer-events-none absolute top-1/2 h-3 w-px -translate-x-1/2 -translate-y-1/2 bg-line-strong"
+          style={{ left: zeroAt }}
         />
         <input
           id={id}
           type="range"
           min={-ADJUSTMENT_RANGE}
-          max={ADJUSTMENT_RANGE}
+          max={max}
           step={1}
           value={value}
           disabled={disabled}
@@ -95,6 +101,7 @@ export function AdjustmentSlider({
  */
 export function AdjustmentDock({
   src,
+  hairColor,
   value,
   disabled,
   dirty,
@@ -106,6 +113,8 @@ export function AdjustmentDock({
 }: {
   /** 지금 얼굴. 없으면 미리보기 없이 슬라이더만 */
   src: string | null;
+  /** 고른 머리색 견본. 저장된 것과 같으면 null */
+  hairColor?: string | null;
   value: Adjustments;
   disabled?: boolean;
   /** 서버에 저장된 값과 다른가 — 적용 버튼이 이걸 본다 */
@@ -117,6 +126,8 @@ export function AdjustmentDock({
   onApply: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  // 미리보기 크기. 작게(옆에 글이 있는 헤더) ↔ 크게(패널 폭 전체). 너비가 바뀌면 3:4 비율이 높이를 따라 움직인다
+  const [large, setLarge] = useState(false);
   const touched = Object.values(value).some((v) => v);
 
   return (
@@ -153,18 +164,32 @@ export function AdjustmentDock({
             "sm:inset-x-auto sm:bottom-6 sm:right-6 sm:w-[380px] sm:max-h-[min(80dvh,720px)] sm:rounded-[20px]",
           )}
         >
-          <header className="flex items-center gap-3 border-b border-line px-4 py-3">
+          <header className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3">
             {src && (
-              <FacePreview
-                src={src}
-                adjustments={value}
-                className="aspect-[3/4] w-14 shrink-0 overflow-hidden rounded-[8px] border border-line bg-sunken"
-              />
+              <button
+                type="button"
+                onClick={() => setLarge((v) => !v)}
+                aria-pressed={large}
+                aria-label={large ? "미리보기 작게" : "미리보기 크게"}
+                className={cn(
+                  "group relative shrink-0 overflow-hidden rounded-[12px] border border-line bg-sunken text-left",
+                  "transition-[width] duration-300 ease-out motion-reduce:transition-none",
+                  large ? "order-last w-full" : "w-36",
+                )}
+              >
+                <FacePreview src={src} adjustments={value} hairColor={hairColor} className="aspect-[3/4] w-full" />
+                <span
+                  aria-hidden
+                  className="absolute bottom-2 right-2 flex size-7 items-center justify-center rounded-full bg-scrim text-on-dark opacity-80 transition-opacity group-hover:opacity-100"
+                >
+                  {large ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
+                </span>
+              </button>
             )}
             <div className="min-w-0 flex-1">
               <p className="text-base font-semibold text-ink">세부 조정</p>
               <p className="mt-0.5 text-caption text-muted">
-                움직이면 얼굴이 바로 따라와요. 가운데가 그대로예요.
+                얼굴을 보면서 조금씩 조절해 보세요. 마음에 들면 적용해요.
               </p>
             </div>
             <button
@@ -201,6 +226,7 @@ export function AdjustmentDock({
                         low={item.low}
                         high={item.high}
                         value={value[item.key] ?? 0}
+                        max={item.max}
                         disabled={disabled}
                         onChange={(next) => onChange(item.key, next)}
                       />

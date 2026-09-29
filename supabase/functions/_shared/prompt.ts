@@ -474,6 +474,7 @@ const CHANGE_PHRASE: Record<string, (p: string) => string> = {
  */
 export const ADJUSTMENT_KEYS = [
   "hair_color_depth",
+  "makeup",
   "eye_tilt",
   "eye_height",
   "nose_height",
@@ -495,6 +496,8 @@ export function asAdjustments(value: unknown): Adjustments {
     const raw = (value as Record<string, unknown>)[key];
     if (typeof raw !== "number" || !Number.isInteger(raw) || raw === 0) continue;
     if (Math.abs(raw) > ADJUSTMENT_RANGE) continue;
+    // 화장은 연하게만. 지금 것보다 진하게는 안 만든다 — IDENTITY_LOCK이 "더 진하게 하지 마라"를 지킨다
+    if (key === "makeup" && raw > 0) continue;
     out[key] = raw;
   }
   return out;
@@ -515,6 +518,12 @@ const ADJUST_PHRASE: Record<AdjustmentKey, { up: (d: string) => string; down: (d
   hair_color_depth: {
     up: (d) => `make the hair color ${d} deeper and more saturated, keeping the same hue`,
     down: (d) => `make the hair color ${d} lighter and softer, keeping the same hue`,
+  },
+  // 화면은 0 이하만 보낸다. up은 되돌릴 때(−60 → 0)의 문장이라 "원래 강도로"다
+  makeup: {
+    up: (d) => `bring the makeup ${d} back toward its previous strength`,
+    down: (d) =>
+      `make the makeup ${d} lighter and more sheer — softer eye definition, a more natural lip and less blush, without removing it entirely`,
   },
   eye_tilt: {
     up: (d) => `tilt the outer corners of the eyes ${d} upward`,
