@@ -375,6 +375,7 @@ test("slider adjustments become relative instructions and nothing else is touche
   assert.deepEqual(asAdjustments({ brow_match_hair: 1 }), { brow_match_hair: 100 });
   assert.match(editInstruction(traits, traits, options, {}, { brow_match_hair: 100, brow_depth: -50 }), /eyebrows clearly lighter and softer[^.]*, match the eyebrow colour to the hair colour/);
   assert.match(editInstruction(traits, traits, options, {}, { eye_scale_x: 60, eye_scale_y: -30 }), /eyes clearly wider horizontally, make the eyes slightly shorter vertically/);
+  assert.match(editInstruction(traits, traits, options, {}, { brow_thickness: 40 }), /eyebrows clearly thicker and fuller/);
   // A makeup chip is a refinable trait and its phrase comes before the identity lock so it wins.
   const withMakeup = new Map([...options, ["mk", { id: "mk", kind: "makeup", prompt: "no makeup at all" }]]);
   const mk = editInstruction(traits, { ...traits, makeup: "mk" }, withMakeup);

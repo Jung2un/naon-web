@@ -487,6 +487,7 @@ const CHANGE_PHRASE: Record<string, (p: string) => string> = {
 export const ADJUSTMENT_KEYS = [
   "hair_color_depth",
   "brow_depth",
+  "brow_thickness",
   "brow_match_hair",
   "makeup_liner",
   "makeup_mascara",
@@ -564,6 +565,10 @@ const ADJUST_PHRASE: Record<AdjustmentKey, { up: (d: string) => string; down: (d
   brow_depth: {
     up: (d) => `make the eyebrows ${d} darker and fuller in colour`,
     down: (d) => `make the eyebrows ${d} lighter and softer in colour, keeping their shape and density`,
+  },
+  brow_thickness: {
+    up: (d) => `make the eyebrows ${d} thicker and fuller`,
+    down: (d) => `make the eyebrows ${d} thinner and finer`,
   },
   // 스위치. 켤 때(0 → 100)만 up이 나온다. 끄면 이전 눈썹색으로
   brow_match_hair: {

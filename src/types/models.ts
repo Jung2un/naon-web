@@ -218,6 +218,7 @@ export const REFINABLE_TRAIT_KINDS: readonly OptionKind[] = [
 export const ADJUSTMENT_KEYS = [
   "hair_color_depth",
   "brow_depth",
+  "brow_thickness",
   "brow_match_hair",
   "makeup_liner",
   "makeup_mascara",
@@ -261,6 +262,7 @@ export const ADJUSTMENT_GROUPS: ReadonlyArray<{ title: string; items: ReadonlyAr
       { key: "brow_tilt", label: "각도", low: "처지게", high: "올라가게" },
       { key: "brow_height", label: "높낮이", low: "낮게", high: "높게" },
       { key: "brow_depth", label: "색 진하기", low: "연하게", high: "진하게" },
+      { key: "brow_thickness", label: "두께", low: "얇게", high: "두껍게" },
       { key: "brow_match_hair", label: "머리색과 맞추기", low: "", high: "", toggle: true },
     ],
   },

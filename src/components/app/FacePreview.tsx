@@ -161,6 +161,11 @@ function fieldsFor(face: Face, a: Adjustments): Field[] {
     const k = v("eye_scale_y") * 0.12;
     fields.push(scale(face.eyeL, 0.6 * u, 0, k), scale(face.eyeR, 0.6 * u, 0, k));
   }
+  if (v("brow_thickness")) {
+    // 눈썹 선을 중심으로 세로만 늘이고(+) 줄인다(−). 가로는 그대로라 길이는 안 바뀐다
+    const k = v("brow_thickness") * 0.16;
+    fields.push(scale(face.browL, 0.45 * u, 0, k), scale(face.browR, 0.45 * u, 0, k));
+  }
   if (v("brow_height")) {
     const d = v("brow_height") * 0.045 * u;
     fields.push(lift(face.browL, 0.5 * u, d), lift(face.browR, 0.5 * u, d));
@@ -252,25 +257,52 @@ function maskStats(base: ImageData, mask: Float32Array, minConf = 0.8): [number,
 }
 
 /**
- * 얼굴 피부의 기준 색차(Cb·Cr)와 밝기. 마스크가 확실한 중간 밝기 픽셀 중 **덜 붉은 절반**의 평균이다.
- * 볼 전체가 블러셔면 평균이 분홍으로 끌려가서 블러셔가 "피부"로 잡히고, 그러면 아무리 내려도 볼이 안 빠진다.
+ * 얼굴 피부의 기준 색차(Cb·Cr)와 밝기 — **블러셔가 없는 자리(이마·코·턱)의 피부**다.
+ *
+ * 처음엔 얼굴 전체에서 "덜 붉은 절반"을 썼는데, 그 절반에 마스크 가장자리(머리·배경과 섞인 픽셀)와 그늘이
+ * 들어가서 기준이 회색으로 흘렀고, 볼을 그쪽으로 되돌리니 **흑백 볼**이 됐다. 블러셔를 뺀 진짜 피부가
+ * 기준이어야 되돌린 볼이 원래 피부색이 된다. `exclude`가 블러셔 자리(볼 원·띠)다. 얼굴을 못 찾았으면 전체.
  */
-function skinReference(base: ImageData, mask: Float32Array): [number, number, number] {
+function skinReference(
+  base: ImageData,
+  mask: Float32Array,
+  exclude: (x: number, y: number) => boolean,
+): [number, number, number] {
   const s = base.data;
-  const samples: [number, number, number][] = [];
+  const w = base.width;
+  let cb = 0, cr = 0, y = 0, n = 0;
   for (let i = 0, p = 0; i < mask.length; i++, p += 4) {
-    if (mask[i] < 0.8) continue;
+    if (mask[i] < 0.9) continue;
+    const px = i % w, py = (i / w) | 0;
+    if (exclude(px, py)) continue;
     const r = s[p], g = s[p + 1], b = s[p + 2];
     const Y = luma(r, g, b);
-    if (Y < 60 || Y > 235) continue;
-    samples.push([toCb(r, g, b), toCr(r, g, b), Y]);
+    if (Y < 70 || Y > 235) continue;
+    cb += toCb(r, g, b); cr += toCr(r, g, b); y += Y; n++;
   }
-  if (samples.length === 0) return [0, 0, 0];
-  samples.sort((a, b) => a[1] - b[1]);
-  const keep = samples.slice(0, Math.max(1, Math.floor(samples.length * 0.5)));
-  let cb = 0, cr = 0, y = 0;
-  for (const [a, b, c] of keep) { cb += a; cr += b; y += c; }
-  return [cb / keep.length, cr / keep.length, y / keep.length];
+  return n ? [cb / n, cr / n, y / n] : [0, 0, 0];
+}
+
+/** 블러셔 자리 — 볼 원 두 개와 볼→콧잔등→볼 띠. 기준 피부를 뽑을 때 빼고, 블러셔를 뺄 때 잡는다 */
+function blushZones(face: Face) {
+  const cheeks = [
+    { c: face.cheekL, r: face.unit * 0.5 },
+    { c: face.cheekR, r: face.unit * 0.5 },
+  ];
+  const band = {
+    c: { x: (face.cheekL.x + face.cheekR.x) / 2, y: (face.cheekL.y + face.cheekR.y) / 2 - face.unit * 0.05 },
+    hw: (face.cheekR.x - face.cheekL.x) / 2 + face.unit * 0.35,
+    hh: face.unit * 0.32,
+  };
+  const inside = (x: number, y: number) => {
+    for (const k of cheeks) {
+      const dx = x - k.c.x, dy = y - k.c.y;
+      if (dx * dx + dy * dy < k.r * k.r * 1.3) return true;
+    }
+    const bx = (x - band.c.x) / band.hw, by = (y - band.c.y) / band.hh;
+    return bx * bx + by * by < 1.3;
+  };
+  return { cheeks, band, inside };
 }
 
 /** 점이 꺾은선의 어디쯤인지 0(시작)~1(끝). 눈썹 선은 바깥→안쪽 순서라 0이 꼬리다 */
@@ -306,6 +338,8 @@ type HairOp = { mask: Float32Array; depth: number; tint: Rgb | null; mean: [numb
 type BrowOp = {
   lines: Point[][];
   band: number;
+  /** 이 y보다 아래(눈 쪽)는 눈썹이 아니다 — 눈두덩 그늘이 눈썹으로 잡히지 않게 */
+  belowLimit: number[];
   /** 눈썹 색 진하기 −100~100 */
   depth: number;
   /** 머리색과 맞추기. 목표 [Cb, Cr]와 목표 밝기(고른 머리색 견본의 밝기) */
@@ -375,7 +409,7 @@ function render(
   // 블러셔는 색차가 옅다. 볼 안에서는 문턱을 더 낮춰서 끝까지 내리면 거의 사라지게
   const CHEEK_DEV_LO = 1.2, CHEEK_DEV_HI = 5;
   const LIP_MAX = 0.5; // 화장 안 한 입술도 피부보다 붉다
-  const BLUSH_MAX = 1.0;
+  const BLUSH_MAX = 0.92; // 기준이 진짜 피부라 거의 다 되돌려도 피부색이다. 8%는 볼의 자연스러운 결로 남긴다
   const LID_MAX = 0.8;
   const LINER_LIFT_MAX = 0.5; // 라인의 어두움은 절반까지만 — 생속눈썹은 남는다
   const MASCARA_LIFT_MAX = 0.6; // 길어진 속눈썹을 옅게. 피부까지 올리면 눈 위가 허옇게 뜬다
@@ -439,7 +473,9 @@ function render(
       // ---- 눈썹. 눈썹 선 띠 안에서 피부보다 어두운 픽셀만 눈썹 털이다
       if (brow && (browT !== 0 || brow.match)) {
         let inBand = 0;
-        for (const line of brow.lines) {
+        for (let li = 0; li < brow.lines.length; li++) {
+          const line = brow.lines[li];
+          if (y > brow.belowLimit[li]) continue;
           const dist = distToPolyline(x, y, line);
           if (dist >= brow.band) continue;
           // 눈썹 꼬리(바깥 끝)는 관자놀이 머리카락과 붙어 있다. 바깥 1/3에서 띠를 좁힌다
@@ -448,10 +484,11 @@ function render(
           if (dist < brow.band * taper) inBand = Math.max(inBand, 1 - (dist / (brow.band * taper)) ** 2);
         }
         // 띠 안이라도 머리카락(앞머리·관자)이면 눈썹이 아니다. 문턱을 낮춰 애매한 픽셀도 뺀다
-        if (inBand > 0 && brow.hairMask && brow.hairMask[y * w + x] > 0.2) inBand = 0;
+        if (inBand > 0 && brow.hairMask && brow.hairMask[y * w + x] > 0.15) inBand = 0;
         if (inBand > 0) {
           const Y = luma(r, g, b);
-          const darkness = clamp01((brow.skinY - 12 - Y) / 45); // 피부 대비 얼마나 어두운가 = 얼마나 털인가
+          // 피부보다 확실히 어두워야 털이다. 문턱을 올려 피부 그늘·잔털은 빼고, 가중치를 제곱해 경계를 날카롭게
+          const darkness = clamp01((brow.skinY - 22 - Y) / 35) ** 2;
           const wgt = inBand * darkness;
           if (wgt > 0.01) {
             let cb = toCb(r, g, b), cr = toCr(r, g, b), nY = Y;
@@ -603,7 +640,7 @@ function browMeanLuma(base: ImageData, lines: Point[][], band: number, skinY: nu
 }
 
 const FACE_KEYS = new Set<keyof Adjustments>([
-  "eye_tilt", "eye_height", "eye_scale_x", "eye_scale_y", "brow_tilt", "brow_height",
+  "eye_tilt", "eye_height", "eye_scale_x", "eye_scale_y", "brow_tilt", "brow_height", "brow_thickness",
   "nose_height", "nose_tilt", "nose_width", "midface", "jaw_vline", "chin_length",
 ]);
 function needsFace(a: Adjustments): boolean {
@@ -702,19 +739,23 @@ export function FacePreview({
         seg.close();
         segmenter.close();
         const base = baseRef.current;
-        if (skinRef.current && base) skinStatsRef.current = skinReference(base, skinRef.current);
         if (hairRef.current && base) hairStatsRef.current = maskStats(base, hairRef.current);
         const lm = result.faceLandmarks[0];
         if (cancelled) return;
         if (!lm) {
+          if (skinRef.current && base) skinStatsRef.current = skinReference(base, skinRef.current, () => false);
           setStatus("no-face");
           return;
         }
         const face = faceFrom(lm, w, h);
         faceRef.current = face;
+        // 기준 피부는 블러셔 자리를 뺀 곳에서 — 얼굴을 알아야 뺄 수 있다
+        if (skinRef.current && base) {
+          skinStatsRef.current = skinReference(base, skinRef.current, blushZones(face).inside);
+        }
         if (base) {
           browLumaRef.current = browMeanLuma(
-            base, [face.browLineL, face.browLineR], face.unit * 0.085, skinStatsRef.current[2] || 150,
+            base, [face.browLineL, face.browLineR], face.unit * 0.07, skinStatsRef.current[2] || 150,
           );
         }
         setStatus("ready");
@@ -770,7 +811,9 @@ export function FacePreview({
         face && (browDepth || match)
           ? {
               lines: [face.browLineL, face.browLineR],
-              band: face.unit * 0.085,
+              band: face.unit * 0.07,
+              // 눈 위 가장자리(눈 중심 − 반너비×0.6)보다 아래는 눈썹이 아니다
+              belowLimit: [face.eyeL.y - face.eyeHalfWidth * 0.6, face.eyeR.y - face.eyeHalfWidth * 0.6],
               depth: browDepth,
               match,
               meanY: browLumaRef.current,
@@ -791,16 +834,9 @@ export function FacePreview({
                 { c: face.eyeL, hw: face.eyeHalfWidth },
                 { c: face.eyeR, hw: face.eyeHalfWidth },
               ],
-              cheeks: [
-                { c: face.cheekL, r: face.unit * 0.5 },
-                { c: face.cheekR, r: face.unit * 0.5 },
-              ],
+              cheeks: blushZones(face).cheeks,
               mouth: { c: face.mouth, hw: face.mouthHalfWidth, hh: face.mouthHalfHeight },
-              blushBand: {
-                c: { x: (face.cheekL.x + face.cheekR.x) / 2, y: (face.cheekL.y + face.cheekR.y) / 2 - face.unit * 0.05 },
-                hw: (face.cheekR.x - face.cheekL.x) / 2 + face.unit * 0.35,
-                hh: face.unit * 0.32,
-              },
+              blushBand: blushZones(face).band,
               unit: face.unit,
               liner, mascara, lip, blush,
             }
