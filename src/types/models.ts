@@ -252,6 +252,8 @@ export type AdjustmentItem = {
   low: string;
   high: string;
   max?: number;
+  /** 저장값의 양수가 축소 방향인 항목은 화면에서만 부호를 뒤집는다. */
+  reversed?: boolean;
   toggle?: boolean;
 };
 export const ADJUSTMENT_GROUPS: ReadonlyArray<{ title: string; items: ReadonlyArray<AdjustmentItem> }> = [
@@ -280,7 +282,7 @@ export const ADJUSTMENT_GROUPS: ReadonlyArray<{ title: string; items: ReadonlyAr
     items: [
       { key: "nose_height", label: "콧대 높이", low: "낮게", high: "높게" },
       { key: "nose_tilt", label: "코끝 각도", low: "내려가게", high: "올라가게" },
-      { key: "nose_width", label: "콧볼", low: "넓게", high: "좁게" },
+      { key: "nose_width", label: "콧볼", low: "좁게", high: "넓게", reversed: true },
     ],
   },
   {
@@ -290,7 +292,7 @@ export const ADJUSTMENT_GROUPS: ReadonlyArray<{ title: string; items: ReadonlyAr
   {
     title: "턱 라인",
     items: [
-      { key: "jaw_vline", label: "V라인", low: "둥글게", high: "갸름하게" },
+      { key: "jaw_vline", label: "V라인", low: "갸름하게", high: "둥글게", reversed: true },
       { key: "chin_length", label: "턱 길이", low: "짧게", high: "길게" },
     ],
   },

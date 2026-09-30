@@ -256,10 +256,10 @@ export function AdjustmentDock({
                           label={item.label}
                           low={item.low}
                           high={item.high}
-                          value={value[item.key] ?? 0}
+                          value={(value[item.key] ?? 0) * (item.reversed ? -1 : 1)}
                           max={item.max}
                           disabled={disabled}
-                          onChange={(next) => onChange(item.key, next)}
+                          onChange={(next) => onChange(item.key, next * (item.reversed ? -1 : 1))}
                         />
                       ),
                     )}
