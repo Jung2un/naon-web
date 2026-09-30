@@ -39,6 +39,105 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_credit_topups: {
+        Row: {
+          actor_email: string
+          actor_id: string | null
+          amount_krw: number
+          balance_after: number
+          created_at: string
+          credits: number
+          depositor: string
+          ledger_id: string | null
+          note: string
+          payment_reference: string
+          request_id: string
+          user_email: string
+          user_id: string | null
+        }
+        Insert: {
+          actor_email: string
+          actor_id?: string | null
+          amount_krw: number
+          balance_after: number
+          created_at?: string
+          credits: number
+          depositor: string
+          ledger_id?: string | null
+          note?: string
+          payment_reference: string
+          request_id: string
+          user_email: string
+          user_id?: string | null
+        }
+        Update: {
+          actor_email?: string
+          actor_id?: string | null
+          amount_krw?: number
+          balance_after?: number
+          created_at?: string
+          credits?: number
+          depositor?: string
+          ledger_id?: string | null
+          note?: string
+          payment_reference?: string
+          request_id?: string
+          user_email?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_credit_topups_ledger_id_fkey"
+            columns: ["ledger_id"]
+            isOneToOne: false
+            referencedRelation: "credit_ledger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_credit_topups_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      backoffice_admins: {
+        Row: {
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      billing_settings: {
+        Row: {
+          id: boolean
+          settings: Json
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: boolean
+          settings?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: boolean
+          settings?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       character_images: {
         Row: {
           adjustments: Json
@@ -176,6 +275,7 @@ export type Database = {
           adjustments: Json
           base_image_path: string | null
           created_at: string
+          deleted_at: string | null
           error_code: string | null
           id: string
           name: string
@@ -191,6 +291,7 @@ export type Database = {
           adjustments?: Json
           base_image_path?: string | null
           created_at?: string
+          deleted_at?: string | null
           error_code?: string | null
           id?: string
           name: string
@@ -206,6 +307,7 @@ export type Database = {
           adjustments?: Json
           base_image_path?: string | null
           created_at?: string
+          deleted_at?: string | null
           error_code?: string | null
           id?: string
           name?: string
@@ -274,6 +376,7 @@ export type Database = {
           completed_at: string | null
           created_at: string
           credits_spent: number
+          deleted_at: string | null
           duration_seconds: number | null
           error_code: string | null
           id: string
@@ -292,6 +395,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           credits_spent?: number
+          deleted_at?: string | null
           duration_seconds?: number | null
           error_code?: string | null
           id?: string
@@ -310,6 +414,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           credits_spent?: number
+          deleted_at?: string | null
           duration_seconds?: number | null
           error_code?: string | null
           id?: string
@@ -505,6 +610,34 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_backoffice_read: {
+        Args: {
+          p_actor_id: string
+          p_filter?: string
+          p_operation: string
+          p_page?: number
+          p_search?: string
+          p_user_id?: string
+        }
+        Returns: Json
+      }
+      admin_billing: {
+        Args: { p_actor_id: string; p_settings?: Json }
+        Returns: Json
+      }
+      admin_top_up_credits: {
+        Args: {
+          p_actor_id: string
+          p_amount_krw: number
+          p_credits: number
+          p_depositor: string
+          p_note?: string
+          p_payment_reference: string
+          p_request_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       begin_video_job: {
         Args: {
           p_character_id: string
@@ -527,6 +660,10 @@ export type Database = {
         }
         Returns: number
       }
+      delete_owned_item: {
+        Args: { p_id: string; p_kind: string }
+        Returns: undefined
+      }
       finish_character_batch: {
         Args: {
           p_character_id: string
@@ -539,6 +676,7 @@ export type Database = {
         Args: { p_error?: string; p_id: string; p_result_path?: string }
         Returns: boolean
       }
+      get_public_billing: { Args: never; Returns: Json }
       refund_credits: {
         Args: {
           p_amount: number

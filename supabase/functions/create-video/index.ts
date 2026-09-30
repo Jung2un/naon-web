@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
     }
     const { data: character } = await admin.from("characters").select(
       "base_image_path,thumbnail_path,status,stage",
-    ).eq("id", characterId).eq("user_id", userId).maybeSingle();
+    ).eq("id", characterId).eq("user_id", userId).is("deleted_at", null).maybeSingle();
     if (character?.stage !== "ready" || character?.status !== "done") {
       return fail(req, 409, "CHARACTER_NOT_READY");
     }

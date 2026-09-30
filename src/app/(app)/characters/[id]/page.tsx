@@ -1,3 +1,4 @@
+import { DeleteItemButton } from "@/components/app/DeleteItemButton";
 import { LOOKS_ENABLED } from "@/features/looks/config";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -55,6 +56,7 @@ export default async function CharacterDetailPage({
 
       <div className="flex flex-wrap items-center gap-3">
         <StatusBadge status={character.status} />
+        <DeleteItemButton kind="character" id={character.id} name={character.name} busy={character.status === "queued" || character.status === "processing"} redirectTo="/characters" />
         <span className="text-caption text-muted">
           {fullTime(character.created_at)}에 만들었어요
         </span>

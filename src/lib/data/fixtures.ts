@@ -121,6 +121,7 @@ export const fixtureCharacterOptions: CharacterOptionWithUrl[] = [
 export const fixtureCharacters: CharacterListItem[] = [
   {
     id: "c1000000-0000-4000-8000-000000000001",
+    deleted_at: null,
     user_id: USER_ID,
     name: "기본 나",
     status: "done",
@@ -143,6 +144,7 @@ export const fixtureCharacters: CharacterListItem[] = [
   },
   {
     id: "c1000000-0000-4000-8000-000000000002",
+    deleted_at: null,
     user_id: USER_ID,
     name: "짧은 머리",
     status: "processing",
@@ -284,6 +286,7 @@ export const fixtureLooks: LookListItem[] = [
 export const fixtureJobs: JobListItem[] = [
   {
     id: "j1000000-0000-4000-8000-000000000001",
+    deleted_at: null,
     user_id: USER_ID,
     character_id: fixtureCharacters[0].id,
     look_id: fixtureLooks[0].id,
@@ -305,6 +308,7 @@ export const fixtureJobs: JobListItem[] = [
   },
   {
     id: "j1000000-0000-4000-8000-000000000002",
+    deleted_at: null,
     user_id: USER_ID,
     character_id: fixtureCharacters[0].id,
     look_id: fixtureLooks[1].id,
@@ -326,6 +330,7 @@ export const fixtureJobs: JobListItem[] = [
   },
   {
     id: "j1000000-0000-4000-8000-000000000003",
+    deleted_at: null,
     user_id: USER_ID,
     character_id: fixtureCharacters[0].id,
     look_id: fixtureLooks[0].id,
@@ -347,6 +352,7 @@ export const fixtureJobs: JobListItem[] = [
   },
   {
     id: "j1000000-0000-4000-8000-000000000004",
+    deleted_at: null,
     user_id: USER_ID,
     character_id: fixtureCharacters[0].id,
     look_id: fixtureLooks[1].id,
@@ -368,6 +374,7 @@ export const fixtureJobs: JobListItem[] = [
   },
   {
     id: "j1000000-0000-4000-8000-000000000005",
+    deleted_at: null,
     user_id: USER_ID,
     character_id: fixtureCharacters[0].id,
     look_id: fixtureLooks[0].id,

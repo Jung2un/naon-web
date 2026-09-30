@@ -1,3 +1,4 @@
+import { DeleteItemButton } from "./DeleteItemButton";
 import { LOOKS_ENABLED } from "@/features/looks/config";
 import Link from "next/link";
 import Image from "next/image";
@@ -14,43 +15,62 @@ export function CharacterCard({ character }: { character: CharacterListItem }) {
     : `/characters/${character.id}`;
 
   return (
-    <Link href={href} className="group block overflow-hidden rounded-[20px] border border-line bg-surface p-2 transition-colors hover:border-primary">
-      <div className="relative aspect-[3/4] overflow-hidden rounded-[12px] border border-line bg-sunken transition-colors duration-150 ease-out group-hover:border-line-strong">
-        {character.thumbnail_url ? (
-          <Image
-            src={character.thumbnail_url}
-            alt=""
-            fill
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px"
-            className="object-cover"
-          />
-        ) : <div className="flex h-full items-center justify-center"><UserRound className="size-12 text-muted" aria-hidden /></div>}
-        {/*
+    <article className="overflow-hidden rounded-[20px] border border-line bg-surface p-2 transition-colors hover:border-primary">
+      <Link href={href} className="group block">
+        <div className="relative aspect-[3/4] overflow-hidden rounded-[12px] border border-line bg-sunken transition-colors duration-150 ease-out group-hover:border-line-strong">
+          {character.thumbnail_url ? (
+            <Image
+              src={character.thumbnail_url}
+              alt=""
+              fill
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px"
+              className="object-cover"
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center">
+              <UserRound className="size-12 text-muted" aria-hidden />
+            </div>
+          )}
+          {/*
           배지는 한 규칙이다. 생성이 돌거나 실패했으면 그 상태(처리 중·실패), 만드는 중이면
           어느 단계인지(후보 고르는 중·다듬는 중), 완성이면 없음 — 완성이 기본 상태라 표시할 게 없다.
           전에는 만드는 중인데 배치가 끝난 카드에 "완료"가 붙어서 완성과 구분이 안 됐다. — 기획서 §8
         */}
-        {character.status !== "done" ? (
-          <span className="absolute left-2 top-2">
-            <StatusBadge status={character.status} />
-          </span>
-        ) : building ? (
-          <span
-            className={cn(
-              "absolute left-2 top-2 inline-flex h-[22px] items-center rounded-full px-2 text-badge font-normal",
-              "bg-primary-soft text-primary",
-            )}
-          >
-            {STAGE_LABEL[character.stage]}
-          </span>
-        ) : null}
+          {character.status !== "done" ? (
+            <span className="absolute left-2 top-2">
+              <StatusBadge status={character.status} />
+            </span>
+          ) : building ? (
+            <span
+              className={cn(
+                "absolute left-2 top-2 inline-flex h-[22px] items-center rounded-full px-2 text-badge font-normal",
+                "bg-primary-soft text-primary",
+              )}
+            >
+              {STAGE_LABEL[character.stage]}
+            </span>
+          ) : null}
+        </div>
+        <p className="mt-3 flex items-center justify-between gap-2 px-2 text-card font-semibold text-ink">
+          <span className="truncate">{character.name}</span>
+          <ArrowUpRight className="size-4 shrink-0 text-muted" aria-hidden />
+        </p>
+        <p className="px-2 pb-3 pt-1 text-caption tabular text-muted">
+          {building
+            ? "눌러서 이어 만들기"
+            : `${LOOKS_ENABLED ? `룩 ${character.look_count} · ` : ""}작업물 ${character.job_count}`}
+        </p>
+      </Link>
+      <div className="flex justify-end border-t border-line pt-1">
+        <DeleteItemButton
+          kind="character"
+          id={character.id}
+          name={character.name}
+          busy={
+            character.status === "queued" || character.status === "processing"
+          }
+        />
       </div>
-      <p className="mt-3 flex items-center justify-between gap-2 px-2 text-card font-semibold text-ink"><span className="truncate">{character.name}</span><ArrowUpRight className="size-4 shrink-0 text-muted" aria-hidden /></p>
-      <p className="px-2 pb-3 pt-1 text-caption tabular text-muted">
-        {building
-          ? "눌러서 이어 만들기"
-          : `${LOOKS_ENABLED ? `룩 ${character.look_count} · ` : ""}작업물 ${character.job_count}`}
-      </p>
-    </Link>
+    </article>
   );
 }

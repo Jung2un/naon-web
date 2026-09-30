@@ -84,6 +84,8 @@ export type LookListItem = Look & {
 };
 
 export type JobListItem = Job & {
+  thumbnail_is_fallback?: boolean;
+  character_deleted?: boolean;
   thumbnail_url: string | null;
   character_name: string;
   look_name: string | null;

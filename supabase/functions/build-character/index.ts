@@ -49,6 +49,7 @@ Deno.serve(async (req) => {
     .select("id, stage, status, base_image_path")
     .eq("id", characterId)
     .eq("user_id", userId)
+    .is("deleted_at", null)
     .maybeSingle();
   if (!character) return fail(req, 404, "CHARACTER_NOT_FOUND");
   if (character.status === "processing") return fail(req, 409, "CHARACTER_BUSY");

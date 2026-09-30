@@ -1,3 +1,5 @@
+import { CreditPlans } from "@/components/app/CreditPlans";
+import { getPublicBilling } from "@/lib/data/billing";
 import type { Metadata } from "next";
 import { Coins } from "lucide-react";
 import { PageHeader, SectionHeader } from "@/components/app/PageHeader";
@@ -18,7 +20,7 @@ import { LEDGER_REASON_LABEL } from "@/types/models";
 export const metadata: Metadata = { title: "크레딧" };
 
 export default async function CreditsPage() {
-  const [profile, ledger] = await Promise.all([getProfile(), getLedger()]);
+  const [profile, ledger, billing] = await Promise.all([getProfile(), getLedger(), getPublicBilling()]);
 
   return (
     <>
@@ -28,6 +30,7 @@ export default async function CreditsPage() {
       />
 
       <CreditStrip balance={profile?.credits ?? 0} />
+      <CreditPlans settings={billing} />
 
       <section className="mt-10">
         <SectionHeader title="사용 내역" />

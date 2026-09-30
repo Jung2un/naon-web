@@ -17,13 +17,13 @@ export function CreditStrip({ balance }: { balance: number }) {
         {isLow && (
           <p className="mt-2 text-caption text-muted">
             {balance === 0
-              ? "크레딧이 없어요. 충전하면 바로 변환할 수 있어요."
+              ? "크레딧이 없어요. 크레딧이 충전되면 다시 변환할 수 있어요."
               : "곧 떨어져요. 미리 충전해 두면 끊기지 않아요."}
           </p>
         )}
       </div>
       <Button variant={isLow ? "primary" : "outline"} asChild>
-        <Link href="/credits">크레딧 충전</Link>
+        <Link href="/credits#charge">크레딧 충전</Link>
       </Button>
     </div>
   );

@@ -77,6 +77,7 @@ Deno.serve(async (req) => {
     .select("id, name, status, stage, base_image_path, thumbnail_path")
     .eq("id", characterId)
     .eq("user_id", userId)
+    .is("deleted_at", null)
     .maybeSingle();
   if (!character) return fail(req, 404, "LOOK_INCOMPLETE");
   if (character.stage !== "ready" || character.status !== "done") {

@@ -446,3 +446,6 @@ verify_jwt = true
 
 [functions.ai-status]
 verify_jwt = true
+
+[functions.admin-backoffice]
+verify_jwt = true

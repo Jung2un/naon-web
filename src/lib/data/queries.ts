@@ -378,7 +378,7 @@ export async function getJobs(
   const supabase = await createClient();
   let query = supabase
     .from("jobs")
-    .select("*, characters(name), looks(name)")
+    .select("*, characters(name, thumbnail_path), looks(name)")
     .order("created_at", { ascending: false });
   if (characterId) query = query.eq("character_id", characterId);
   if (limit) query = query.limit(limit);
@@ -392,6 +392,8 @@ export async function getJobs(
     data.map((j) => j.thumbnail_path),
   );
 
+  const fallbackUrls = await signedUrls(supabase, "characters", data.map((j, i) => urls[i] ? null : j.characters?.thumbnail_path ?? null));
+
   return data.map((row, i) => {
     const { characters, looks, ...job } = row as typeof row & {
       characters: { name: string } | null;
@@ -399,8 +401,10 @@ export async function getJobs(
     };
     return {
       ...job,
-      thumbnail_url: urls[i],
-      character_name: characters?.name ?? "",
+      thumbnail_url: urls[i] ?? fallbackUrls[i],
+      thumbnail_is_fallback: !urls[i],
+      character_deleted: !characters,
+      character_name: characters?.name ?? "삭제된 캐릭터",
       look_name: looks?.name ?? null,
     };
   });
@@ -438,18 +442,18 @@ export async function getJob(id: string): Promise<JobDetail | null> {
   const supabase = await createClient();
   const { data: row } = await supabase
     .from("jobs")
-    .select("*, characters(name), looks(name)")
+    .select("*, characters(name, thumbnail_path), looks(name)")
     .eq("id", id)
     .single();
   if (!row) return null;
 
   const { characters, looks, ...job } = row as typeof row & {
-    characters: { name: string } | null;
+    characters: { name: string; thumbnail_path: string | null } | null;
     looks: { name: string } | null;
   };
 
   const [thumbnail_url, result_video_url, source_video_url] = await Promise.all([
-    signedUrl(supabase, "videos", job.thumbnail_path),
+    job.thumbnail_path ? signedUrl(supabase, "videos", job.thumbnail_path) : signedUrl(supabase, "characters", characters?.thumbnail_path ?? null),
     signedUrl(supabase, "videos", job.result_video_path),
     signedUrl(supabase, "videos", job.source_video_path),
   ]);
@@ -457,9 +461,11 @@ export async function getJob(id: string): Promise<JobDetail | null> {
   return {
     ...job,
     thumbnail_url,
+    thumbnail_is_fallback: !job.thumbnail_path,
+    character_deleted: !characters,
     result_video_url,
     source_video_url,
-    character_name: characters?.name ?? "",
+    character_name: characters?.name ?? "삭제된 캐릭터",
     look_name: looks?.name ?? null,
   };
 }

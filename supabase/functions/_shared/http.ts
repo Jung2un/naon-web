@@ -8,6 +8,8 @@
 
 /** `src/lib/errors.ts`에 문구가 있는 코드만 쓴다. 새 코드를 만들려면 거기부터 추가한다. */
 export type ErrorCode =
+  | "ADMIN_FORBIDDEN" | "ADMIN_INVALID_INPUT" | "ADMIN_REQUEST_CONFLICT"
+  | "ADMIN_DUPLICATE_PAYMENT" | "ADMIN_USER_NOT_FOUND" | "ADMIN_UNAVAILABLE"
   | "AI_NOT_CONFIGURED"
   | "VIDEO_INVALID"
   | "VIDEO_TOO_LONG"

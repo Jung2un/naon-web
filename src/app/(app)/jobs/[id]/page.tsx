@@ -1,3 +1,5 @@
+import { DeleteItemButton } from "@/components/app/DeleteItemButton";
+import { JobThumbnail } from "@/components/app/JobThumbnail";
 import { GenerationProgress } from "@/components/app/GenerationProgress";
 import { RetryVideoJob } from "@/components/app/RetryVideoJob";
 import { LOOKS_ENABLED } from "@/features/looks/config";
@@ -51,13 +53,13 @@ export default async function JobDetailPage({ params }: PageProps<"/jobs/[id]">)
                 <video
                   src={job.result_video_url}
                   controls
+                  poster={job.thumbnail_url ?? undefined}
+                  preload="metadata"
                   playsInline
                   className="size-full object-contain"
                 />
               ) : (
-                <div className="flex size-full items-center justify-center">
-                  <StatusBadge status={job.status} />
-                </div>
+                <JobThumbnail src={job.thumbnail_url} isFallback={job.thumbnail_is_fallback ?? false} status={job.status} />
               )}
             </div>
           </div>
@@ -79,20 +81,21 @@ export default async function JobDetailPage({ params }: PageProps<"/jobs/[id]">)
             </div>
           )}
 
-          {job.status === "failed" && <RetryVideoJob sourceUrl={job.source_video_url} characterId={job.character_id} />}
+          {job.status === "failed" && !job.character_deleted && <RetryVideoJob sourceUrl={job.source_video_url} characterId={job.character_id} />}
           {(job.status === "queued" || job.status === "processing") && <GenerationProgress
             title={job.status === "queued" ? "변환 접수 확인·대기 중" : "AI 영상 변환 중"}
             startedAt={job.created_at} expectedSeconds={180}
           />}
 
+          <div className="mt-4"><DeleteItemButton kind="job" id={job.id} name={job.character_name} busy={job.status === "queued" || job.status === "processing"} redirectTo="/jobs" /></div>
           <dl className="mt-6 rounded-[12px] border border-line bg-cream p-5">
             <Row label="캐릭터">
-              <Link
+              {job.character_deleted ? <span>삭제된 캐릭터</span> : <Link
                 href={`/characters/${job.character_id}`}
                 className="text-ink underline-offset-2 hover:underline"
               >
                 {job.character_name}
-              </Link>
+              </Link>}
             </Row>
             {LOOKS_ENABLED && <Row label="룩">{job.look_name ?? "—"}</Row>}
             <Row label="길이" numeric>

@@ -36,6 +36,16 @@ const MESSAGES: Record<string, string> = {
   // 크레딧
   INSUFFICIENT_CREDITS: "크레딧이 모자라요. 충전하고 다시 시도해 주세요.",
 
+  ADMIN_FORBIDDEN: "관리자 계정으로 로그인해 주세요.",
+  ADMIN_INVALID_INPUT: "금액, 크레딧 수량과 필수 입력 내용을 확인해 주세요.",
+  ADMIN_REQUEST_CONFLICT: "기존 요청과 내용이 달라요. 충전 기록을 확인해 주세요.",
+  ADMIN_DUPLICATE_PAYMENT: "이미 처리된 입금 식별번호예요. 충전 기록을 확인해 주세요.",
+  ADMIN_USER_NOT_FOUND: "사용자를 찾을 수 없어요. 목록에서 다시 선택해 주세요.",
+  ADMIN_UNAVAILABLE: "관리 기능에 연결하지 못했어요. 잠시 뒤 다시 시도해 주세요.",
+  DELETE_NOT_FOUND: "삭제할 항목을 찾을 수 없어요. 목록을 새로고침해 주세요.",
+  DELETE_BUSY: "생성 중인 작업이 있어요. 작업이 끝난 뒤 삭제해 주세요.",
+  DELETE_FORBIDDEN: "본인 소유의 항목만 삭제할 수 있어요.",
+
   // 인증
   OAUTH_CANCELLED: "로그인을 취소했어요.",
   OAUTH_FAILED: "로그인에 실패했어요. 잠시 뒤 다시 시도해 주세요.",

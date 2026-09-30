@@ -1,3 +1,4 @@
+import { hasAdminAccess } from "@/lib/admin/data";
 import { Sidebar } from "@/components/app/Sidebar";
 import { MobileNav } from "@/components/app/MobileNav";
 import { BottomNav } from "@/components/app/BottomNav";
@@ -7,12 +8,13 @@ import { JobsRealtime } from "@/components/app/JobsRealtime";
 import { getActiveJobCount, getProfile } from "@/lib/data/queries";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
-  const [profile, activeJobs] = await Promise.all([
+  const [profile, activeJobs, isAdmin] = await Promise.all([
     getProfile(),
     getActiveJobCount(),
+    hasAdminAccess(),
   ]);
 
-  const footer = <AccountMenu />;
+  const footer = <AccountMenu isAdmin={isAdmin} />;
 
   return (
     /*
