@@ -7,7 +7,6 @@ import {
   CirclePlay,
   Coins,
   Plus,
-  Sparkles,
   UserRound,
   Users,
 } from "lucide-react";
@@ -127,10 +126,6 @@ function BentoHero({
             className={styles.largePortrait}
             priority
           />
-          <span className={styles.portraitTag}>
-            <Sparkles className="size-3.5" aria-hidden />
-            상상에서 캐릭터로
-          </span>
         </div>
         <div className="relative z-10 mt-auto flex items-end justify-between gap-3 pt-52 sm:pt-56">
           <Link

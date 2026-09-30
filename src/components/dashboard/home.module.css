@@ -44,20 +44,6 @@
   transform: rotate(-12deg);
   box-shadow: 0 12px 30px #3d393415;
 }
-.portraitTag {
-  position: absolute;
-  bottom: 19%;
-  right: 5%;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  border: 1px solid var(--color-line);
-  border-radius: 99px;
-  background: var(--color-surface);
-  padding: 10px 14px;
-  font-size: 11px;
-  box-shadow: 0 4px 16px #3d39340c;
-}
 .videoFeature {
   position: relative;
   grid-column: span 2;
@@ -151,10 +137,6 @@
     height: 37%;
     bottom: 13%;
     right: 36%;
-  }
-  .portraitTag {
-    bottom: 29%;
-    right: 4%;
   }
   .smallCard {
     border-radius: 20px;
