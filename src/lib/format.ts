@@ -12,6 +12,7 @@ export function relativeTime(iso: string): string {
 /** "2026. 9. 16. 오후 1:20" */
 export function fullTime(iso: string): string {
   return new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(iso));

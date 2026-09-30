@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { StudioHome } from "@/components/dashboard/StudioHome";
-import { AdminShortcut } from "@/components/dashboard/AdminShortcut";
 import { HomeViewSwitch } from "@/components/dashboard/HomeViewSwitch";
 import { hasAdminAccess } from "@/lib/admin/data";
 import {
@@ -37,7 +36,6 @@ export default async function DashboardPage({
     <>
       {canPreview && <HomeViewSwitch previewNew={previewNew} />}
       <StudioHome
-        adminShortcut={isAdmin ? <AdminShortcut /> : undefined}
         key={previewNew ? "first-visit" : "actual"}
         name={profile?.display_name ?? ""}
         balance={profile?.credits ?? 0}

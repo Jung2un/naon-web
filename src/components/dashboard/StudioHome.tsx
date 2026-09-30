@@ -21,7 +21,6 @@ type Props = {
   characters: CharacterListItem[];
   jobs: JobListItem[];
   activeJobs: number;
-  adminShortcut?: React.ReactNode;
 };
 const number = (n: number) => new Intl.NumberFormat("ko-KR").format(n);
 const arrowClass =
@@ -307,7 +306,6 @@ export function StudioHome(props: Props) {
         characters={characters}
         hasCharacter={hasCharacter}
       />
-      {props.adminShortcut}
       <RecentWork
         jobs={jobs}
         activeJobs={activeJobs}

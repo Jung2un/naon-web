@@ -1,31 +1,30 @@
 import Link from "next/link";
-import { ShieldCheck } from "lucide-react";
-import { LogOut } from "lucide-react";
+import { ArrowUpRight, LogOut, ShieldCheck } from "lucide-react";
 
-/**
- * 사이드바 하단(모바일은 더보기 시트 하단). 관리자에게는 운영 관리 링크, 모든 사용자에게는 로그아웃을 둔다.
- * 이름·크레딧 줄은 뺐다 — 크레딧은 모바일 상단·크레딧 화면에서 이미 보인다.
- */
+/** 사이드바와 모바일 더보기의 계정 메뉴. 운영 관리 링크는 관리자에게만 보인다. */
 export function AccountMenu({ isAdmin = false }: { isAdmin?: boolean }) {
   return (
-    <div className="border-t border-line pt-3">
-      <>
-        {isAdmin && (
-          <Link
-            href="/admin"
-            className="mb-2 flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-sm text-primary hover:bg-hover"
-          >
-            <ShieldCheck className="size-4" aria-hidden />
-            운영 관리
-          </Link>
-        )}
-      </>
+    <div className="space-y-1 border-t border-line pt-3">
+      {isAdmin && (
+        <Link
+          href="/admin"
+          className="group flex min-h-12 items-center gap-3 rounded-2xl px-3 py-2 text-sm text-primary transition-colors hover:bg-primary-soft"
+        >
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-primary-soft group-hover:bg-surface">
+            <ShieldCheck className="size-4" strokeWidth={1.75} aria-hidden />
+          </span>
+          운영 관리
+          <ArrowUpRight className="ml-auto size-3.5 text-muted" aria-hidden />
+        </Link>
+      )}
       <form action="/auth/signout" method="post">
         <button
           type="submit"
-          className="flex w-full items-center gap-2.5 min-h-11 rounded-[6px] px-3 py-2 text-sm text-muted transition-colors duration-150 ease-out hover:bg-hover hover:text-ink"
+          className="flex min-h-12 w-full cursor-pointer items-center gap-3 rounded-2xl px-3 py-2 text-sm text-muted transition-colors duration-150 ease-out hover:bg-hover hover:text-ink"
         >
-          <LogOut className="size-4 shrink-0" strokeWidth={1.75} aria-hidden />
+          <span className="flex size-8 shrink-0 items-center justify-center">
+            <LogOut className="size-4" strokeWidth={1.75} aria-hidden />
+          </span>
           로그아웃
         </button>
       </form>
