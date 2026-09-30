@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import {
-  ArrowDown,
   ArrowRight,
   ArrowUpRight,
   CirclePlay,
@@ -12,6 +11,7 @@ import {
 } from "lucide-react";
 import { PageTitleSync } from "@/components/app/app-bar";
 import { RecentWork } from "./RecentWork";
+import { BackToTop } from "./BackToTop";
 import type { CharacterListItem, JobListItem } from "@/types/models";
 import styles from "./home.module.css";
 
@@ -128,12 +128,11 @@ function BentoHero({
           />
         </div>
         <div className="relative z-10 mt-auto flex items-end justify-between gap-3 pt-52 sm:pt-56">
-          <Link
-            href="/characters/new"
-            className="inline-flex min-h-12 items-center gap-3 rounded-full bg-primary px-5 text-sm font-semibold text-on-dark shadow-sm transition-colors hover:bg-ink"
-          >
+          <Link href="/characters/new" className={styles.createButton}>
             {characters.length ? "새 캐릭터 만들기" : "첫 캐릭터 만들기"}
-            <Plus className="size-4" aria-hidden />
+            <span className={styles.createIcon}>
+              <Plus className="size-4" aria-hidden />
+            </span>
           </Link>
           <span className="pb-3 text-[10px] text-muted">
             스타일 예시 이미지
@@ -317,14 +316,8 @@ export function StudioHome(props: Props) {
       <CharacterShelf characters={characters} />
       <footer className="mt-12 flex items-center justify-between border-t border-line py-5 text-[11px] tracking-wider text-muted">
         <span>YOUR IMAGINATION, IN MOTION.</span>
-        <a
-          href="#studio-home"
-          className="inline-flex min-h-11 items-center gap-2"
-        >
-          맨 위로
-          <ArrowDown className="size-3 rotate-180" aria-hidden />
-        </a>
       </footer>
+      <BackToTop />
     </div>
   );
 }

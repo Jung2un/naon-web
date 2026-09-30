@@ -143,3 +143,73 @@
     padding: 20px 16px;
   }
 }
+
+.createButton {
+  display: inline-flex;
+  min-height: 50px;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid color-mix(in srgb, var(--color-on-dark) 12%, transparent);
+  border-radius: 999px;
+  padding: 7px 9px 7px 20px;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-on-dark) 7%, transparent),
+      transparent
+    ),
+    var(--color-primary);
+  color: var(--color-on-dark);
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow:
+    0 3px 8px color-mix(in srgb, var(--color-primary) 14%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--color-on-dark) 8%, transparent);
+}
+.createIcon {
+  display: flex;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--color-ink);
+}
+.createButton:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 4px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .createButton:hover {
+    box-shadow:
+      0 7px 16px color-mix(in srgb, var(--color-primary) 19%, transparent),
+      inset 0 1px 0 color-mix(in srgb, var(--color-on-dark) 12%, transparent);
+  }
+  .createButton:hover .createIcon {
+    background: var(--color-ink);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .createButton {
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+  .createIcon {
+    transition:
+      background 0.2s ease,
+      transform 0.2s ease;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .createButton:hover {
+      transform: translateY(-2px);
+    }
+    .createButton:hover .createIcon {
+      transform: scale(1.06);
+    }
+  }
+  .createButton:active {
+    transform: translateY(0) scale(0.98);
+  }
+}

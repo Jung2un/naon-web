@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { NotFoundBackButton } from "@/components/app/NotFoundBackButton";
 
 export const metadata: Metadata = {
   title: "페이지를 찾을 수 없어요",
@@ -17,14 +16,13 @@ export default function NotFound() {
         <p className="mt-4 break-keep text-sm leading-relaxed text-muted sm:text-base">
           주소를 확인하거나 홈으로 이동해 주세요.
         </p>
-        <div className="mt-8 flex flex-wrap justify-center gap-3">
+        <div className="mt-8 flex justify-center">
           <Link
             href="/dashboard"
             className="inline-flex min-h-12 items-center justify-center rounded-full bg-primary px-6 text-sm font-semibold text-on-dark transition-colors hover:bg-ink"
           >
             홈으로 돌아가기
           </Link>
-          <NotFoundBackButton />
         </div>
       </div>
     </main>
