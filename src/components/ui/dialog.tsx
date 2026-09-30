@@ -92,7 +92,7 @@ export function DialogFooter({
   return (
     <div
       className={cn(
-        "mt-7 flex items-center justify-end gap-3 border-t border-line pt-5 [&>button]:min-w-24 [&>button]:flex-1 sm:[&>button]:flex-none",
+        "mt-7 flex items-center justify-end gap-3 pt-5 [&>button]:min-w-24 [&>button]:flex-1 sm:[&>button]:flex-none",
         className,
       )}
       {...props}
