@@ -78,16 +78,20 @@ export function DeleteItemButton({
             <DialogTitle>
               {kind === "job" ? "작업물을" : "캐릭터를"} 삭제할까요?
             </DialogTitle>
-            <DialogDescription>
-              <span className="block font-semibold text-ink">{name}</span>
-              <span className="mt-2 block">
-                {kind === "character"
-                  ? "캐릭터 목록에서 삭제되며 새 작업에 사용할 수 없어요. 이미 만든 영상과 크레딧 내역은 유지돼요."
-                  : "작업물 목록에서 삭제돼요. 사용한 크레딧은 반환되지 않으며 사용 내역은 유지돼요."}{" "}
-                삭제 후 직접 복구할 수 없어요.
-              </span>
-            </DialogDescription>
           </DialogHeader>
+          <DialogDescription asChild className="mt-5">
+            <div>
+              <p>
+                <strong className="font-semibold text-ink">{name}</strong>
+                {kind === "character"
+                  ? " 캐릭터는 목록에서 삭제되며 새 작업에 사용할 수 없어요. 이미 만든 영상과 크레딧 내역은 유지돼요."
+                  : " 작업물은 목록에서 삭제돼요. 사용한 크레딧은 반환되지 않으며 사용 내역은 유지돼요."}
+              </p>
+              <p className="mt-4 text-sm text-body">
+                삭제 후 직접 복구할 수 없어요.
+              </p>
+            </div>
+          </DialogDescription>
           {error && (
             <p role="alert" className="mt-4 text-sm text-danger">
               {error}
@@ -97,8 +101,13 @@ export function DeleteItemButton({
             <Button disabled={pending} onClick={() => setOpen(false)}>
               취소
             </Button>
-            <Button variant="destructive" disabled={pending} onClick={remove}>
-              {pending ? "삭제 중…" : `${label} 삭제`}
+            <Button
+              variant="destructive"
+              className="border-danger bg-danger text-on-dark hover:bg-danger/90"
+              disabled={pending}
+              onClick={remove}
+            >
+              {pending ? "삭제 중…" : "삭제"}
             </Button>
           </DialogFooter>
         </DialogContent>

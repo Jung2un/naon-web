@@ -4,12 +4,9 @@ import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import styles from "./dialog.module.css";
 
-/**
- * DESIGN.md §6 — 다이얼로그
- * 크림, 라운드 16px, 1px solid --border-subtle, --shadow-overlay.
- * 깊이 4단계(--shadow-overlay)를 쓰는 유일한 자리다. 카드에는 절대 쓰지 않는다.
- */
+/** 공통 모달: 제목 → 본문 → 행동. 긴 내용은 화면 안에서 스크롤한다. */
 export const Dialog = DialogPrimitive.Root;
 export const DialogTrigger = DialogPrimitive.Trigger;
 export const DialogClose = DialogPrimitive.Close;
@@ -21,31 +18,40 @@ export function DialogContent({
 }: React.ComponentProps<typeof DialogPrimitive.Content>) {
   return (
     <DialogPrimitive.Portal>
-      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-scrim" />
+      <DialogPrimitive.Overlay
+        className={cn(
+          "fixed inset-0 z-50 bg-scrim backdrop-blur-[2px]",
+          styles.overlay,
+        )}
+      />
       <DialogPrimitive.Content
         className={cn(
-          "fixed left-1/2 top-1/2 z-50 w-[calc(100%-32px)] max-w-[480px]",
-          "-translate-x-1/2 -translate-y-1/2",
-          "rounded-[16px] border border-line bg-cream p-6 shadow-overlay",
-          "duration-200 ease-out",
+          "fixed left-1/2 top-1/2 z-50 w-[calc(100%-32px)] max-w-[480px] -translate-x-1/2 -translate-y-1/2",
+          "max-h-[calc(100dvh-32px)] overflow-y-auto overscroll-contain rounded-[24px] border border-line bg-surface p-6 shadow-overlay sm:p-8",
+          styles.content,
           className,
         )}
         {...props}
       >
         {children}
         <DialogPrimitive.Close
-          className="absolute right-4 top-4 flex size-8 items-center justify-center rounded-full text-muted transition-colors duration-150 ease-out hover:bg-hover hover:text-ink"
+          className="absolute right-3 top-3 flex size-11 items-center justify-center rounded-full text-muted transition-colors hover:bg-primary-soft hover:text-ink sm:right-4 sm:top-4"
           aria-label="닫기"
         >
-          <X className="size-4" />
+          <X className="size-4" aria-hidden />
         </DialogPrimitive.Close>
       </DialogPrimitive.Content>
     </DialogPrimitive.Portal>
   );
 }
 
-export function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
-  return <div className={cn("flex flex-col gap-2 pr-8", className)} {...props} />;
+export function DialogHeader({
+  className,
+  ...props
+}: React.ComponentProps<"div">) {
+  return (
+    <div className={cn("flex flex-col gap-3 pr-9", className)} {...props} />
+  );
 }
 
 export function DialogTitle({
@@ -54,7 +60,10 @@ export function DialogTitle({
 }: React.ComponentProps<typeof DialogPrimitive.Title>) {
   return (
     <DialogPrimitive.Title
-      className={cn("font-display text-section font-semibold text-ink", className)}
+      className={cn(
+        "break-keep font-display text-[22px] font-semibold leading-snug tracking-[-0.025em] text-ink sm:text-2xl",
+        className,
+      )}
       {...props}
     />
   );
@@ -66,17 +75,26 @@ export function DialogDescription({
 }: React.ComponentProps<typeof DialogPrimitive.Description>) {
   return (
     <DialogPrimitive.Description
-      className={cn("text-base text-body", className)}
+      className={cn(
+        "break-keep [overflow-wrap:anywhere] text-base leading-[1.75] text-muted",
+        className,
+      )}
       {...props}
     />
   );
 }
 
-/** 버튼은 오른쪽 정렬, 취소(Ghost) → 확인(Primary) 순 */
-export function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
+/** 작은 화면에서도 취소 → 확인 순서와 같은 버튼 높이를 유지한다. */
+export function DialogFooter({
+  className,
+  ...props
+}: React.ComponentProps<"div">) {
   return (
     <div
-      className={cn("mt-6 flex items-center justify-end gap-2", className)}
+      className={cn(
+        "mt-7 flex items-center justify-end gap-3 border-t border-line pt-5 [&>button]:min-w-24 [&>button]:flex-1 sm:[&>button]:flex-none",
+        className,
+      )}
       {...props}
     />
   );
