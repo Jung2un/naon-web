@@ -18,12 +18,14 @@ export function DeleteItemButton({
   name,
   busy = false,
   redirectTo,
+  iconOnly = false,
 }: {
   kind: "job" | "character";
   id: string;
   name: string;
   busy?: boolean;
   redirectTo?: string;
+  iconOnly?: boolean;
 }) {
   const [open, setOpen] = useState(false),
     [pending, setPending] = useState(false),
@@ -52,7 +54,7 @@ export function DeleteItemButton({
   return (
     <>
       <Button
-        size="sm"
+        size={iconOnly ? "icon" : "sm"}
         variant="ghost"
         disabled={busy}
         aria-label={`${name} ${label} 삭제${busy ? " (생성 완료 후 가능)" : ""}`}
@@ -63,7 +65,7 @@ export function DeleteItemButton({
         }}
       >
         <Trash2 aria-hidden />
-        <span>삭제</span>
+        {!iconOnly && <span>삭제</span>}
       </Button>
       <Dialog
         open={open}
@@ -73,7 +75,9 @@ export function DeleteItemButton({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{kind === "job" ? "작업물을" : "캐릭터를"} 삭제할까요?</DialogTitle>
+            <DialogTitle>
+              {kind === "job" ? "작업물을" : "캐릭터를"} 삭제할까요?
+            </DialogTitle>
             <DialogDescription>
               <span className="block font-semibold text-ink">{name}</span>
               <span className="mt-2 block">

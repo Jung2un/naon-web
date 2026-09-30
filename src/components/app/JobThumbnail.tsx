@@ -7,10 +7,12 @@ export function JobThumbnail({
   src,
   isFallback,
   status,
+  compact = false,
 }: {
   src: string | null;
   isFallback: boolean;
   status: JobStatus;
+  compact?: boolean;
 }) {
   const [failed, setFailed] = useState(false);
   const working = status === "queued" || status === "processing";
@@ -28,13 +30,20 @@ export function JobThumbnail({
           onError={() => setFailed(true)}
           alt=""
           fill
-          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px"
+          sizes={
+            compact
+              ? "96px"
+              : "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px"
+          }
           className="object-cover transition-transform duration-300 motion-safe:group-hover:scale-[1.03] motion-reduce:transition-none"
         />
       ) : (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-4 text-center break-keep text-muted">
-          <Film className="size-9 opacity-50" aria-hidden />
-          <p className="text-sm">
+          <Film
+            className={compact ? "hidden" : "size-9 opacity-50"}
+            aria-hidden
+          />
+          <p className={compact ? "sr-only" : "text-sm"}>
             {working
               ? "영상을 만들고 있어요"
               : status === "failed"
@@ -43,8 +52,14 @@ export function JobThumbnail({
           </p>
         </div>
       )}
-      <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-10 text-white">
-        <span className="text-xs">
+      <div
+        className={
+          compact
+            ? `absolute inset-0 flex items-center justify-center ${src && !failed ? "bg-black/10 text-white" : "text-primary"}`
+            : "absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-10 text-white"
+        }
+      >
+        <span className={compact ? "sr-only" : "text-xs"}>
           {working
             ? "생성 중"
             : status === "failed"

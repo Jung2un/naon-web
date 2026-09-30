@@ -1,63 +1,50 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { Film } from "lucide-react";
-import { PageHeader, SectionHeader } from "@/components/app/PageHeader";
-import { CreditStrip } from "@/components/app/CreditStrip";
-import { JobCard, JobGrid } from "@/components/app/JobCard";
-import { EmptyState } from "@/components/app/EmptyState";
-import { Button } from "@/components/ui/button";
-import { getCharacters, getJobs, getProfile } from "@/lib/data/queries";
-
-import { StudioGuide } from "@/components/app/StudioGuide";
+import { StudioHome } from "@/components/dashboard/StudioHome";
+import { AdminShortcut } from "@/components/dashboard/AdminShortcut";
+import { HomeViewSwitch } from "@/components/dashboard/HomeViewSwitch";
+import { hasAdminAccess } from "@/lib/admin/data";
+import {
+  getActiveJobCount,
+  getCharacters,
+  getJobs,
+  getProfile,
+} from "@/lib/data/queries";
+import { isSupabaseConfigured } from "@/lib/env";
 
 export const metadata: Metadata = { title: "홈" };
 
-export default async function DashboardPage() {
-  const [profile, characters, jobs] = await Promise.all([
-    getProfile(),
-    getCharacters(),
-    getJobs({ limit: 8 }),
-  ]);
-
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const [profile, characters, jobs, activeJobs, isAdmin, params] =
+    await Promise.all([
+      getProfile(),
+      getCharacters(),
+      getJobs({ limit: 8 }),
+      getActiveJobCount(),
+      hasAdminAccess(),
+      searchParams,
+    ]);
+  // 운영에서는 서버에서 확인한 관리자만 전환한다. 일반 사용자의 URL 파라미터는 무시한다.
+  const canPreview =
+    isAdmin ||
+    (process.env.NODE_ENV === "development" && !isSupabaseConfigured);
+  const previewNew = canPreview && params.homeView === "new";
+  // 빈 목록일 때 첫 생성 안내가 자연스럽게 표시된다. 테스트는 DB나 크레딧을 변경하지 않는다.
   return (
     <>
-      {/* 앱바에는 인사말 대신 화면 이름을 띄운다 — 하단 탭의 "홈"과 같은 말로 맞춘다 */}
-      <PageHeader
-        title={profile?.display_name ? `${profile.display_name}님, 반가워요` : "나만의 스튜디오에 오신 걸 환영해요"}
-        shortTitle="홈"
-        description="오늘은 어떤 모습으로 표현해 볼까요?"
+      {canPreview && <HomeViewSwitch previewNew={previewNew} />}
+      <StudioHome
+        adminShortcut={isAdmin ? <AdminShortcut /> : undefined}
+        key={previewNew ? "first-visit" : "actual"}
+        name={profile?.display_name ?? ""}
+        balance={profile?.credits ?? 0}
+        characters={previewNew ? [] : characters}
+        jobs={previewNew ? [] : jobs}
+        activeJobs={previewNew ? 0 : activeJobs}
       />
-
-      <StudioGuide hasCharacter={characters.some(c => c.stage === "ready" && c.status === "done")} />
-      <div className="mt-6"><CreditStrip balance={profile?.credits ?? 0} /></div>
-
-      <section className="mt-10">
-        <SectionHeader
-          title="최근 작업물"
-          action={
-            jobs.length > 0 ? (
-              <Button variant="ghost" size="sm" asChild>
-                <Link href="/jobs">전체 보기</Link>
-              </Button>
-            ) : undefined
-          }
-        />
-
-        {jobs.length === 0 ? (
-          <EmptyState
-            icon={Film}
-            title="아직 작업물이 없어요"
-            description="앱에서 10초짜리 영상을 찍으면 여기에 나타나요. 변환은 1~3분 걸려요."
-            action={{ label: "캐릭터 보기", href: "/characters" }}
-          />
-        ) : (
-          <JobGrid>
-            {jobs.map((job) => (
-              <JobCard key={job.id} job={job} />
-            ))}
-          </JobGrid>
-        )}
-      </section>
     </>
   );
 }
