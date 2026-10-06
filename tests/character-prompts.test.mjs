@@ -302,7 +302,26 @@ test("optional traits are omitted cleanly and identity-preserving edits remain u
   assert.equal(identity.build, undefined);
   assert.equal(editInstruction(minimal, minimal, options), null);
   const edit = editInstruction(minimal, { ...minimal, hair: "hair" }, options);
-  assert.ok(viewInstruction("left45").includes("45 degrees to the left"));
+  assert.ok(viewInstruction("left45").includes("45 degrees toward the viewer's LEFT"));
+});
+
+// "turned to the left" alone drew both side views the same way — whose left was never said.
+// The two phrases must name the viewer as the reference and be mirror images of each other.
+test("left and right 45° views name the viewer's side and mirror each other", () => {
+  const left = viewInstruction("left45");
+  const right = viewInstruction("right45");
+  assert.notEqual(left, right);
+  assert.match(left, /viewer's LEFT/);
+  assert.match(left, /nose points toward the left edge/);
+  assert.match(left, /RIGHT side of the face/);
+  assert.match(left, /left ear is hidden/);
+  assert.match(right, /viewer's RIGHT/);
+  assert.match(right, /nose points toward the right edge/);
+  assert.match(right, /LEFT side of the face/);
+  assert.match(right, /right ear is hidden/);
+  for (const text of [left, right]) assert.match(text, /must clearly not be a frontal view/);
+  assert.match(viewInstruction("front"), /facing the camera directly/);
+  assert.doesNotMatch(viewInstruction("front"), /not be a frontal view/);
 });
 
 test("every stage after the draft names what it must keep, or the edit model drops it", () => {
@@ -322,7 +341,7 @@ test("every stage after the draft names what it must keep, or the edit model dro
   }
   // Each stage still does its own job on top of that.
   assert.match(edit, /change the hairstyle to/);
-  assert.match(view, /45 degrees to the left/);
+  assert.match(view, /45 degrees toward the viewer's LEFT/);
   // The three views are a reference sheet for the acting video, so a plain background is correct there.
   assert.match(view, /plain neutral background/);
   assert.doesNotMatch(look, /plain neutral background/);

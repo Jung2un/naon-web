@@ -683,10 +683,19 @@ export function editInstruction(
  * 4단계 — 같은 사람을 다른 각도에서.
  * 좌/우가 모델마다 뒤집히면 여기 문구로 잡는다. — 기획서 §10
  */
+/*
+ * "turned to the left"만으로는 모델이 좌·우를 같은 쪽으로 그렸다(두 장이 같은 각도로 나옴 — 10-02).
+ * 누구 기준 왼쪽인지가 비어 있어서다. 그래서 기준을 **화면(보는 사람)**으로 못 박고,
+ * 어느 뺨이 보이고 어느 귀가 가려지며 코끝이 프레임 어느 쪽을 가리키는지까지 적는다.
+ * 두 문장은 서로의 거울상이어야 한다 — 한쪽만 고치면 다시 어긋난다.
+ */
 const ANGLE_PHRASE: Record<string, string> = {
-  front: "a front view, facing the camera directly",
-  left45: "a three-quarter view, the person turned 45 degrees to the left",
-  right45: "a three-quarter view, the person turned 45 degrees to the right",
+  front:
+    "a front view, facing the camera directly, head and shoulders square to the lens, both ears equally visible",
+  left45:
+    "a three-quarter view with the head and shoulders rotated 45 degrees toward the viewer's LEFT (the left side of the frame): the nose points toward the left edge of the frame, the camera sees mostly the RIGHT side of the face — the right cheek, right jawline and right ear are visible while the left ear is hidden behind the head; this must clearly not be a frontal view",
+  right45:
+    "a three-quarter view with the head and shoulders rotated 45 degrees toward the viewer's RIGHT (the right side of the frame): the nose points toward the right edge of the frame, the camera sees mostly the LEFT side of the face — the left cheek, left jawline and left ear are visible while the right ear is hidden behind the head; this must clearly not be a frontal view",
 };
 
 export function viewInstruction(angle: string): string {
