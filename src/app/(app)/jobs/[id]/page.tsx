@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { getJob } from "@/lib/data/queries";
 import { humanError } from "@/lib/errors";
 import { credits, duration, fullTime } from "@/lib/format";
+import { VIDEO_EXPECTED_SECONDS } from "@/types/models";
 
 export async function generateMetadata({
   params,
@@ -82,9 +83,12 @@ export default async function JobDetailPage({ params }: PageProps<"/jobs/[id]">)
           )}
 
           {job.status === "failed" && !job.character_deleted && <RetryVideoJob sourceUrl={job.source_video_url} characterId={job.character_id} />}
+          {/* 영상 변환(Wan-Animate Replace)은 fal 대기열까지 합쳐 실측 15분 안팎이다(10-02). 3분이라고 적으면
+              "예상보다 오래 걸리고 있어요"가 매번 뜬다 — 처음부터 최소 15분이라고 말한다. */}
           {(job.status === "queued" || job.status === "processing") && <GenerationProgress
             title={job.status === "queued" ? "변환 접수 확인·대기 중" : "AI 영상 변환 중"}
-            startedAt={job.created_at} expectedSeconds={180}
+            startedAt={job.created_at} expectedSeconds={VIDEO_EXPECTED_SECONDS}
+            note="영상 변환은 최소 15분 걸려요. 이 화면을 닫아도 계속 진행되고, 끝나면 작업물 목록에서 볼 수 있어요."
           />}
 
           <div className="mt-4"><DeleteItemButton kind="job" id={job.id} name={job.character_name} busy={job.status === "queued" || job.status === "processing"} redirectTo="/jobs" /></div>

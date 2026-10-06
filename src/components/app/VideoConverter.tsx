@@ -12,7 +12,7 @@ import { Select } from "@/components/ui/select";
 import { createClient } from "@/lib/supabase/client";
 import { invokeFunction } from "@/lib/supabase/functions";
 import { humanError } from "@/lib/errors";
-import type { CharacterListItem, LookListItem } from "@/types/models";
+import { VIDEO_EXPECTED_LABEL, type CharacterListItem, type LookListItem } from "@/types/models";
 
 export function VideoConverter(
   { characters, looks, balance, available }: {
@@ -192,6 +192,9 @@ export function VideoConverter(
         <p className="mt-3 text-sm text-body">
           선택한 캐릭터의 모습으로 영상을 바꿔요. 완료되면 작업물에서 확인할 수
           있어요.
+        </p>
+        <p className="mt-2 text-sm text-body">
+          변환에는 <span className="font-semibold text-ink">{VIDEO_EXPECTED_LABEL}</span> 걸려요. 접수가 끝나면 창을 닫아도 계속 진행돼요.
         </p>
         <dl className="my-6 space-y-3 text-sm">
           <div className="flex justify-between">

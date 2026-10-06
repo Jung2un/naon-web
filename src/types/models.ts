@@ -354,6 +354,13 @@ export const STAGE_LABEL: Record<CharacterStage, string> = {
 export const CHARACTER_COST = { draft: 1, refine: 1, build: 2 } as const;
 
 /**
+ * 영상 변환(fal Wan-Animate Replace)이 걸리는 시간. 대기열까지 합쳐 실측 15분 안팎이라(10-02)
+ * 화면은 "최소 15분"이라고 말한다. 진행 패널의 남은 시간 계산과 접수 화면 안내가 같은 값을 쓴다.
+ */
+export const VIDEO_EXPECTED_SECONDS = 15 * 60;
+export const VIDEO_EXPECTED_LABEL = "최소 15분";
+
+/**
  * 1단계에서는 이름을 안 받는다. DB의 name이 필수라 후보를 뽑을 때 이 값이 들어가고,
  * 3단계에서 완성할 때 사용자가 적은 이름으로 바뀐다. — draft-character · build-character와 같은 값
  */
