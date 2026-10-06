@@ -1,3 +1,31 @@
+# TODO — 유료 운영 전 준비 (최우선)
+
+> 개인 프로젝트라도 영상 생성권·크레딧·구독을 계속 판매하면 원칙적으로 사업자등록 대상이다. 무통장입금도 동일하다. 상표등록은 수익화의 필수 조건이 아니다.
+
+- [ ] 유료 운영 전 개인사업자등록 준비 및 신청 시점 확인 (원칙적으로 사업 개시일부터 20일 이내).
+- [ ] 통신판매업 신고 대상·면제 여부 확인 후 필요한 신고 진행.
+- [ ] 결제 방식별 매출 기록·세금 신고·현금영수증 등 증빙 의무 확인.
+- [ ] 이용약관·개인정보 처리방침·가격·환불 기준과 필수 사업자 정보 표시 점검.
+- [ ] **나온 / NAON** 선행상표의 지정상품·유사 여부 검토. 상표 출원은 브랜드 보호를 위한 별도 과제로 진행.
+
+근거: [국세청 사업자등록 안내](https://j.nts.go.kr/nts/cm/cntnts/cntntsView.do?cntntsId=7776&mi=2443) · [전자상거래법 제12조](https://www.law.go.kr/lsLinkCommonInfo.do?lsJoLnkSeq=1029561435) · [상표 제도 안내](https://www.moip.go.kr/ko/kpoContentView.do?menuCd=SCD0200154)
+
+## 나온 · NAON 브랜딩 (2026-09-30)
+
+**내 캐릭터로 만드는 짧은 영상.** 얼굴상·헤어·분위기를 직접 고르고 눈·코·눈썹까지 다듬은 캐릭터로, 직접 촬영한 영상 속 내 모습을 바꾸는 AI 숏폼 제작 서비스.
+
+- 로고 워드마크·탭 제목·공유 메타데이터·로그인·로그인 후 홈 소개를 나온으로 통일.
+- 기존 크림·차콜 컬러와 Shift 심볼 유지. 실시간 버추얼 방송은 현재 제공 기능으로 홍보하지 않음.
+- 운영 주소는 https://meetnaon.vercel.app. Vercel 프로젝트 `meetnaon`, 저장소 `naon-web`, Supabase 표시 이름 `Naon`으로 통일.
+- [x] 브랜드 Gmail `meetnaon@gmail.com` 및 인스타그램 [@meet_naon](https://www.instagram.com/meet_naon/) 계정 생성.
+- [x] 기존 프로젝트 앱 아이콘을 인스타그램 프로필 사진으로 적용, 서비스 소개 저장.
+- [x] 첫 피드 3개 개편 완료: 흰 배경 브랜드 소개 → 여성·남성·여성 캐릭터 3장 캐러셀 → 사용법 가이드 순서로 발행 (프로필 왼쪽부터 3·2·1). 로고 외 제목은 Pretendard. 본문 해시태그·대체 텍스트·사진 AI 레이블 적용. 단발 여성 사진은 승인 원본의 얼굴·머리를 그대로 보존해 끈나시 부분 합성.
+- [ ] 인스타그램 모바일 앱에서 프로필 외부 링크 추가 (웹 편집은 비활성화).
+- [x] `meetnaon.vercel.app` 확보, Supabase Site URL·Redirect URLs·함수 요청 허용 도메인 연결.
+- [x] 나온 브랜딩 웹 운영 배포, 프로덕션 빌드·모바일/데스크톱 배치·운영 로그인 페이지 확인 (실제 OAuth 로그인은 별도 사용자 확인).
+
+---
+
 # 캐릭터 프롬프트 개편 (2026-09-21)
 
 캐릭터 후보 요청(`draftPrompt`)을 키워드 나열에서 **구조화된 JSON 요청**으로 바꿨습니다. `task · scene · subject · camera_technical · avoid · output`으로 나누고, 사람(성별·나이·얼굴·체형·머리)은 `identity_fixed`에, 장면·옷·표정은 `scene`·`styling`에 담아 고정되는 것과 바뀌는 것을 분리했습니다. 실사 어휘(natural skin texture · muted neutral palette · shallow depth of field · Korean editorial/lifestyle photography · candid · understated)는 사진 톤 4개에만 붙고 애니·3D에는 붙지 않습니다. `beautiful · flawless · perfect` 같은 형용사는 쓰지 않습니다 — 그 말이 AI 티 나는 얼굴을 만듭니다. **성별별 연출**을 따로 썼습니다(여성: 은은한 메이크업·뷰티 필터 금지 / 남성: 그루밍·모공·턱 음영, 여성화 보정 금지 / 중성: 어느 쪽으로도 뚜렷히 읽히지 않는 균형). DB 톤 문장은 그대로라 마이그레이션은 없고 `draft-character` 함수만 다시 올리면 됩니다. 구조·성별별 표·검증은 [캐릭터 생성 프롬프트 문서](docs/캐릭터-생성-프롬프트.md)에 있습니다. 실제 품질 비교는 아직 안 했습니다.
@@ -45,7 +73,7 @@
 - [x] 머리색·영상 파이프라인 마이그레이션 2건 원격 적용, 실제 DB에서 타입 재생성
 - [x] Google AI Studio·fal 계정 준비, Supabase Edge Function Secrets에 `GEMINI_API_KEY`·`FAL_KEY` 저장 확인
 - [x] 기존 `WEBHOOK_SECRET` 유지. 실제 키는 저장소와 Vercel에 넣지 않음
-- [x] Edge Function 7개와 [운영 웹](https://ai-daeyeok.vercel.app) 배포 완료
+- [x] Edge Function 7개와 [운영 웹](https://meetnaon.vercel.app) 배포 완료
 - [x] mock 테스트 7개, Edge Function 7개 타입 검사, ESLint, Next.js 프로덕션 빌드 통과
 - [x] 운영 `/kitchen-sink` HTTP 200 및 비로그인 `ai-status` HTTP 401 확인
 
@@ -173,7 +201,7 @@ curl -s -o /dev/null -w "%{http_code}\n" "https://alafyhejiaxukrkrmehh.supabase.
       셋 다 크림(`#f7f4ed`) 배경 + 차콜 심볼이다 — 처음 넣은 코발트 파비콘은 크림으로 바꿨다
 - [x] 화면 로고 — `BrandMark`(차콜 심볼)를 사이드바 · 모바일 상단 · 로그인에. 서비스 이름은 아직 없어서 글자는 안 붙인다
 - [x] 임시 서비스 이름 문구를 전부 뺐다 — 탭 제목은 화면 이름만, 로그인 제목은 "로그인하고 시작해요",
-      캐릭터 설명은 "내 캐릭터". 도메인·레포 이름(`ai-daeyeok`)은 실제 주소라 그대로 뒀다
+      캐릭터 설명은 "내 캐릭터". 도메인·레포 이름도 나온 브랜딩에 맞춰 변경했다
 - [x] 캐릭터 만들기에서 비워도 되는 갈래는 "선택" 뱃지로 표시한다(`TraitRow`의 `OptionalBadge`)
 - [x] 톤 노출 순서 — 실사 · 일상 스냅 · 화보 · 시네마틱 · 3D 캐릭터 · 애니 (여성·남성·중성 공통, `0012`)
 - 사용 규칙(여백 · 늘이기·돌리기 금지 · 파비콘도 크림 배경)은 `docs/로고-가이드.md`
@@ -241,7 +269,7 @@ curl -s -o /dev/null -w "%{http_code}\n" "https://alafyhejiaxukrkrmehh.supabase.
 
 당시 완료한 작업 기록이다. 현재 준비 상태는 위 TODO와 AI 연동 문서를 우선한다.
 
-**Supabase** — 프로젝트 `ai-web` · ref `alafyhejiaxukrkrmehh` · 리전 `ap-northeast-2`(서울) · 조직 `Jung2un`
+**Supabase** — 프로젝트 `Naon` · ref `alafyhejiaxukrkrmehh` · 리전 `ap-northeast-2`(서울) · 조직 `Jung2un`
 
 - CLI가 레포에 devDependency로 들어 있다. 전역 설치 없이 `npx supabase …`. link는 걸려 있다
 - 마이그레이션 7개 적용 — `init` · `ledger_reasons` · `presets_seed` · `credit_functions` ·
@@ -269,12 +297,12 @@ curl -s -o /dev/null -w "%{http_code}\n" "https://alafyhejiaxukrkrmehh.supabase.
   다음 `npx supabase config push`가 이 파일 값으로 되돌린다.
   무관한 값들은 원격 현재 값에 맞춰 놨으니, 새 값을 바꿀 때는 `config diff`로 먼저 볼 것
 
-**Vercel** — 프로젝트 `ai-daeyeok` (`jung2uns-projects`) · https://ai-daeyeok.vercel.app
+**Vercel** — 프로젝트 `meetnaon` (`jung2uns-projects`) · https://meetnaon.vercel.app
 
 - GitHub 레포가 연결돼 있다. `main`에 push하면 배포된다
 - `NEXT_PUBLIC_SUPABASE_URL` · `NEXT_PUBLIC_SUPABASE_ANON_KEY`가 Production/Preview/Development 전부에
 - 함수 리전 `icn1` (`vercel.json`)
-- 운영 URL이 `ai-daeyeok.vercel.app`으로 잡혀서 `site-url.ts`의 `PRODUCTION_URL`을 고칠 일이 없었다
+- 운영 URL은 `meetnaon.vercel.app`이며 `site-url.ts`에서 관리한다
 
 **Edge Function** — 7개 운영 배포 완료(2026-09-18)
 
@@ -455,7 +483,7 @@ Supabase 환경변수가 비어 있으면 데이터 레이어가 **타입만 같
 
 ## 자주 틀리는 세 곳
 
-1. **Supabase Redirect URLs에 프리뷰 와일드카드가 빠짐** → Vercel 프리뷰 URL은 배포마다 바뀐다. `https://ai-daeyeok-*.vercel.app/**`를 넣어야 한다. 안 넣으면 프리뷰에서 로그인이 전부 막히고 원인을 코드에서 찾게 된다.
+1. **Supabase Redirect URLs에 프리뷰 와일드카드가 빠짐** → Vercel 프리뷰 URL은 배포마다 바뀐다. `https://meetnaon-*.vercel.app/**`를 넣어야 한다. 안 넣으면 프리뷰에서 로그인이 전부 막히고 원인을 코드에서 찾게 된다.
 2. **Google에 우리 도메인을 등록함** → 거기 들어가는 건 `https://<ref>.supabase.co/auth/v1/callback`이다. 우리 도메인은 Supabase 쪽 허용목록에 넣는다.
 3. **함수 리전을 기본값으로 둠** → `iad1`(워싱턴)이라 서울 Supabase까지 태평양을 왕복한다. `icn1`로 고정할 것.
 

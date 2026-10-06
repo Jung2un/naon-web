@@ -67,18 +67,11 @@ export function Sidebar({ footer }: { footer?: React.ReactNode }) {
     <aside className="fixed inset-y-0 left-0 z-20 hidden w-60 flex-col overflow-y-auto border-r border-line bg-surface px-4 py-6 lg:flex">
       <Link
         href="/dashboard"
-        aria-label="대시보드로 가기"
+        aria-label="나온 홈으로 가기"
         className="mb-8 flex min-h-12 shrink-0 items-center gap-3 rounded-2xl px-3"
       >
         <BrandMark size="md" />
-        <span className="border-l border-line pl-3">
-          <span className="block font-display text-[9px] font-semibold tracking-[0.15em] text-muted">
-            PERSONAL STUDIO
-          </span>
-          <span className="mt-1 block text-sm font-semibold tracking-tight text-ink">
-            나의 스튜디오
-          </span>
-        </span>
+        <span className="ml-auto text-[9px] font-semibold tracking-[0.16em] text-muted">NAON</span>
       </Link>
       <SidebarNav />
       <Link

@@ -1,5 +1,5 @@
 import re, json, urllib.request, gzip, sys
-base = "https://ai-daeyeok.vercel.app"
+base = "https://meetnaon.vercel.app"
 
 def get(u):
     r = urllib.request.Request(u, headers={"User-Agent": "Mozilla/5.0", "Accept-Encoding": "gzip"})

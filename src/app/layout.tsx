@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Figtree } from "next/font/google";
+import { BRAND } from "@/lib/brand";
 import { SITE_URL } from "@/lib/site-url";
 import "./globals.css";
 
@@ -16,12 +17,26 @@ const figtree = Figtree({
 export const metadata: Metadata = {
   // 고정 운영 URL. 값은 src/lib/site-url.ts 한 곳에서만 정한다.
   metadataBase: new URL(SITE_URL),
-  // 탭에는 화면 이름만 둔다. 서비스 이름은 아직 정하지 않았다 — 정해지면 template에 꼬리로 붙인다
   title: {
-    default: "캐릭터 만들기",
-    template: "%s",
+    default: `${BRAND.name} | ${BRAND.tagline}`,
+    template: `%s | ${BRAND.name}`,
   },
-  description: "내 대신 연기하는 캐릭터를 만들고, 찍은 영상을 바꿔요.",
+  description: BRAND.description,
+  applicationName: BRAND.name,
+  openGraph: {
+    type: "website",
+    locale: "ko_KR",
+    siteName: BRAND.name,
+    title: `${BRAND.name} | ${BRAND.tagline}`,
+    description: BRAND.description,
+    images: [{ url: "/brand/naon-share.png", width: 1200, height: 630, alt: "나온 — 또 다른 나, 세상에 나오다." }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${BRAND.name} | ${BRAND.tagline}`,
+    description: BRAND.description,
+    images: ["/brand/naon-share.png"],
+  },
 };
 
 export const viewport: Viewport = {

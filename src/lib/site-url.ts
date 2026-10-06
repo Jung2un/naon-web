@@ -10,7 +10,7 @@
  * 운영 URL. 커스텀 도메인을 붙이면 여기를 바꾼다.
  * 환경변수 `NEXT_PUBLIC_SITE_URL`이 있으면 그쪽이 이긴다 — 프리뷰 브랜치에서만 따로 쓰고 싶을 때.
  */
-const PRODUCTION_URL = "https://ai-daeyeok.vercel.app";
+const PRODUCTION_URL = "https://meetnaon.vercel.app";
 
 function normalize(origin: string): string {
   const withProtocol = /^https?:\/\//.test(origin) ? origin : `https://${origin}`;
@@ -24,7 +24,7 @@ export const SITE_URL = normalize(
 
 /**
  * OAuth가 돌아올 주소.
- * 고정 URL이라 Supabase Redirect URLs에 `https://ai-daeyeok.vercel.app/**` 한 줄이면 된다.
+ * 고정 URL이라 Supabase Redirect URLs에 `https://meetnaon.vercel.app/**` 한 줄이면 된다.
  */
 export function callbackUrl(next: string): string {
   const url = new URL("/auth/callback", SITE_URL);

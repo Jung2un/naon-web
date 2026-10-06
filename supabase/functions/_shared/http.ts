@@ -35,7 +35,7 @@ export type ErrorCode =
  * 브라우저가 직접 부르는 함수라 preflight가 온다.
  * 아무 origin이나 열지 않고 운영·프리뷰 도메인만 되비춘다.
  */
-const ALLOWED_ORIGIN = /^https:\/\/ai-daeyeok(-[a-z0-9-]+)?\.vercel\.app$/;
+const ALLOWED_ORIGIN = /^https:\/\/meetnaon(-[a-z0-9-]+)?\.vercel\.app$/;
 
 export function corsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get("Origin") ?? "";

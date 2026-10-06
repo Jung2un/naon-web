@@ -44,8 +44,8 @@ export function MobileNav({
         ) : (
           <Link
             href="/dashboard"
-            aria-label="대시보드로 가기"
-            className="flex size-11 shrink-0 items-center justify-center"
+            aria-label="나온 홈으로 가기"
+            className="flex h-11 shrink-0 items-center justify-center px-2"
           >
             <BrandMark size="sm" />
           </Link>
