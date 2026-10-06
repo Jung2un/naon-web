@@ -24,6 +24,9 @@ import { credits } from "@/lib/format";
 import { HAIR_COLORS } from "@/lib/hair-colors";
 import { cn } from "@/lib/utils";
 import {
+  ADJUSTMENT_DEAD_ZONE,
+  ADJUSTMENT_KEYS,
+  ADJUSTMENT_RANGE,
   ANGLE_LABEL,
   CHARACTER_COST,
   CHARACTER_STEPS,
@@ -106,10 +109,21 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
   const browHairColor = hairColorName ? HAIR_COLORS[hairColorName] ?? null : null;
   const faceTypeName = character.options.face.find((o) => o.id === serverTraits.face)?.name;
 
-  const changed =
-    REFINABLE_TRAIT_KINDS.some(
-      (kind) => traits[kind] && traits[kind] !== serverTraits[kind],
-    ) || !sameAdjustments(adjust, serverAdjust);
+  // 미리보기는 **저장된 값과의 차이**만 얹는다. 저장된 슬라이더 값은 이미 base 이미지에
+  // 구워져 있다(finish_character_batch가 성공한 값을 characters.adjustments로 옮긴다).
+  // 절대값을 그대로 넘기면 수정이 끝난 뒤에도 같은 변형이 한 번 더 얹혀서, 사람이 보는
+  // "지금 얼굴"과 완성(3방향)이 실제로 쓰는 저장본이 달라진다 — 서버 지시문이 상대값인 것과 같은 규칙.
+  const previewAdjust = diffAdjustments(adjust, serverAdjust);
+
+  const traitsChanged = REFINABLE_TRAIT_KINDS.some(
+    (kind) => traits[kind] && traits[kind] !== serverTraits[kind],
+  );
+  // 서버와 같은 기준으로 센다 — 손잡이를 살짝 건드린 것(차이 10 미만)은 서버가 NO_CHANGES로 돌려보내므로
+  // 여기서도 "바뀐 것"으로 안 쳐야 완성하기가 그 때문에 막히지 않는다.
+  const adjustChanged = ADJUSTMENT_KEYS.some(
+    (key) => Math.abs(previewAdjust[key] ?? 0) >= ADJUSTMENT_DEAD_ZONE,
+  );
+  const changed = traitsChanged || adjustChanged;
 
   async function run(
     action: string,
@@ -330,7 +344,7 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
                   // 슬라이더 값이 그대로 이 그림에 얹혀 보인다. 적용하면 진짜 결과로 바뀐다.
                   <FacePreview
                     src={character.base_image_url}
-                    adjustments={adjust}
+                    adjustments={previewAdjust}
                     hairColor={previewHairColor}
                     browHairColor={browHairColor}
                     className="size-full"
@@ -341,9 +355,9 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
                 <p className="mt-2 text-caption text-muted">
                   수정을 반영하는 중이에요. 30초~2분 걸려요.
                 </p>
-              ) : !sameAdjustments(adjust, serverAdjust) || previewHairColor ? (
+              ) : adjustChanged || previewHairColor ? (
                 <p className="mt-2 text-caption text-muted">
-                  미리보기예요. 적용하면 진짜 결과가 나와요.
+                  미리보기예요. 아직 적용되지 않았어요 — &quot;이 수정 적용&quot;을 눌러야 진짜 결과가 나와요.
                 </p>
               ) : null}
             </div>
@@ -469,14 +483,18 @@ export function CharacterStudio({ character }: { character: CharacterBuild }) {
             label="캐릭터 완성하기"
             pendingLabel="시작하는 중…"
             pending={pending === "build"}
+            // 적용 안 한 수정이 있으면 못 간다. 미리보기만 보고 완성을 누르면 후보 그대로 3방향이 나간다 —
+            // 사람은 "내가 고친 얼굴"이 나갈 거라 믿는다. 먼저 적용하거나 되돌리게 한다.
             disabled={
-              working || Boolean(pending) || !character.base_image_path || !nameReady
+              working || Boolean(pending) || !character.base_image_path || !nameReady || changed
             }
             onSubmit={build}
             summary={
-              <span className="text-muted">
-                {nameReady
-                  ? "이 얼굴로 정면 · 좌 45° · 우 45° 세 장을 뽑아요"
+              <span className={changed ? "text-ink" : "text-muted"}>
+                {changed
+                  ? "아직 적용하지 않은 수정이 있어요. 먼저 \"이 수정 적용\"을 누르거나 이전 얼굴로 되돌려 주세요"
+                  : nameReady
+                  ? "지금 얼굴 그대로 정면 · 좌 45° · 우 45° 세 장을 뽑아요"
                   : "캐릭터 이름을 적으면 완성할 수 있어요"}
               </span>
             }
@@ -550,6 +568,20 @@ const STEPS_ON_SCREEN: Record<CharacterBuild["stage"], number[]> = {
   building: [3],
   ready: [],
 };
+
+/**
+ * 지금 슬라이더 값에서 저장된 값을 뺀 차이. 미리보기에 얹는 건 이것뿐이다 —
+ * 저장된 값은 이미 base 이미지에 들어 있다. 차이가 0인 키는 빼서 FacePreview의 idle 판단이 맞게 한다.
+ */
+function diffAdjustments(current: Adjustments, saved: Adjustments): Adjustments {
+  const out: Adjustments = {};
+  for (const key of ADJUSTMENT_KEYS) {
+    const delta = (current[key] ?? 0) - (saved[key] ?? 0);
+    if (delta === 0) continue;
+    out[key] = Math.max(-ADJUSTMENT_RANGE, Math.min(ADJUSTMENT_RANGE, delta));
+  }
+  return out;
+}
 
 /** 배치는 회차 단위다. 지난 회차는 화면에 안 그린다. */
 function latestRound(

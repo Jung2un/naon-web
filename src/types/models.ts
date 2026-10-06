@@ -242,6 +242,8 @@ export const ADJUSTMENT_KEYS = [
 export type AdjustmentKey = (typeof ADJUSTMENT_KEYS)[number];
 export type Adjustments = Partial<Record<AdjustmentKey, number>>;
 export const ADJUSTMENT_RANGE = 100;
+/** 이보다 작은 차이는 서버가 "바뀐 것"으로 안 친다(NO_CHANGES). `_shared/prompt.ts`의 같은 이름 상수와 같아야 한다. */
+export const ADJUSTMENT_DEAD_ZONE = 10;
 
 /**
  * 화면에 나오는 순서와 문구. `low`·`high`는 슬라이더 양 끝 라벨이다.
