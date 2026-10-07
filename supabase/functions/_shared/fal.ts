@@ -1,5 +1,28 @@
 /** Video queue model and authenticated callback helpers. */
-export const VIDEO_MODEL = "fal-ai/wan/v2.2-14b/animate/replace";
+// Animate Replace replaces the entire person, including the reference outfit,
+// and has no prompt field. Use localized, instruction-based video editing.
+// Contract: https://fal.ai/models/fal-ai/wan-vace-apps/video-edit/api
+export const VIDEO_MODEL = "fal-ai/wan-vace-apps/video-edit";
+
+export function videoEditInput(videoUrl: string, characterImageUrl: string) {
+  return {
+    video_url: videoUrl,
+    image_urls: [characterImageUrl],
+    prompt: [
+      "Edit only the face and hair of the single person in the input video to match the identity in the reference image",
+      "The reference image supplies facial identity and hairstyle ONLY; ignore its clothing, body pose, background and lighting",
+      "Keep the original video's clothing and accessories exactly unchanged in every frame: same garments, neckline, sleeves, colors, patterns, logos, fabric, folds, shoes and jewelry",
+      "Do not dress the person in the reference image's outfit; do not replace or restyle the body",
+      "Preserve the source video's body, hands, pose, gestures, facial performance, timing, camera movement, framing, lighting and background",
+      "Blend only the new face and hair naturally into the original footage, with temporally consistent facial identity",
+    ].join(". "),
+    video_type: "human",
+    resolution: "720p",
+    aspect_ratio: "auto",
+    acceleration: "none",
+    enable_safety_checker: true,
+  };
+}
 
 export type WebhookSubject = "job";
 
@@ -66,7 +89,9 @@ export function resultUrl(payload: unknown): string | null {
     const url = new URL(source);
     return url.protocol === "https:" && !url.username && !url.password &&
         !url.port &&
-        (url.hostname === "fal.media" || url.hostname.endsWith(".fal.media"))
+        (url.hostname === "fal.media" || url.hostname.endsWith(".fal.media") ||
+          (url.hostname === "storage.googleapis.com" &&
+            url.pathname.startsWith("/falserverless/")))
       ? url.toString()
       : null;
   } catch {

@@ -1,5 +1,5 @@
 /**
- * build-character — 확정한 얼굴로 정면·좌45·우45를 뽑는다. 캐릭터 만들기의 4단계다.
+ * build-character — 확정한 정면을 보존하고 좌45·우45를 만든다. 캐릭터 만들기의 4단계다.
  *
  * 화면 계약 (`src/components/app/CharacterStudio.tsx`)
  *   body     { character_id, name }
@@ -16,10 +16,9 @@ import { adminClient, callerId, charge, refund } from "../_shared/supabase.ts";
 import { geminiConfig } from "../_shared/gemini.ts";
 import { inBackground, runImageBatch } from "../_shared/batch.ts";
 import { viewInstruction } from "../_shared/prompt.ts";
+import { characterViewPlan } from "../_shared/character-views.ts";
 
 const COST = 2;
-/** 정면·좌45·우45. 측면 90°는 얼굴 정보가 적어서 안 뽑는다. — 기획서 §9 */
-const ANGLES = ["front", "left45", "right45"] as const;
 
 Deno.serve(async (req) => {
   const pre = preflight(req);
@@ -46,7 +45,7 @@ Deno.serve(async (req) => {
 
   const { data: character } = await admin
     .from("characters")
-    .select("id, stage, status, base_image_path")
+    .select("id, stage, status, base_image_path, traits, adjustments")
     .eq("id", characterId)
     .eq("user_id", userId)
     .is("deleted_at", null)
@@ -86,14 +85,17 @@ Deno.serve(async (req) => {
   const balance = await charge(admin, userId, COST, "character_charge", memo);
   if (balance === null) return fail(req, 402, "INSUFFICIENT_CREDITS");
 
-  const rows = ANGLES.map((angle) => ({
+  // 정면을 다시 생성하면 AI가 눈·코·눈썹의 수정값을 되돌릴 수 있다.
+  // 마지막으로 적용/선택한 파일을 그대로 완성본과 썸네일로 사용한다.
+  const rows = characterViewPlan(character.base_image_path).map((view) => ({
+    ...view,
     id: crypto.randomUUID(),
     character_id: characterId,
     kind: "view",
-    angle,
     round,
     source_image_path: character.base_image_path,
-    status: "queued",
+    traits: character.traits,
+    adjustments: character.adjustments,
   }));
 
   const { error: rowsError } = await admin.from("character_images").insert(rows);
@@ -113,14 +115,16 @@ Deno.serve(async (req) => {
     })
     .eq("id", characterId);
 
-  // 세 장을 배경에서 나란히 만든다. 하나라도 실패하면 배치가 닫히며 2크레딧을 돌려준다.
+  // 정면은 이미 저장 완료. 같은 수정본에서 좌우만 생성한다.
+  // 배치 판정에는 정면까지 세 장을 포함하므로 기존 완료/실패·환불 계약을 유지한다.
   inBackground(
     runImageBatch(admin, gemini, {
       userId,
       characterId,
       kind: "view",
       round,
-      rows: rows.map((row) => ({ id: row.id, prompt: viewInstruction(row.angle) })),
+      rows: rows.filter((row) => row.status === "queued")
+        .map((row) => ({ id: row.id, prompt: viewInstruction(row.angle) })),
       sourcePath: character.base_image_path,
     }),
   );

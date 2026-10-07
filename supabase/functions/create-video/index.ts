@@ -1,6 +1,6 @@
 import { type ErrorCode, fail, ok, preflight } from "../_shared/http.ts";
 import { adminClient, callerId } from "../_shared/supabase.ts";
-import { VIDEO_MODEL, webhookUrl } from "../_shared/fal.ts";
+import { VIDEO_MODEL, videoEditInput, webhookUrl } from "../_shared/fal.ts";
 import { mp4Duration, readLimited, validSourcePath } from "../_shared/video.ts";
 
 Deno.serve(async (req) => {
@@ -41,28 +41,21 @@ Deno.serve(async (req) => {
       return ok(req, { job_id: id });
     }
     const { data: character } = await admin.from("characters").select(
-      "base_image_path,thumbnail_path,status,stage",
+      "base_image_path,status,stage",
     ).eq("id", characterId).eq("user_id", userId).is("deleted_at", null).maybeSingle();
     if (character?.stage !== "ready" || character?.status !== "done") {
       return fail(req, 409, "CHARACTER_NOT_READY");
     }
-    let imagePath = character.base_image_path || character.thumbnail_path;
-    let bucket = "characters";
+    // Outfit replacement is not part of video conversion. A look image would
+    // conflict with the source-clothing contract, even through a direct API call.
     if (lookId) {
-      const { data: look } = await admin.from("looks").select(
-        "thumbnail_path,status",
-      ).eq("id", lookId).eq("user_id", userId).eq("character_id", characterId)
-        .maybeSingle();
-      if (look?.status !== "done" || !look.thumbnail_path) {
-        return fail(req, 400, "LOOK_INCOMPLETE");
-      }
-      imagePath = look.thumbnail_path;
-      bucket = "looks";
+      return fail(req, 400, "LOOK_INCOMPLETE");
     }
+    const imagePath = character.base_image_path;
     if (!imagePath) return fail(req, 409, "CHARACTER_NOT_READY");
     const [video, image] = await Promise.all([
       admin.storage.from("videos").createSignedUrl(path, 3600),
-      admin.storage.from(bucket).createSignedUrl(imagePath, 3600),
+      admin.storage.from("characters").createSignedUrl(imagePath, 3600),
     ]);
     if (video.error || image.error || !video.data || !image.data) {
       return fail(req, 400, "VIDEO_INVALID");
@@ -116,16 +109,7 @@ Deno.serve(async (req) => {
           Authorization: `Key ${key}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          video_url: video.data.signedUrl,
-          image_url: image.data.signedUrl,
-          resolution: "720p",
-          // 이 엔드포인트는 프롬프트를 받지 않는다. 품질 손잡이는 이 둘뿐이다 — 기본 20단계·high.
-          // 30단계는 얼굴(눈·입가)의 깜빡임을 줄이는 대신 처리 시간이 는다. 요금이 단계 수를 따르는지는 fal 가격표에서 본다.
-          num_inference_steps: 30,
-          video_quality: "high",
-          enable_safety_checker: true,
-        }),
+        body: JSON.stringify(videoEditInput(video.data.signedUrl, image.data.signedUrl)),
       });
     } catch {
       console.error("Video queue acknowledgement missing", { id });

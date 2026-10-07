@@ -56,4 +56,11 @@ try {
   );
   process.exit(1);
 }
+try {
+  const results = await db.exec(fs.readFileSync(new URL("./character-completion.sql", import.meta.url), "utf8"));
+  console.log(results.flatMap((r) => r.rows).filter((r) => r.result));
+} catch (error) {
+  console.error("CHARACTER COMPLETION TEST FAILED", error.message, error.detail ?? "", error.where ?? "");
+  process.exit(1);
+}
 await db.close();

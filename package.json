@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test:prompts": "node --experimental-strip-types --test tests/character-prompts.test.mjs",
     "test:admin": "node --experimental-strip-types --test tests/admin-input.test.mjs",
+    "test:generation": "node --experimental-strip-types --test tests/generation-contracts.test.mjs",
     "test:db": "node tests/local-db.mjs"
   },
   "dependencies": {

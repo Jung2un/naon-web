@@ -2,7 +2,7 @@
 
 ## 모델
 - 이미지: Gemini 3.1 Flash Image (`gemini-3.1-flash-image`). 캐릭터 후보, 참조 이미지 편집, 3방향, 룩 생성에서 공통으로 사용한다. `GEMINI_IMAGE_MODEL`로 교체 가능. Lite 모델은 순차 편집 일관성이 덜 적합하므로 기본값에서 제외했다.
-- 영상: fal.ai Wan 2.2 Animate Replace (`fal-ai/wan/v2.2-14b/animate/replace`), 720p. 원본 영상과 캐릭터/룩 이미지를 받아 인물을 교체한다.
+- 영상: fal.ai Wan VACE Video Edit (`fal-ai/wan-vace-apps/video-edit`), 720p. 원본 영상과 최종 적용 얼굴을 참조하고, 얼굴·머리만 편집하며 원본 의상·몸·배경을 유지하도록 지시한다. 의상 보존은 생성 모델의 지시 이행에 의존하므로 배포 후 실제 결과 비교가 필요하다.
 - 키는 Supabase Edge Function 시크릿에만 저장한다. 웹에는 Supabase 공개 URL과 공개 키만 둔다.
 
 ## 계정 준비 (계정 소유자가 진행)
@@ -29,7 +29,7 @@ npx supabase gen types typescript --linked > src/types/database.ts
 영상 관련 신규 RPC는 service_role만 실행 가능하다. 사용자 JWT와 소유권은 Edge Function과 RPC에서 검증한다.
 
 ## 영상 흐름
-`/jobs/new`에서 완성한 캐릭터·룩 선택 → private videos 버킷의 본인 폴더에 MP4 업로드 → create-video가 50MB·MP4 실제 길이 3~10초 검증 → 트랜잭션으로 1크레딧 차감과 job 생성 → fal 큐 제출 → HMAC 검증 웹훅 → 결과를 private 버킷으로 복사 → 트랜잭션으로 완료 또는 1회 환불.
+`/jobs/new`에서 완성한 캐릭터 선택 → private videos 버킷의 본인 폴더에 MP4 업로드 → create-video가 50MB·MP4 실제 길이 3~10초 검증 → 트랜잭션으로 1크레딧 차감과 job 생성 → fal 큐 제출 → HMAC 검증 웹훅 → 결과를 private 버킷으로 복사 → 트랜잭션으로 완료 또는 1회 환불.
 같은 job ID 재요청은 다시 과금/큐 제출하지 않는다. 영상 큐 접수 응답이 유실된 경우 유료 요청을 자동 재전송하지 않는다. 이 경우 job은 대기로 남고 웹훅 또는 운영 확인을 기다린다.
 
 ## 운영 확인
@@ -42,5 +42,12 @@ npx supabase gen types typescript --linked > src/types/database.ts
 
 ## 공식 문서
 - https://ai.google.dev/gemini-api/docs/image-generation
-- https://fal.ai/models/fal-ai/wan/v2.2-14b/animate/replace/api
+- https://fal.ai/models/fal-ai/wan-vace-apps/video-edit/api
 - https://fal.ai/docs/documentation/model-apis/inference/queue
+
+## 2026-10-07 수정 및 검증
+- 캐릭터 완성은 마지막으로 적용한 `base_image_path`를 정면과 썸네일에 그대로 사용하고 좌우만 생성한다. 이전 후보를 명시적으로 다시 선택한 경우에는 그 선택을 존중한다.
+- 영상은 인물 전체를 바꾸는 Animate Replace에서 지시 기반 편집 모델로 변경했다. 새 작업에는 룩 이미지를 전달하지 않으며, 기존 작업 재요청은 기존 작업을 반환한다.
+- `npm run test:prompts`, `npm run test:generation`, `npm run test:db`로 요청 형식, 최종 얼굴 경로, 각도 실패 및 반복 정산을 검증한다. 자동 테스트는 실제 생성 품질을 보장하지 않는다.
+- 이 변경에는 DB 마이그레이션이 없다. `build-character`, `create-video`, `fal-webhook`을 배포한 뒤 같은 원본으로 얼굴 일치, 의상·로고·소매·액세서리 보존, 동작·길이를 비교해야 한다. 의상 변경이 남으면 마스크 기반 합성 등 추가 처리가 필요하다.
+- README GIF는 수정 전 배포 화면의 기록이다. 새 영상 모델의 비용·대기 시간·시각 품질은 아직 실측하지 않았다.

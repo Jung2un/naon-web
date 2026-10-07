@@ -702,8 +702,7 @@ export function viewInstruction(angle: string): string {
   return [
     ANGLE_PHRASE[angle] ?? ANGLE_PHRASE.front,
     IDENTITY_LOCK,
-    // 3방향은 영상 변환(Wan-Animate)이 얼굴을 옮겨 오는 유일한 레퍼런스다. 영상 모델은 텍스트를
-    // 안 받으니 영상에 살아남아야 할 것(눈빛·시선·표정)은 전부 여기서 그림에 박아 둔다. — 09-29
+    "the supplied image is the final customized face, not an initial draft. Preserve every applied edit exactly: eyebrow angle and height, eye size and tilt, nose shape, midface proportions, jawline, chin, hair color and makeup. Change only the viewing angle; do not normalize, beautify or restore earlier facial proportions",
     VIDEO_REFERENCE_DIRECTION,
     "keep the same hairstyle, clothing and lighting",
     // 여기서는 무지 배경이 맞다 — 3방향은 연기 영상이 쓰는 레퍼런스지 작품이 아니다. — 기획서 §10
@@ -714,15 +713,11 @@ export function viewInstruction(angle: string): string {
 /**
  * 영상 레퍼런스용 지시. — 09-29
  *
- * 영상 변환(fal Wan-Animate Replace)은 `video_url`·`image_url`만 받고 **프롬프트를 받지 않는다.**
- * 그래서 영상 품질을 텍스트로 올릴 자리는 레퍼런스 이미지(3방향)를 만드는 이 지시문뿐이다.
- * 영상 프롬프트 가이드(정체성 고정 · 시선축 유지 · 표정을 구체적 행동으로)에서 이미지에 적용되는 것만 가져왔다.
- *   - 고정 형질(immutable traits)을 이름으로 부른다: 골격·눈 모양·헤어라인·머리색·피부 톤·화장
- *   - 눈은 영상에서 뭉개지는 자리라 캐치라이트·홍채·속눈썹을 또렷하게, 시선은 렌즈로
- *   - 표정은 "자연스럽게"가 아니라 근육의 상태로 적는다: 이완된 이마, 살짝 든 입꼬리, 살아 있는 눈
+ * 각도를 바꾸면서 표정·눈매를 새로 연출하면 커스터마이징 결과를 덮어쓴다.
+ * 추가 연기 지시 없이 이미 적용된 얼굴의 특징과 표정을 보존한다.
  */
 export const VIDEO_REFERENCE_DIRECTION =
-  "this image is a motion reference: keep these immutable traits identical to the source — facial bone structure, eye shape and spacing, eyebrow shape, nose, lip shape, hairline, hair color and texture, skin tone and makeup. Eyes sharp and open with a clear catchlight, crisp iris detail and defined lashes, gaze steady into the lens along the same eye line. A relaxed, alive expression: relaxed forehead, soft jaw, a faint lift at the mouth corners, presence in the eyes rather than a blank stare. Face fully lit and unobstructed, no hair across the eyes, no motion blur";
+  "this image is a motion reference: keep these immutable traits identical to the source — facial bone structure, eye shape and spacing, eyebrow shape, nose, lip shape, hairline, hair color and texture, skin tone and makeup. Preserve the source expression, eyelid openness, eyebrow angle, mouth corners and gaze relative to the head. Do not add a smile, open the eyes wider or relax the customized jaw. Keep the facial details sharp, without motion blur";
 
 /**
  * 룩 — 사람은 그대로 두고 스타일만 바꾼다.

@@ -302,6 +302,7 @@ test("optional traits are omitted cleanly and identity-preserving edits remain u
   assert.equal(identity.build, undefined);
   assert.equal(editInstruction(minimal, minimal, options), null);
   const edit = editInstruction(minimal, { ...minimal, hair: "hair" }, options);
+  assert.ok(edit);
   assert.ok(viewInstruction("left45").includes("45 degrees toward the viewer's LEFT"));
 });
 
@@ -410,14 +411,16 @@ test("slider adjustments become relative instructions and nothing else is touche
   assert.match(both, /change the expression to a warm look, turn the nose tip slightly upward/);
 });
 
-test("the three views carry the video reference direction, since the video model takes no prompt", () => {
+test("angle generation preserves applied customization without directing a new expression", () => {
   for (const angle of ["front", "left45", "right45"]) {
     const text = viewInstruction(angle);
     assert.match(text, /motion reference/);
     assert.match(text, /immutable traits/);
-    assert.match(text, /gaze steady into the lens/);
-    assert.match(text, /relaxed forehead, soft jaw/);
-    assert.match(text, /clear catchlight/);
+    assert.match(text, /final customized face, not an initial draft/);
+    assert.match(text, /Preserve every applied edit exactly/);
+    assert.match(text, /Preserve the source expression/);
+    assert.match(text, /Do not add a smile, open the eyes wider or relax the customized jaw/);
+    assert.doesNotMatch(text, /gaze steady into the lens|relaxed forehead, soft jaw|faint lift at the mouth corners/);
   }
 });
 
